@@ -5,32 +5,59 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, Text, Input, Spacing, Card } from '../components';
 import { theme } from '../theme';
+import { useAuthStore } from '../store';
+import type { RootStackParamList } from '../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
+  const { login } = useAuthStore();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setLoading(true);
     setError('');
-    // TODO: Implement actual login
-    console.log('Login pressed', { email, password });
-    setTimeout(() => {
+    
+    try {
+      const success = await login(email, password);
+      if (success) {
+        // Check if user needs onboarding
+        const { user } = useAuthStore.getState();
+        if (user?.onboardingComplete) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'MainTabs' }],
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Framing' }],
+          });
+        }
+      }
+    } catch (e) {
+      setError('Login failed. Please try again.');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const handleForgotPassword = () => {
-    console.log('Forgot password pressed');
+    navigation.navigate('ForgotPassword');
   };
 
   const handleSignUp = () => {
-    console.log('Sign up pressed');
+    navigation.navigate('Signup');
   };
 
   return (
