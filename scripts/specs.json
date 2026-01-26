@@ -1,0 +1,670 @@
+{
+  "version": 1,
+  "generatedAt": "2026-01-26T00:51:23.971Z",
+  "screens": [
+    {
+      "id": "SCR-DISPUTE-ENTRY-POSTER-001",
+      "name": null,
+      "friendlyName": "DisputeEntryPoster",
+      "filename": "DISPUTE_FLOW.md",
+      "status": null,
+      "entry": "From Poster Review → \"Report an issue\"",
+      "purpose": null,
+      "layoutHierarchy": "DisputeEntryPoster\n├── Header\n│   ├── Title: \"Report an issue\"\n│   └── Subtitle: \"Disputes pause payment and require review.\"\n├── ProofReview (read-only)\n├── ReasonSelector\n│   ├── Incomplete work\n│   ├── Wrong task completed\n│   ├── Quality issue\n│   └── Other (240 char limit)\n├── EvidenceHint\n└── ActionFooter\n    ├── OpenDisputeButton (HX-Button/Primary)\n    └── CancelLink",
+      "components": [
+        "ActionFooter",
+        "CancelLink",
+        "DisputeEntryPoster",
+        "EvidenceHint",
+        "HX-Button/Primary",
+        "Header",
+        "Incomplete",
+        "OpenDisputeButton",
+        "Other",
+        "ProofReview",
+        "Quality",
+        "ReasonSelector",
+        "Subtitle",
+        "Title",
+        "Wrong"
+      ],
+      "rules": [
+        "Max 1 open dispute per user",
+        "Reason is required",
+        "No emotional language prompts"
+      ],
+      "states": [],
+      "motionSpec": null,
+      "apiEndpoints": [
+        {
+          "method": "POST",
+          "path": "/tasks/:id/dispute"
+        }
+      ],
+      "errorHandling": [],
+      "accessibility": null,
+      "fileContext": {
+        "principles": [],
+        "stateModel": null
+      }
+    },
+    {
+      "id": "SCR-DISPUTE-STATUS-HUSTLER-001",
+      "name": null,
+      "friendlyName": "DisputeStatusHustler",
+      "filename": "DISPUTE_FLOW.md",
+      "status": null,
+      "entry": "Task Active / Proof Awaiting → state = DISPUTED",
+      "purpose": null,
+      "layoutHierarchy": "DisputeStatusHustler\n├── StatusHeader\n│   ├── StatusBadge: \"DISPUTE IN REVIEW\"\n│   └── ExplanationText\n├── WhatThisMeans\n├── YourSubmission (read-only)\n├── WhatHappensNext\n└── SupportBoundary",
+      "components": [
+        "DisputeStatusHustler",
+        "ExplanationText",
+        "StatusBadge",
+        "StatusHeader",
+        "SupportBoundary",
+        "WhatHappensNext",
+        "WhatThisMeans",
+        "YourSubmission"
+      ],
+      "rules": [
+        "Cannot submit new proof",
+        "Cannot message poster",
+        "Cannot cancel task"
+      ],
+      "states": [],
+      "motionSpec": null,
+      "apiEndpoints": [],
+      "errorHandling": [],
+      "accessibility": null,
+      "fileContext": {
+        "principles": [],
+        "stateModel": null
+      }
+    },
+    {
+      "id": "SCR-DISPUTE-STATUS-POSTER-001",
+      "name": null,
+      "friendlyName": "DisputeStatusPoster",
+      "filename": "DISPUTE_FLOW.md",
+      "status": null,
+      "entry": null,
+      "purpose": null,
+      "layoutHierarchy": "DisputeStatusPoster\n├── StatusHeader\n│   ├── StatusBadge: \"UNDER REVIEW\"\n│   └── ExplanationText: \"Your dispute is under review. Payment is paused.\"\n├── DisputeSummary (reason, time opened)\n├── WhatHappensNext\n└── SupportBoundary",
+      "components": [
+        "DisputeStatusPoster",
+        "DisputeSummary",
+        "ExplanationText",
+        "StatusBadge",
+        "StatusHeader",
+        "SupportBoundary",
+        "WhatHappensNext"
+      ],
+      "rules": [],
+      "states": [],
+      "motionSpec": null,
+      "apiEndpoints": [],
+      "errorHandling": [],
+      "accessibility": null,
+      "fileContext": {
+        "principles": [],
+        "stateModel": null
+      }
+    },
+    {
+      "id": "SCR-DISPUTE-RESOLUTION-001",
+      "name": null,
+      "friendlyName": "DisputeResolution",
+      "filename": "DISPUTE_FLOW.md",
+      "status": null,
+      "entry": "Push notification → resolution complete",
+      "purpose": null,
+      "layoutHierarchy": "DisputeResolution\n├── ResolutionHeader\n│   ├── ResolutionType\n│   └── OutcomeText\n├── FinancialOutcome (explicit dollars)\n├── ExplanationCard\n└── CloseButton",
+      "components": [
+        "CloseButton",
+        "DisputeResolution",
+        "ExplanationCard",
+        "FinancialOutcome",
+        "OutcomeText",
+        "ResolutionHeader",
+        "ResolutionType"
+      ],
+      "rules": [],
+      "states": [],
+      "motionSpec": {
+        "allowed": [
+          "Screen fade-in",
+          "Button press: M-001"
+        ],
+        "forbidden": [
+          "Haptics",
+          "Animations",
+          "Color shifts implying victory or loss"
+        ],
+        "haptic": null
+      },
+      "apiEndpoints": [],
+      "errorHandling": [
+        {
+          "condition": "Duplicate dispute",
+          "ui": "Inline error"
+        },
+        {
+          "condition": "Admin freeze",
+          "ui": "Banner"
+        },
+        {
+          "condition": "Network error",
+          "ui": "Retry banner"
+        }
+      ],
+      "accessibility": "- All screens announce state: \"Dispute under review. Payment paused.\"\n- Reading order linear\n- Reduced Motion: default",
+      "fileContext": {
+        "principles": [],
+        "stateModel": null
+      }
+    },
+    {
+      "id": "SCR-EARNINGS-HUSTLER-001",
+      "name": "Earnings / Wallet",
+      "friendlyName": "EarningsHustler",
+      "filename": "EARNINGS_HUSTLER.md",
+      "status": "REFERENCE SCREEN #6",
+      "entry": "Tab navigation → \"Earnings\"",
+      "purpose": "Explain where money is, why it's there, and when it moves",
+      "layoutHierarchy": "EarningsScreen (ScrollView)\n├── BalanceHeader (HX-Card/Elevated)\n│   ├── AvailableBalance (--hx-num-hero, primary)\n│   ├── PendingBalance (--hx-num-medium, secondary)\n│   └── PayoutStatusHint (--hx-text-footnote)\n├── TransferStatusCard (HX-Card/Secondary)\n│   ├── TransferState (dynamic)\n│   └── TimingExplanation\n├── EarningsBreakdown\n│   ├── EarningsRow (repeat, HX-Card/Primary list style)\n│   └── Pagination / LoadMore\n├── BankInfo (HX-Card/Secondary)\n│   ├── BankName\n│   ├── LastFourDigits\n│   └── ChangeBankLink\n└── SafeAreaBottom",
+      "components": [
+        "AvailableBalance",
+        "BalanceHeader",
+        "BankInfo",
+        "BankName",
+        "ChangeBankLink",
+        "EarningsBreakdown",
+        "EarningsRow",
+        "EarningsScreen",
+        "HX-Card/Elevated",
+        "HX-Card/Primary",
+        "HX-Card/Secondary",
+        "LastFourDigits",
+        "Pagination",
+        "PayoutStatusHint",
+        "PendingBalance",
+        "SafeAreaBottom",
+        "TimingExplanation",
+        "TransferState",
+        "TransferStatusCard"
+      ],
+      "rules": [
+        "Never compute money client-side.**"
+      ],
+      "states": [],
+      "motionSpec": {
+        "allowed": [
+          "List item fade-in (100ms)",
+          "Pull-to-refresh spinner"
+        ],
+        "forbidden": [
+          "Haptics",
+          "Count-up animations",
+          "Confetti",
+          "Glow"
+        ],
+        "haptic": null
+      },
+      "apiEndpoints": [],
+      "errorHandling": [],
+      "accessibility": "- Screen announces: \"Earnings. Available one hundred twenty dollars. Pending forty-five dollars.\"\n- Each row announces status\n- Reduced Motion: default (already minimal)\n- Contrast: AAA for balances, AA+ elsewhere"
+    },
+    {
+      "id": "SCR-HOME-HUSTLER-001",
+      "name": "Home (Hustler Mode)",
+      "friendlyName": "HomeHustler",
+      "filename": "HOME_HUSTLER.md",
+      "status": "REFERENCE SCREEN #8",
+      "entry": "Login / App launch",
+      "purpose": "Surface available work while enforcing pacing and constraints",
+      "layoutHierarchy": "HomeHustlerScreen (ScrollView)\n├── Header\n│   ├── Greeting (time-of-day only)\n│   └── LocationIndicator\n├── ActiveTaskBanner (conditional, HX-Card/Elevated)\n│   ├── ActiveTaskSummary\n│   └── ResumeButton (HX-Button/Primary)\n├── ConstraintBanner (conditional)\n│   └── ConstraintMessage\n├── TaskFeedHeader\n│   ├── SectionTitle: \"Available tasks\"\n│   └── SortControl\n├── TaskFeed\n│   ├── TaskRow (HX-TaskRow/Available, repeat)\n│   └── EmptyState (conditional)\n└── SafeAreaBottom",
+      "components": [
+        "ActiveTaskBanner",
+        "ActiveTaskSummary",
+        "ConstraintBanner",
+        "ConstraintMessage",
+        "EmptyState",
+        "Greeting",
+        "HX-Button/Primary",
+        "HX-Card/Elevated",
+        "HX-TaskRow/Available",
+        "Header",
+        "HomeHustlerScreen",
+        "LocationIndicator",
+        "ResumeButton",
+        "SafeAreaBottom",
+        "SectionTitle",
+        "SortControl",
+        "TaskFeed",
+        "TaskFeedHeader",
+        "TaskRow"
+      ],
+      "rules": [
+        "Must **not** pressure the user into accepting work when already committed.",
+        "never hides tasks; only reorders."
+      ],
+      "states": [],
+      "motionSpec": {
+        "allowed": [
+          "List fade-in",
+          "Pull-to-refresh spinner",
+          "ActiveTaskBanner slide-in on state change"
+        ],
+        "forbidden": [
+          "Haptics",
+          "Card bounce",
+          "Reward-style motion"
+        ],
+        "haptic": null
+      },
+      "apiEndpoints": [],
+      "errorHandling": [
+        {
+          "condition": "Network error",
+          "ui": "Inline retry"
+        },
+        {
+          "condition": "Location unavailable",
+          "ui": "Read-only banner"
+        },
+        {
+          "condition": "Kill switch",
+          "ui": "Global banner"
+        }
+      ],
+      "accessibility": "- Greeting announced once\n- Active task announced before feed\n- Task rows: \"Assemble IKEA Desk. Forty-five dollars. Two point one miles.\"\n- Reduced Motion: default (already minimal)\n\n---"
+    },
+    {
+      "id": "SCR-POSTER-REVIEW-001",
+      "name": "Poster Review / Confirmation",
+      "friendlyName": "PosterReview",
+      "filename": "POSTER_REVIEW.md",
+      "status": "REFERENCE SCREEN #5",
+      "entry": "Push notification or task list → \"Proof submitted\"",
+      "purpose": null,
+      "layoutHierarchy": "PosterReviewScreen (ScrollView)\n├── StatusHeader (HX-Card/Elevated)\n│   ├── StatusBadge (HX-Pill/Status: \"PROOF SUBMITTED\")\n│   ├── StatusTitle: \"Review the completed task\"\n│   └── StatusSubtitle: \"Confirm to release payment to the hustler.\"\n├── ProofViewer\n│   ├── ProofMedia (full-width, zoomable)\n│   └── ProofMeta: \"Submitted today at 3:42 PM\"\n├── TaskSummary (HX-Card/Primary)\n│   ├── TaskTitle\n│   ├── LocationSummary\n│   └── AgreedPrice (explicit)\n├── ConfirmationCard (HX-Card/Secondary)\n│   ├── ConfirmationText: \"Confirming will release $45.00 to the hustler.\"\n│   └── IrreversibilityHint: \"This action can't be undone.\"\n├── ActionFooter (sticky)\n│   ├── ConfirmButton (HX-Button/Primary): \"Release $45.00\"\n│   └── DisputeButton (HX-Button/Ghost): \"Report an issue\"\n└── SafeAreaBottom",
+      "components": [
+        "ActionFooter",
+        "AgreedPrice",
+        "ConfirmButton",
+        "ConfirmationCard",
+        "ConfirmationText",
+        "DisputeButton",
+        "HX-Button/Ghost",
+        "HX-Button/Primary",
+        "HX-Card/Elevated",
+        "HX-Card/Primary",
+        "HX-Card/Secondary",
+        "HX-Pill/Status",
+        "IrreversibilityHint",
+        "LocationSummary",
+        "PosterReviewScreen",
+        "ProofMedia",
+        "ProofMeta",
+        "ProofViewer",
+        "SafeAreaBottom",
+        "StatusBadge",
+        "StatusHeader",
+        "StatusSubtitle",
+        "StatusTitle",
+        "TaskSummary",
+        "TaskTitle"
+      ],
+      "rules": [],
+      "states": [],
+      "motionSpec": {
+        "allowed": [
+          "Button press: M-001",
+          "Footer shadow on scroll"
+        ],
+        "forbidden": [
+          "Haptics on confirm",
+          "Celebration",
+          "Success animations"
+        ],
+        "haptic": null
+      },
+      "apiEndpoints": [
+        {
+          "method": "POST",
+          "path": "/tasks/:id/confirm"
+        }
+      ],
+      "errorHandling": [
+        {
+          "error code": "INVALID_STATE_TRANSITION",
+          "ui response": "Silent refresh"
+        },
+        {
+          "error code": "KILL_SWITCH_ACTIVE",
+          "ui response": "Blocking banner"
+        },
+        {
+          "error code": "TASK_EXPIRED",
+          "ui response": "Navigate to resolution"
+        }
+      ],
+      "accessibility": "- Initial announcement: \"Proof submitted. Review to release payment.\"\n- Confirm button: \"Release forty-five dollars to hustler.\"\n- Reduced Motion: identical layout\n- Contrast: AA+ everywhere, AAA on price"
+    },
+    {
+      "id": "SCR-PROOF-AWAITING-HUSTLER-001",
+      "name": "Proof Submitted / Awaiting Confirmation",
+      "friendlyName": "ProofAwaitingHustler",
+      "filename": "PROOF_AWAITING_HUSTLER.md",
+      "status": "REFERENCE SCREEN #4",
+      "entry": "Successful POST `/tasks/:id/submit-proof`",
+      "purpose": "Set correct expectations during escrow wait",
+      "layoutHierarchy": "ProofAwaitingScreen (ScrollView)\n├── StatusHeader (HX-Card/Elevated)\n│   ├── StatusBadge (HX-Pill/Status: \"AWAITING CONFIRMATION\")\n│   ├── StatusTitle: \"Proof submitted\"\n│   └── StatusSubtitle: \"The poster is reviewing your submission.\"\n├── ProofSummary\n│   ├── ProofThumbnail (static, non-interactive)\n│   ├── ProofMeta: \"Submitted today at 3:42 PM\"\n│   └── ProofNote: \"You can't edit this submission.\"\n├── WhatHappensNext (HX-Card/Primary)\n│   ├── 1. The poster reviews your proof.\n│   ├── 2. They confirm completion or request a dispute.\n│   └── 3. Once confirmed, XP is awarded and payout begins processing.\n├── TimingExpectations (HX-Card/Secondary)\n│   ├── ExpectedWindow: \"Most posters respond within 24 hours.\"\n│   └── AutoCompleteExplanation: \"If no response after 48 hours...\"\n├── NoActionRequired\n│   └── \"You don't need to do anything right now.\"\n├── SupportBoundary\n│   └── ContactPolicyText\n└── SafeAreaBottom",
+      "components": [
+        "1",
+        "2",
+        "3",
+        "AutoCompleteExplanation",
+        "ContactPolicyText",
+        "ExpectedWindow",
+        "HX-Card/Elevated",
+        "HX-Card/Primary",
+        "HX-Card/Secondary",
+        "HX-Pill/Status",
+        "NoActionRequired",
+        "ProofAwaitingScreen",
+        "ProofMeta",
+        "ProofNote",
+        "ProofSummary",
+        "ProofThumbnail",
+        "SafeAreaBottom",
+        "StatusBadge",
+        "StatusHeader",
+        "StatusSubtitle",
+        "StatusTitle",
+        "SupportBoundary",
+        "TimingExpectations",
+        "WhatHappensNext",
+        "You"
+      ],
+      "rules": [],
+      "states": [],
+      "motionSpec": {
+        "allowed": [
+          "Screen fade-in (200ms)",
+          "Toast if navigated here after submit"
+        ],
+        "forbidden": [
+          "Haptics",
+          "Progress animation",
+          "Countdown",
+          "Shimmer"
+        ],
+        "haptic": null
+      },
+      "apiEndpoints": [],
+      "errorHandling": [
+        {
+          "condition": "TASK_EXPIRED",
+          "ui response": "Navigate to resolution"
+        },
+        {
+          "condition": "KILL_SWITCH_ACTIVE",
+          "ui response": "Full-width banner"
+        },
+        {
+          "condition": "NETWORK_ERROR",
+          "ui response": "Inline banner, retry"
+        }
+      ],
+      "accessibility": "- Initial announcement: \"Proof submitted. Awaiting confirmation.\"\n- Reading order matches hierarchy\n- Reduced Motion: identical (no motion anyway)\n- Contrast: AA+ all text, AAA headers"
+    },
+    {
+      "id": "SCR-REWARD-001",
+      "name": "Reward / Level-Up Screen",
+      "friendlyName": "Reward",
+      "filename": "REWARD.md",
+      "status": "REFERENCE SCREEN #1 — GOLD STANDARD",
+      "entry": null,
+      "purpose": null,
+      "layoutHierarchy": "RewardScreen (Frame: Full Screen)\n├── Overlay (--hx-surface-overlay, animated opacity)\n├── ContentContainer (Auto Layout: Vertical, Center)\n│   ├── XPBurst\n│   │   ├── XPAmount (--hx-num-hero, --hx-xp-gold)\n│   │   ├── XPLabel (--hx-text-title-2)\n│   │   └── ParticleLayer (8-12 particles)\n│   ├── LevelUpContainer (conditional)\n│   │   ├── HX-LevelBadge/LevelUp\n│   │   ├── LevelText (--hx-text-hero)\n│   │   ├── TitleText (--hx-text-title-2)\n│   │   └── ConfettiLayer (20-30 particles)\n│   ├── ProgressSection\n│   │   ├── HX-ProgressBar/XP\n│   │   └── ProgressLabel (--hx-text-footnote)\n│   └── StreakSection (conditional)\n│       ├── HX-StreakBadge/Active\n│       └── StreakText (--hx-text-headline)\n├── DismissHint (--hx-text-tertiary)\n└── SafeAreaBottom",
+      "components": [
+        "ConfettiLayer",
+        "ContentContainer",
+        "DismissHint",
+        "HX",
+        "LevelText",
+        "LevelUpContainer",
+        "Overlay",
+        "ParticleLayer",
+        "ProgressLabel",
+        "ProgressSection",
+        "RewardScreen",
+        "SafeAreaBottom",
+        "StreakSection",
+        "StreakText",
+        "TitleText",
+        "XPAmount",
+        "XPBurst",
+        "XPLabel"
+      ],
+      "rules": [],
+      "states": [],
+      "motionSpec": null,
+      "apiEndpoints": [],
+      "errorHandling": [],
+      "accessibility": "- VoiceOver: \"Congratulations! You earned {n} XP. Level up! You are now level {n}.\"\n- Reduce Motion: Full support\n- Contrast: AAA on primary elements\n\n---"
+    },
+    {
+      "id": "SCR-TASK-ACTIVE-HUSTLER-001",
+      "name": "Task Active (In Progress)",
+      "friendlyName": "TaskActiveHustler",
+      "filename": "TASK_ACTIVE_HUSTLER.md",
+      "status": "REFERENCE SCREEN #3",
+      "entry": "Successful POST `/tasks/:id/accept`",
+      "purpose": "Guide execution, prevent abandonment, surface consequences",
+      "layoutHierarchy": "TaskActiveScreen (ScrollView)\n├── StatusHeader (HX-Card/Elevated)\n│   ├── StatusBadge (HX-Pill/Status: \"IN PROGRESS\")\n│   ├── CountdownTimer (--hx-num-medium)\n│   └── DeadlineHint (--hx-text-footnote)\n├── TaskSummary\n│   ├── TaskTitle\n│   ├── LocationSummary\n│   └── TimeEstimate\n├── ExecutionChecklist\n│   ├── ✓ Accepted\n│   ├── → Go to the location\n│   ├── → Complete the task\n│   └── → Submit proof\n├── ProofSection\n│   ├── ProofInstructions\n│   ├── UploadButton\n│   └── ProofRequirementsHint\n├── ConsequenceCard (HX-Card/Secondary, warning)\n│   ├── AutoCompleteWarning\n│   └── DisputeExplanation\n├── PosterContact (read-only)\n│   ├── PosterAvatar\n│   ├── PosterName\n│   └── ContactPolicyText\n├── ProgressFooter (sticky)\n│   ├── ProgressIndicator\n│   └── SubmitProofButton (HX-Button/Primary)\n└── SafeAreaBottom",
+      "components": [
+        "Accepted",
+        "AutoCompleteWarning",
+        "Complete",
+        "ConsequenceCard",
+        "ContactPolicyText",
+        "CountdownTimer",
+        "DeadlineHint",
+        "DisputeExplanation",
+        "ExecutionChecklist",
+        "Go",
+        "HX-Button/Primary",
+        "HX-Card/Elevated",
+        "HX-Card/Secondary",
+        "HX-Pill/Status",
+        "LocationSummary",
+        "PosterAvatar",
+        "PosterContact",
+        "PosterName",
+        "ProgressFooter",
+        "ProgressIndicator",
+        "ProofInstructions",
+        "ProofRequirementsHint",
+        "ProofSection",
+        "SafeAreaBottom",
+        "StatusBadge",
+        "StatusHeader",
+        "Submit",
+        "SubmitProofButton",
+        "TaskActiveScreen",
+        "TaskSummary",
+        "TaskTitle",
+        "TimeEstimate",
+        "UploadButton"
+      ],
+      "rules": [
+        "never collapsible:",
+        "Always visible, never collapsible:"
+      ],
+      "states": [
+        {
+          "state": "Disabled",
+          "description": "No proof   Media not attached"
+        },
+        {
+          "state": "Enabled",
+          "description": "Ready   Media valid"
+        },
+        {
+          "state": "Loading",
+          "description": "Submitting   API in flight"
+        },
+        {
+          "state": "Locked",
+          "description": "Submitted   Proof accepted"
+        }
+      ],
+      "motionSpec": {
+        "allowed": [
+          "Countdown text update (no animation)",
+          "Button press: M-001",
+          "Section fade-in on first load only"
+        ],
+        "forbidden": [
+          "Haptics (except submit success)",
+          "Celebratory motion",
+          "Progress animation"
+        ],
+        "haptic": "Proof submission success → notification.success"
+      },
+      "apiEndpoints": [],
+      "errorHandling": [
+        {
+          "error code": "PHONE_NOT_VERIFIED",
+          "ui behavior": "Inline banner (blocking)"
+        },
+        {
+          "error code": "FILE_INVALID",
+          "ui behavior": "Inline under upload"
+        },
+        {
+          "error code": "INVALID_STATE_TRANSITION",
+          "ui behavior": "Silent refresh"
+        },
+        {
+          "error code": "KILL_SWITCH_ACTIVE",
+          "ui behavior": "Full-width error"
+        },
+        {
+          "error code": "TASK_EXPIRED",
+          "ui behavior": "Navigate to resolution"
+        }
+      ],
+      "accessibility": "- Countdown announced on focus: \"47 hours remaining\"\n- Proof button: \"Submit proof. Required for payout.\"\n- Reduced Motion: identical layout, zero transitions"
+    },
+    {
+      "id": "SCR-TASK-DETAIL-HUSTLER-001",
+      "name": "Task Detail (Hustler)",
+      "friendlyName": "TaskDetailHustler",
+      "filename": "TASK_DETAIL_HUSTLER.md",
+      "status": "REFERENCE SCREEN #2",
+      "entry": "Tap from Task Feed",
+      "purpose": null,
+      "layoutHierarchy": "TaskDetailScreen (ScrollView)\n├── Header\n│   ├── CategoryPill (HX-Pill/Category)\n│   ├── TaskTitle (--hx-text-title-2)\n│   └── DistanceText (--hx-text-footnote)\n├── RewardCard (HX-Card/Primary)\n│   ├── PayoutAmount (--hx-num-large, dominant)\n│   ├── XPAmount (HX-Pill/XP, secondary)\n│   └── PayoutStatusHint (--hx-text-footnote)\n├── TaskInfoSection\n│   ├── Description\n│   ├── TimeEstimate\n│   ├── LocationSummary\n│   └── PostedAt\n├── ConstraintWarnings (conditional)\n│   ├── NewUserCapWarning\n│   ├── ConcurrentLimitWarning\n│   └── PhoneVerificationWarning\n├── TrustSection\n│   ├── PosterAvatar (HX-Avatar/Medium)\n│   ├── PosterName\n│   └── PosterHistorySummary\n├── ActionFooter (sticky, HX-Card/Elevated)\n│   ├── AcceptButton (HX-Button/Primary)\n│   └── SecondaryText\n└── SafeAreaBottom",
+      "components": [
+        "AcceptButton",
+        "ActionFooter",
+        "CategoryPill",
+        "ConcurrentLimitWarning",
+        "ConstraintWarnings",
+        "Description",
+        "DistanceText",
+        "HX-Avatar/Medium",
+        "HX-Button/Primary",
+        "HX-Card/Elevated",
+        "HX-Card/Primary",
+        "HX-Pill/Category",
+        "HX-Pill/XP",
+        "Header",
+        "LocationSummary",
+        "NewUserCapWarning",
+        "PayoutAmount",
+        "PayoutStatusHint",
+        "PhoneVerificationWarning",
+        "PostedAt",
+        "PosterAvatar",
+        "PosterHistorySummary",
+        "PosterName",
+        "RewardCard",
+        "SafeAreaBottom",
+        "SecondaryText",
+        "TaskDetailScreen",
+        "TaskInfoSection",
+        "TaskTitle",
+        "TimeEstimate",
+        "TrustSection",
+        "XPAmount"
+      ],
+      "rules": [
+        "never equal visual weight",
+        "never after a tap.",
+        "always visible): \"Accepting locks this task and creates a commitment.\"",
+        "cannot be undone."
+      ],
+      "states": [
+        {
+          "state": "Ready",
+          "description": "Enabled   All constraints passed"
+        },
+        {
+          "state": "Blocked",
+          "description": "Disabled   Warning present"
+        },
+        {
+          "state": "Loading",
+          "description": "Spinner   Accept in progress"
+        },
+        {
+          "state": "Locked",
+          "description": "Disabled   Task already accepted"
+        }
+      ],
+      "motionSpec": {
+        "allowed": [
+          "Button press: M-001 (subtle scale)",
+          "Warning appearance: fade + slide 8px",
+          "Loading: spinner only"
+        ],
+        "forbidden": [
+          "Card elevation animation",
+          "Reward animation",
+          "XP motion",
+          "Haptics on load"
+        ],
+        "haptic": "Accept success → single medium impact"
+      },
+      "apiEndpoints": [],
+      "errorHandling": [
+        {
+          "error code": "CITY_NOT_SUPPORTED",
+          "ui response": "Inline warning"
+        },
+        {
+          "error code": "DAILY_ACCEPT_LIMIT",
+          "ui response": "Inline warning"
+        },
+        {
+          "error code": "PHONE_NOT_VERIFIED",
+          "ui response": "Inline warning"
+        },
+        {
+          "error code": "KILL_SWITCH_ACTIVE",
+          "ui response": "Full-width error"
+        },
+        {
+          "error code": "INVALID_STATE_TRANSITION",
+          "ui response": "Silent refresh + disable"
+        }
+      ],
+      "accessibility": "- Reading order matches layout\n- Accept button announces: \"Accept task. Locks commitment.\"\n- Warnings announced before CTA\n- Reduced Motion: identical layout, zero transitions"
+    }
+  ]
+}
