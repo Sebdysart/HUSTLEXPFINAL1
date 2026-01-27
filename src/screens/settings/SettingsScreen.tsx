@@ -210,6 +210,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.surface.secondary,
   },
   rowLabel: { flex: 1, marginLeft: theme.spacing[3] },
+  headerSpacer: { width: 50 },
 });
 
 export default SettingsScreen;

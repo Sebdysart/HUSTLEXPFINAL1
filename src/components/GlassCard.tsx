@@ -16,10 +16,9 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  interpolateColor,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
-import { BlurView } from '@react-native-community/blur';
+// import { BlurView } from '@react-native-community/blur';
 import { neonColors, neonShadows, neonRadii, glassStyles } from '../theme/neon-tokens';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

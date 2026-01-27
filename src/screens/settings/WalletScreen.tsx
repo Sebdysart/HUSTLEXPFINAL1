@@ -163,6 +163,7 @@ const styles = StyleSheet.create({
   paymentInfo: { flex: 1, marginLeft: theme.spacing[3] },
   transaction: { marginBottom: theme.spacing[2] },
   transactionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerSpacer: { width: 50 },
 });
 
 export default WalletScreen;

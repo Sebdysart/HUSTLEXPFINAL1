@@ -18,7 +18,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { Text } from '../components/Text';
 import { GlassCard, NeonBadge } from '../components/GlassCard';
 import { NeonButton } from '../components/NeonButton';
-import { neonColors, neonShadows, neonRadii } from '../theme/neon-tokens';
+import { neonColors } from '../theme/neon-tokens';
 
 const { width } = Dimensions.get('window');
 
@@ -34,7 +34,7 @@ export function NeonHomePreview() {
       -1,
       false
     );
-  }, []);
+  }, [rotation]);
 
   const animatedGradientStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
@@ -140,7 +140,7 @@ export function NeonHomePreview() {
 }
 
 // Sub-components
-const StatPill: React.FC<{ label: string; value: string; color: string }> = ({ label, value, color }) => (
+const StatPill: React.FC<{ label: string; value: string; color: string }> = ({ label, value, color: _color }) => (
   <View style={[styles.statPill, { borderColor: `${color}44` }]}>
     <Text variant="title3" color={color}>{value}</Text>
     <Text variant="caption" color={neonColors.text.tertiary}>{label}</Text>

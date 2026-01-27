@@ -1,3 +1,4 @@
+/* eslint-env jest */
 // Jest setup for React Native
 
 // Mock react-native-reanimated

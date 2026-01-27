@@ -18,14 +18,13 @@ import Animated, {
   withSpring,
   withSequence,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
 import { neonColors, neonShadows, neonRadii } from '../theme/neon-tokens';
 import { Text } from './Text';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+// const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 export type NeonButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type NeonButtonSize = 'sm' | 'md' | 'lg';
@@ -146,7 +145,7 @@ export const NeonButton: React.FC<NeonButtonProps> = ({
           },
           variant === 'secondary' && {
             borderWidth: 1,
-            borderColor: config.borderColor,
+            borderColor: neonColors.cyan,
           },
         ]}
       >
