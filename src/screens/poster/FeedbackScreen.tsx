@@ -5,6 +5,11 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Text, Spacing, Card, Button, Input } from '../../components';
 import { theme } from '../../theme';
 
@@ -17,6 +22,7 @@ const FEEDBACK_TYPES = [
 
 export function FeedbackScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
   const [type, setType] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);

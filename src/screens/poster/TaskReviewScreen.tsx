@@ -5,11 +5,17 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Text, Spacing, Card, Button, MoneyDisplay, Input } from '../../components';
 import { theme } from '../../theme';
 
 export function TaskReviewScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
 

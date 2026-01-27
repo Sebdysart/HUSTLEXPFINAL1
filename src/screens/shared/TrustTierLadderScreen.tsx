@@ -5,6 +5,11 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Text, Spacing, Card, TrustBadge } from '../../components';
 import { theme } from '../../theme';
 
@@ -19,6 +24,7 @@ const LEVELS = [
 
 export function TrustTierLadderScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
   const currentLevel = 3;
   const currentXP = 2600;
 

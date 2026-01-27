@@ -5,6 +5,11 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Text, Spacing, Card, MoneyDisplay } from '../../components';
 import { theme } from '../../theme';
 
@@ -20,6 +25,7 @@ const MOCK_HISTORY = [
 
 export function TaskHistoryScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
   const [activeTab, setActiveTab] = useState('Completed');
 
   const filteredTasks = MOCK_HISTORY.filter(t => 

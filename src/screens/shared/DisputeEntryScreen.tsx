@@ -5,6 +5,11 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Text, Spacing, Card, Button, Input } from '../../components';
 import { theme } from '../../theme';
 
@@ -19,6 +24,7 @@ const REASONS = [
 
 export function DisputeEntryScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
   const [reason, setReason] = useState<string | null>(null);
   const [details, setDetails] = useState('');
 
