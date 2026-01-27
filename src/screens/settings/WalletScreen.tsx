@@ -2,25 +2,56 @@
  * WalletScreen - Payment methods and balance
  */
 
-import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Text, Spacing, Card, Button, MoneyDisplay } from '../../components';
+import { theme } from '../../theme';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, Button, MoneyDisplay } from '../../components';
-import { theme } from '../../theme';
 
 export function WalletScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
+  const [balance] = useState(347.50);
+  const [pending] = useState(150);
+
+  const handleBack = () => navigation.goBack();
+  
+  const handleWithdraw = () => {
+    Alert.alert(
+      'Withdraw Funds',
+      `Withdraw $${balance.toFixed(2)} to your default payment method?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Withdraw', onPress: () => Alert.alert('Success', 'Withdrawal initiated!') },
+      ]
+    );
+  };
+
+  const handleAddFunds = () => {
+    Alert.alert('Add Funds', 'This feature is for poster accounts to add funds for posting tasks.');
+  };
+
+  const handleAddPayment = () => {
+    Alert.alert('Add Payment Method', 'Connect your bank or card to receive payments.');
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack}>
+          <Text variant="body" color="primary">← Back</Text>
+        </TouchableOpacity>
+        <Text variant="title2" color="primary">Wallet</Text>
+        <View style={{ width: 50 }} />
+      </View>
+
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text variant="title1" color="primary">Wallet</Text>
 
         <Spacing size={24} />
 
@@ -28,14 +59,14 @@ export function WalletScreen() {
         <Card variant="elevated" padding="lg">
           <Text variant="footnote" color="secondary">Available Balance</Text>
           <Spacing size={4} />
-          <MoneyDisplay amount={347.50} size="lg" />
+          <MoneyDisplay amount={balance} size="lg" />
           <Spacing size={16} />
           <View style={styles.balanceActions}>
-            <Button variant="primary" size="md" onPress={() => {}} style={styles.balanceBtn}>
+            <Button variant="primary" size="md" onPress={handleWithdraw} style={styles.balanceBtn}>
               Withdraw
             </Button>
             <View style={styles.spacer} />
-            <Button variant="secondary" size="md" onPress={() => {}} style={styles.balanceBtn}>
+            <Button variant="secondary" size="md" onPress={handleAddFunds} style={styles.balanceBtn}>
               Add Funds
             </Button>
           </View>
@@ -46,8 +77,9 @@ export function WalletScreen() {
         <Card variant="default" padding="sm">
           <View style={styles.pendingRow}>
             <Text variant="body" color="secondary">Pending</Text>
-            <MoneyDisplay amount={150} size="sm" />
+            <MoneyDisplay amount={pending} size="sm" />
           </View>
+          <Text variant="caption" color="tertiary">Released after task approval</Text>
         </Card>
 
         <Spacing size={24} />
@@ -61,7 +93,7 @@ export function WalletScreen() {
         <PaymentMethod type="card" name="Visa ••••8834" isDefault={false} />
 
         <Spacing size={12} />
-        <Button variant="ghost" size="sm" onPress={() => {}}>
+        <Button variant="ghost" size="sm" onPress={handleAddPayment}>
           + Add Payment Method
         </Button>
 
@@ -115,7 +147,13 @@ function Transaction({ title, amount, type, date }: { title: string; amount: num
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  scroll: { padding: theme.spacing[4] },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    padding: theme.spacing[4],
+  },
+  scroll: { padding: theme.spacing[4], paddingTop: 0 },
   balanceActions: { flexDirection: 'row' },
   balanceBtn: { flex: 1 },
   spacer: { width: theme.spacing[3] },
