@@ -3,22 +3,33 @@
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, Text, Spacing, Input, Card } from '../../components';
 import { theme } from '../../theme';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function CapabilityLocationScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
   const [zipCode, setZipCode] = useState('');
   const [radius, setRadius] = useState('10');
 
   const handleContinue = () => {
-    console.log('Location:', { zipCode, radius });
+    navigation.navigate('CapabilityVehicle');
   };
+
+  const handleBack = () => navigation.goBack();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+        <Text variant="body" color="primary">← Back</Text>
+      </TouchableOpacity>
       <View style={styles.content}>
         <Text variant="title1" color="primary" align="center">
           Where do you operate?
@@ -84,7 +95,8 @@ export function CapabilityLocationScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  content: { flex: 1, paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[8] },
+  backButton: { padding: theme.spacing[4], paddingBottom: 0 },
+  content: { flex: 1, paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[4] },
   radiusOptions: { 
     flexDirection: 'row', 
     justifyContent: 'space-between',

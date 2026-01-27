@@ -5,6 +5,11 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Button, Text, Spacing } from '../../components';
 import { theme } from '../../theme';
 
@@ -13,6 +18,7 @@ const TIMES = ['Morning', 'Afternoon', 'Evening'];
 
 export function CapabilityAvailabilityScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
   const [availability, setAvailability] = useState<Record<string, string[]>>({});
 
   const toggle = (day: string, time: string) => {
