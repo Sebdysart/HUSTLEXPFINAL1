@@ -14,11 +14,15 @@
 - [x] Navigation hooks in screens
 
 ## Phase 3: API Integration (IN PROGRESS)
-- [ ] API client setup (axios or fetch wrapper)
-- [ ] Authentication endpoints
-- [ ] Task CRUD endpoints
+- [x] API client setup (fetch wrapper with auth)
+- [x] Authentication endpoints (login, signup, profile)
+- [x] Task CRUD endpoints (fetch, claim, complete)
+- [x] Custom hooks (useAuth, useTasks)
+- [x] Mock API for development
+- [x] TaskFeedScreen wired to API
 - [ ] Real-time updates (websockets or polling)
 - [ ] Push notifications setup
+- [ ] Wire remaining screens to API
 
 ## Phase 4: Feature Polish
 - [ ] Real maps integration (react-native-maps)
