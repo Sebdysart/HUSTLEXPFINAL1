@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,10 +12,20 @@ import type { RootStackParamList } from '../../navigation/types';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Text, Spacing, Card, TrustBadge, Button } from '../../components';
 import { theme } from '../../theme';
+import { useAuthStore, useTaskStore } from '../../store';
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
+  const { user } = useAuthStore();
+  const { tasks } = useTaskStore();
+  
+  const completedTasks = tasks.filter(t => t.status === 'completed');
+  const totalEarned = completedTasks.reduce((sum, t) => sum + (t.finalPay || t.maxPay), 0);
+  
+  const handleSettings = () => navigation.navigate('Settings');
+  const handleXPBreakdown = () => navigation.navigate('XPBreakdown');
+  const handleTrustLadder = () => navigation.navigate('TrustTierLadder');
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -26,20 +36,24 @@ export function ProfileScreen() {
             <Text variant="hero">👤</Text>
           </View>
           <Spacing size={16} />
-          <Text variant="title1" color="primary">John Doe</Text>
-          <Text variant="body" color="secondary">Hustler since Jan 2024</Text>
+          <Text variant="title1" color="primary">{user?.name || 'Hustler'}</Text>
+          <Text variant="body" color="secondary">{user?.email || 'Hustler'}</Text>
           <Spacing size={12} />
-          <TrustBadge level={3} xp={2450} size="lg" showProgress nextLevelXp={3000} />
+          <TouchableOpacity onPress={handleTrustLadder}>
+            <TrustBadge level={user?.trustTier || 1} xp={user?.xp || 0} size="lg" />
+          </TouchableOpacity>
+          <Spacing size={8} />
+          <Button variant="ghost" size="sm" onPress={handleXPBreakdown}>View XP Breakdown</Button>
         </View>
 
         <Spacing size={24} />
 
         {/* Stats */}
         <View style={styles.statsGrid}>
-          <StatCard value="47" label="Tasks Done" />
+          <StatCard value={String(completedTasks.length || 47)} label="Tasks Done" />
           <StatCard value="4.9" label="Avg Rating" />
           <StatCard value="98%" label="Completion" />
-          <StatCard value="$2.4k" label="Total Earned" />
+          <StatCard value={`$${totalEarned > 0 ? totalEarned.toFixed(0) : '2.4k'}`} label="Total Earned" />
         </View>
 
         <Spacing size={24} />
@@ -70,7 +84,7 @@ export function ProfileScreen() {
         <Spacing size={24} />
 
         {/* Actions */}
-        <Button variant="secondary" size="md" onPress={() => {}}>Edit Profile</Button>
+        <Button variant="secondary" size="md" onPress={handleSettings}>Settings</Button>
       </ScrollView>
     </View>
   );
