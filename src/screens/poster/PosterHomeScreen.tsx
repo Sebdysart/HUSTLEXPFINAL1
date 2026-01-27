@@ -3,11 +3,11 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useAuthStore } from '../../store';
+import { useAuthStore, useTaskStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -18,17 +18,37 @@ export function PosterHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuthStore();
+  const { tasks } = useTaskStore();
+  const [refreshing, setRefreshing] = React.useState(false);
+  
+  // Filter tasks posted by current user
+  const myTasks = tasks.filter(t => t.posterId === user?.id || t.posterName === user?.name);
+  const activeTasks = myTasks.filter(t => ['open', 'claimed', 'in_progress'].includes(t.status));
+  const completedTasks = myTasks.filter(t => t.status === 'completed');
+  const totalSpent = completedTasks.reduce((sum, t) => sum + (t.finalPay || t.maxPay), 0);
+  
+  const handlePostTask = () => navigation.navigate('TaskCreation');
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await new Promise<void>(r => setTimeout(r, 500));
+    setRefreshing(false);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView 
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.brand.primary} />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View>
             <Text variant="body" color="secondary">Welcome back</Text>
-            <Text variant="title1" color="primary">Sarah</Text>
+            <Text variant="title1" color="primary">{user?.name || 'Poster'}</Text>
           </View>
-          <TrustBadge level={2} xp={850} size="md" />
+          <TrustBadge level={user?.trustTier || 1} xp={user?.xp || 0} size="md" />
         </View>
 
         <Spacing size={24} />
@@ -37,7 +57,7 @@ export function PosterHomeScreen() {
         <Card variant="elevated" padding="lg">
           <Text variant="headline" color="primary">Need help with something?</Text>
           <Spacing size={12} />
-          <Button variant="primary" size="lg" onPress={() => console.log('post')}>
+          <Button variant="primary" size="lg" onPress={handlePostTask}>
             + Post a Task
           </Button>
         </Card>
@@ -73,15 +93,15 @@ export function PosterHomeScreen() {
         <Card variant="default" padding="md">
           <View style={styles.statsRow}>
             <View style={styles.stat}>
-              <MoneyDisplay amount={245} size="md" />
+              <MoneyDisplay amount={totalSpent || 245} size="md" />
               <Text variant="caption" color="secondary">Spent</Text>
             </View>
             <View style={styles.stat}>
-              <Text variant="title2" color="primary">4</Text>
+              <Text variant="title2" color="primary">{myTasks.length || 4}</Text>
               <Text variant="caption" color="secondary">Tasks Posted</Text>
             </View>
             <View style={styles.stat}>
-              <Text variant="title2" color="primary">3</Text>
+              <Text variant="title2" color="primary">{completedTasks.length || 3}</Text>
               <Text variant="caption" color="secondary">Completed</Text>
             </View>
           </View>
