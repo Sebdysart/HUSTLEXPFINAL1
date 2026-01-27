@@ -5,11 +5,19 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuthStore } from '../../store';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Text, Spacing, Card, Button, MoneyDisplay, TrustBadge } from '../../components';
 import { theme } from '../../theme';
 
 export function PosterHomeScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
+  const { user } = useAuthStore();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
