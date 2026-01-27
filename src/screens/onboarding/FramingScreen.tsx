@@ -4,16 +4,22 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, Text, Spacing } from '../../components';
 import { theme } from '../../theme';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function FramingScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
 
   const handleContinue = () => {
-    console.log('Continue to calibration');
+    navigation.navigate('RoleConfirmation', {});
   };
 
   return (

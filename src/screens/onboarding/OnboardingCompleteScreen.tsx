@@ -5,11 +5,30 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, Text, Spacing, TrustBadge } from '../../components';
 import { theme } from '../../theme';
+import { useAuthStore } from '../../store';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function OnboardingCompleteScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
+  const { user, updateOnboarding } = useAuthStore();
+
+  const handleStart = () => {
+    // Mark onboarding as complete
+    updateOnboarding(true);
+    
+    // Navigate to main app
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs' }],
+    });
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -29,7 +48,7 @@ export function OnboardingCompleteScreen() {
         <Spacing size={40} />
 
         <View style={styles.badgeContainer}>
-          <TrustBadge level={1} xp={0} size="lg" />
+          <TrustBadge level={user?.trustTier || 1} xp={user?.xp || 0} size="lg" />
         </View>
 
         <Spacing size={24} />
@@ -48,7 +67,7 @@ export function OnboardingCompleteScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={() => console.log('go to home')}>
+        <Button variant="primary" size="lg" onPress={handleStart}>
           Start Exploring
         </Button>
       </View>

@@ -5,21 +5,43 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, Text, Spacing } from '../../components';
 import { theme } from '../../theme';
+import type { RootStackParamList } from '../../navigation/types';
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type Role = 'hustler' | 'poster' | 'both';
 
 export function RoleConfirmationScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
   const handleContinue = () => {
-    console.log('Selected role:', selectedRole);
+    if (!selectedRole) return;
+    
+    // If hustler or both, go through capability screens
+    if (selectedRole === 'hustler' || selectedRole === 'both') {
+      navigation.navigate('CapabilityLocation');
+    } else {
+      // Posters skip most onboarding
+      navigation.navigate('OnboardingComplete');
+    }
+  };
+
+  const handleBack = () => {
+    navigation.goBack();
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      {/* Back button */}
+      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+        <Text variant="body" color="primary">← Back</Text>
+      </TouchableOpacity>
+
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
@@ -117,12 +139,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.surface.primary,
   },
+  backButton: {
+    padding: theme.spacing[4],
+    paddingBottom: 0,
+  },
   content: {
     flex: 1,
     paddingHorizontal: theme.spacing[4],
   },
   header: {
-    marginTop: theme.spacing[8],
+    marginTop: theme.spacing[4],
   },
   roleCard: {
     flexDirection: 'row',
