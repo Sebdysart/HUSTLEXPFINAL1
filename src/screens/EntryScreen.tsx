@@ -1,15 +1,18 @@
 /**
- * EntryScreen - The First Impression
+ * EntryScreen - Chosen-State Design
  * 
- * EMOTIONAL CONTRACT:
- * - "Oh wow."
- * - "This makes sense instantly."
- * - "I want to keep going."
+ * NORTH STAR:
+ * "HustleXP should feel like a beautiful, trustworthy system that has 
+ *  already decided you'll succeed — and is calmly guiding you to your first result."
  * 
- * NOT: Intimidating, chaotic, instructional, pressure
- * YES: Welcoming, empowering, alive, addictive
+ * 3 FEELINGS IN FIRST 5 SECONDS:
+ * 1. Chosen - "I'm not starting from zero"
+ * 2. Guaranteed Outcome - "This works. You're next."
+ * 3. Effortless Entry - "I'm already inside"
  * 
- * The system is alive — but it's inviting you in, not shouting.
+ * CTA = Confirmation, not action
+ * Background = Availability (soft signals resolving)
+ * Hero = Selection (confident, understated, factual)
  */
 
 import React, { useEffect } from 'react';
@@ -27,6 +30,7 @@ import Animated, {
   FadeIn,
   FadeInUp,
   interpolate,
+  runOnJS,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
 import { Text } from '../components/Text';
@@ -34,58 +38,99 @@ import { hustleColors, hustleGradients, hustleShadows, hustleRadii, hustleSpacin
 
 const { width, height } = Dimensions.get('window');
 
-const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+// Simulated activity signals - implies "requests resolving themselves"
+const ACTIVITY_SIGNALS = [
+  { label: 'Task completed nearby', icon: '✓' },
+  { label: 'Someone earned $45', icon: '↑' },
+  { label: '3 tasks available', icon: '●' },
+  { label: 'New request posted', icon: '+' },
+];
 
 export function EntryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   
-  // Ambient gradient animation - slow, hypnotic
-  const gradientPosition = useSharedValue(0);
+  // Ambient animations
   const orbScale = useSharedValue(1);
-  const orbOpacity = useSharedValue(0.15);
+  const orbY = useSharedValue(0);
   
-  // CTA button animation
+  // Activity signal animations
+  const signal1Opacity = useSharedValue(0);
+  const signal2Opacity = useSharedValue(0);
+  const signal3Opacity = useSharedValue(0);
+  
+  // CTA
   const ctaScale = useSharedValue(1);
 
   useEffect(() => {
-    // Slow drift animation (12 seconds, infinite)
-    gradientPosition.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 12000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 12000, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      false
-    );
-    
-    // Gentle pulse on orb (3 seconds)
+    // Gentle orb breathing
     orbScale.value = withRepeat(
       withSequence(
-        withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) })
+        withTiming(1.08, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       false
     );
     
-    // Subtle opacity pulse
-    orbOpacity.value = withRepeat(
+    // Subtle vertical drift
+    orbY.value = withRepeat(
       withSequence(
-        withTiming(0.25, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.15, { duration: 4000, easing: Easing.inOut(Easing.ease) })
+        withTiming(15, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-15, { duration: 6000, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
-      false
+      true
     );
+    
+    // Staggered activity signals - implies system is alive
+    const animateSignals = () => {
+      signal1Opacity.value = withDelay(1000, 
+        withSequence(
+          withTiming(1, { duration: 800 }),
+          withDelay(2000, withTiming(0, { duration: 600 }))
+        )
+      );
+      signal2Opacity.value = withDelay(3500,
+        withSequence(
+          withTiming(1, { duration: 800 }),
+          withDelay(2000, withTiming(0, { duration: 600 }))
+        )
+      );
+      signal3Opacity.value = withDelay(6000,
+        withSequence(
+          withTiming(1, { duration: 800 }),
+          withDelay(2000, withTiming(0, { duration: 600 }))
+        )
+      );
+    };
+    
+    animateSignals();
+    const interval = setInterval(animateSignals, 9000);
+    return () => clearInterval(interval);
   }, []);
 
   const orbAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
       { scale: orbScale.value },
-      { translateY: interpolate(gradientPosition.value, [0, 1], [0, 30]) },
+      { translateY: orbY.value },
     ],
-    opacity: orbOpacity.value,
+  }));
+
+  const signal1Style = useAnimatedStyle(() => ({
+    opacity: signal1Opacity.value,
+    transform: [{ translateY: interpolate(signal1Opacity.value, [0, 1], [10, 0]) }],
+  }));
+  
+  const signal2Style = useAnimatedStyle(() => ({
+    opacity: signal2Opacity.value,
+    transform: [{ translateY: interpolate(signal2Opacity.value, [0, 1], [10, 0]) }],
+  }));
+  
+  const signal3Style = useAnimatedStyle(() => ({
+    opacity: signal3Opacity.value,
+    transform: [{ translateY: interpolate(signal3Opacity.value, [0, 1], [10, 0]) }],
   }));
 
   const handleCtaPressIn = () => {
@@ -100,7 +145,7 @@ export function EntryScreen({ navigation }: any) {
     transform: [{ scale: ctaScale.value }],
   }));
 
-  const handleGetStarted = () => {
+  const handleContinue = () => {
     navigation.navigate('Signup');
   };
 
@@ -110,7 +155,7 @@ export function EntryScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Background - dark base with soft gradient mesh */}
+      {/* Background - implies availability */}
       <LinearGradient
         colors={hustleGradients.backgroundMesh}
         style={StyleSheet.absoluteFill}
@@ -118,19 +163,32 @@ export function EntryScreen({ navigation }: any) {
         end={{ x: 0.5, y: 1 }}
       />
       
-      {/* Ambient orb - soft purple glow, slow drift */}
+      {/* Ambient orb - soft, alive */}
       <Animated.View style={[styles.ambientOrb, orbAnimatedStyle]}>
         <LinearGradient
-          colors={['rgba(124, 106, 239, 0.4)', 'transparent']}
+          colors={['rgba(124, 106, 239, 0.25)', 'transparent']}
           style={styles.orb}
-          start={{ x: 0.5, y: 0.5 }}
+          start={{ x: 0.5, y: 0.3 }}
           end={{ x: 0.5, y: 1 }}
         />
       </Animated.View>
       
+      {/* Activity signals - "requests resolving themselves" */}
+      <View style={styles.signalsContainer}>
+        <Animated.View style={[styles.signal, styles.signal1, signal1Style]}>
+          <Text style={styles.signalText}>✓ Task completed nearby</Text>
+        </Animated.View>
+        <Animated.View style={[styles.signal, styles.signal2, signal2Style]}>
+          <Text style={styles.signalText}>↑ Someone just earned $45</Text>
+        </Animated.View>
+        <Animated.View style={[styles.signal, styles.signal3, signal3Style]}>
+          <Text style={styles.signalText}>● 3 tasks available now</Text>
+        </Animated.View>
+      </View>
+      
       {/* Content */}
       <View style={styles.content}>
-        {/* Logo / Brand mark area */}
+        {/* Logo */}
         <Animated.View 
           entering={FadeIn.delay(200).duration(800)}
           style={styles.logoArea}
@@ -140,38 +198,40 @@ export function EntryScreen({ navigation }: any) {
           </View>
         </Animated.View>
         
-        {/* Main messaging - human, simple, outcome-oriented */}
+        {/* Hero - confident, understated, factual (not persuasive) */}
         <Animated.View 
           entering={FadeInUp.delay(400).duration(600).springify()}
           style={styles.messaging}
         >
+          {/* Implies selection, not sales pitch */}
           <Text style={styles.headline}>
-            Get things done.
+            Things are happening.
           </Text>
           <Text style={styles.subheadline}>
-            Or get paid doing them.
+            You're next.
           </Text>
         </Animated.View>
         
-        {/* Subtle value prop - no sides, no pressure */}
+        {/* Understated value - factual, not hype */}
         <Animated.View 
           entering={FadeInUp.delay(600).duration(600).springify()}
           style={styles.valueProp}
         >
           <Text style={styles.valueText}>
-            A marketplace that works for you —{'\n'}however you participate.
+            Tasks getting done. People getting paid.{'\n'}
+            The system is ready for you.
           </Text>
         </Animated.View>
       </View>
       
-      {/* CTAs - light, obvious, safe, tempting */}
+      {/* CTA - feels like confirmation, not action */}
       <Animated.View 
         entering={FadeInUp.delay(800).duration(600).springify()}
         style={styles.ctaContainer}
       >
-        {/* Primary CTA - inviting, not demanding */}
+        {/* Primary: Confirmation language */}
         <AnimatedPressable
-          onPress={handleGetStarted}
+          onPress={handleContinue}
           onPressIn={handleCtaPressIn}
           onPressOut={handleCtaPressOut}
           style={[styles.primaryCta, ctaAnimatedStyle, hustleShadows.purpleGlow]}
@@ -182,14 +242,14 @@ export function EntryScreen({ navigation }: any) {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Text style={styles.ctaText}>Get Started</Text>
+            <Text style={styles.ctaText}>Let's go</Text>
           </LinearGradient>
         </AnimatedPressable>
         
-        {/* Secondary - existing users */}
+        {/* Secondary */}
         <Pressable onPress={handleSignIn} style={styles.secondaryCta}>
           <Text style={styles.secondaryCtaText}>
-            Already have an account? <Text style={styles.signInLink}>Sign in</Text>
+            I already have an account
           </Text>
         </Pressable>
       </Animated.View>
@@ -204,16 +264,52 @@ const styles = StyleSheet.create({
   },
   ambientOrb: {
     position: 'absolute',
-    top: height * 0.15,
-    left: width * 0.5 - 150,
-    width: 300,
-    height: 300,
+    top: height * 0.12,
+    left: width * 0.5 - 175,
+    width: 350,
+    height: 350,
   },
   orb: {
     width: '100%',
     height: '100%',
     borderRadius: 999,
   },
+  
+  // Activity signals - subtle proof of life
+  signalsContainer: {
+    position: 'absolute',
+    top: height * 0.15,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  signal: {
+    position: 'absolute',
+    backgroundColor: hustleColors.glass.medium,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: hustleRadii.full,
+    borderWidth: 1,
+    borderColor: hustleColors.glass.border,
+  },
+  signal1: {
+    top: 0,
+    right: 20,
+  },
+  signal2: {
+    top: 50,
+    left: 30,
+  },
+  signal3: {
+    top: 100,
+    right: 40,
+  },
+  signalText: {
+    fontSize: 13,
+    color: hustleColors.text.secondary,
+    fontWeight: '500',
+  },
+  
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -242,7 +338,7 @@ const styles = StyleSheet.create({
     marginBottom: hustleSpacing.xl,
   },
   headline: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: '700',
     color: hustleColors.text.primary,
     textAlign: 'center',
@@ -250,7 +346,7 @@ const styles = StyleSheet.create({
     marginBottom: hustleSpacing.xs,
   },
   subheadline: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: '700',
     color: hustleColors.purple.soft,
     textAlign: 'center',
@@ -293,9 +389,6 @@ const styles = StyleSheet.create({
   },
   secondaryCtaText: {
     fontSize: 15,
-    color: hustleColors.text.tertiary,
-  },
-  signInLink: {
     color: hustleColors.purple.soft,
     fontWeight: '500',
   },
