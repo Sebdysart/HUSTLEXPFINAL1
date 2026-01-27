@@ -12,16 +12,18 @@ import type { RootStackParamList } from './../navigation/types';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Button, Text, Input, Spacing, Card } from '../components';
 import { theme } from '../theme';
+import { useAuth } from '../hooks';
 
 export function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
+  const { forgotPassword, isLoading } = useAuth();
+  
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (!email.trim()) {
       setError('Email is required');
       return;
@@ -33,19 +35,16 @@ export function ForgotPasswordScreen() {
     }
     
     setError('');
-    setLoading(true);
-    
-    // TODO: Implement actual password reset
-    console.log('Reset password for:', email);
-    
-    setTimeout(() => {
-      setLoading(false);
+    const success = await forgotPassword(email);
+    if (success) {
       setSent(true);
-    }, 1500);
+    } else {
+      setError('Failed to send reset email. Please try again.');
+    }
   };
 
   const handleBackToLogin = () => {
-    console.log('Back to login pressed');
+    navigation.navigate('Login');
   };
 
   if (sent) {
@@ -135,7 +134,7 @@ export function ForgotPasswordScreen() {
             variant="primary"
             size="lg"
             onPress={handleResetPassword}
-            loading={loading}
+            loading={isLoading}
             disabled={!email}
           >
             Send Reset Link
