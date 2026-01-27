@@ -12,15 +12,17 @@ import type { RootStackParamList } from './../navigation/types';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Button, Text, Input, Spacing, Card } from '../components';
 import { theme } from '../theme';
+import { useAuth } from '../hooks';
 
 export function SignupScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
+  const { signup, isLoading, error: authError } = useAuth();
+  
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
@@ -50,19 +52,21 @@ export function SignupScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (!validate()) return;
     
-    setLoading(true);
-    // TODO: Implement actual signup
-    console.log('Signup pressed', { name, email, password });
-    setTimeout(() => {
-      setLoading(false);
-    }, 1500);
+    const success = await signup(email, password, name);
+    if (success) {
+      // New users go through onboarding
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Framing' }],
+      });
+    }
   };
 
   const handleLogin = () => {
-    console.log('Login pressed - navigate back');
+    navigation.navigate('Login');
   };
 
   return (
@@ -139,10 +143,17 @@ export function SignupScreen() {
             variant="primary"
             size="lg"
             onPress={handleSignup}
-            loading={loading}
+            loading={isLoading}
           >
             Create Account
           </Button>
+          
+          {authError && (
+            <>
+              <Spacing size={12} />
+              <Text variant="caption" color="error" align="center">{authError}</Text>
+            </>
+          )}
           
           <Spacing size={16} />
           
