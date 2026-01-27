@@ -3,96 +3,212 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Text, Spacing, Card, TrustBadge } from '../../components';
+import { theme } from '../../theme';
+import { useAuthStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, TrustBadge } from '../../components';
-import { theme } from '../../theme';
 
-const LEVELS = [
-  { level: 1, name: 'Newcomer', xp: 0, perks: ['Basic task access', 'Standard fees'] },
-  { level: 2, name: 'Rising', xp: 500, perks: ['Priority in search', '5% lower fees'] },
-  { level: 3, name: 'Trusted', xp: 1500, perks: ['Verified badge', '10% lower fees', 'Higher-paying tasks'] },
-  { level: 4, name: 'Expert', xp: 3000, perks: ['Featured profile', '15% lower fees', 'Early task access'] },
-  { level: 5, name: 'Elite', xp: 5000, perks: ['Elite badge', '20% lower fees', 'VIP support', 'Exclusive tasks'] },
-  { level: 6, name: 'Legend', xp: 10000, perks: ['Legend status', '25% lower fees', 'Community recognition'] },
+interface TierInfo {
+  tier: number;
+  name: string;
+  xpRequired: number;
+  platformFee: string;
+  perks: string[];
+  color: string;
+}
+
+const TIERS: TierInfo[] = [
+  { 
+    tier: 1, 
+    name: 'Newcomer', 
+    xpRequired: 0, 
+    platformFee: '15%',
+    perks: ['Access to basic tasks', 'Standard support'],
+    color: '#6B7280', // gray
+  },
+  { 
+    tier: 2, 
+    name: 'Rising', 
+    xpRequired: 500, 
+    platformFee: '14%',
+    perks: ['Access to $50+ tasks', 'Priority matching', '1% fee reduction'],
+    color: '#10B981', // green
+  },
+  { 
+    tier: 3, 
+    name: 'Trusted', 
+    xpRequired: 2000, 
+    platformFee: '12%',
+    perks: ['Access to $100+ tasks', 'Verified badge', '3% fee reduction', 'Priority support'],
+    color: '#3B82F6', // blue
+  },
+  { 
+    tier: 4, 
+    name: 'Expert', 
+    xpRequired: 5000, 
+    platformFee: '10%',
+    perks: ['Access to premium tasks', 'Featured profile', '5% fee reduction', 'Early access'],
+    color: '#8B5CF6', // purple
+  },
+  { 
+    tier: 5, 
+    name: 'Elite', 
+    xpRequired: 10000, 
+    platformFee: '8%',
+    perks: ['All task access', 'Elite badge', '7% fee reduction', 'VIP support', 'Exclusive events'],
+    color: '#F59E0B', // gold
+  },
 ];
 
 export function TrustTierLadderScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
-  const currentLevel = 3;
-  const currentXP = 2600;
+  const { user } = useAuthStore();
+  
+  const currentTier = user?.trustTier || 1;
+  const currentXP = user?.xp || 0;
+  const currentTierInfo = TIERS.find(t => t.tier === currentTier) || TIERS[0];
+  const nextTierInfo = TIERS.find(t => t.tier === currentTier + 1);
+  const xpToNext = nextTierInfo ? nextTierInfo.xpRequired - currentXP : 0;
+
+  const handleBack = () => navigation.goBack();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack}>
+          <Text variant="body" color="primary">← Back</Text>
+        </TouchableOpacity>
+        <Text variant="title2" color="primary">Trust Tiers</Text>
+        <View style={{ width: 50 }} />
+      </View>
+
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text variant="title1" color="primary">Trust Levels</Text>
-        <Spacing size={8} />
-        <Text variant="body" color="secondary">
-          Level up by completing tasks and earning great reviews
-        </Text>
-
-        <Spacing size={24} />
-
-        {/* Current Level */}
+        {/* Current Tier Card */}
         <Card variant="elevated" padding="lg">
-          <View style={styles.currentLevel}>
-            <TrustBadge level={currentLevel} xp={currentXP} size="lg" showProgress nextLevelXp={3000} />
+          <View style={styles.currentTier}>
+            <TrustBadge level={currentTier} xp={currentXP} size="lg" />
             <Spacing size={12} />
-            <Text variant="headline" color="primary">Level {currentLevel}: {LEVELS[currentLevel - 1].name}</Text>
-            <Text variant="body" color="secondary">{3000 - currentXP} XP to Level {currentLevel + 1}</Text>
+            <Text variant="title2" color="primary">
+              {`Tier ${currentTier}: ${currentTierInfo.name}`}
+            </Text>
+            <Spacing size={4} />
+            <Text variant="body" color="secondary">
+              {`Current fee: ${currentTierInfo.platformFee}`}
+            </Text>
+            {nextTierInfo && (
+              <>
+                <Spacing size={12} />
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { width: `${Math.min((currentXP / nextTierInfo.xpRequired) * 100, 100)}%` }
+                    ]} 
+                  />
+                </View>
+                <Spacing size={8} />
+                <Text variant="caption" color="secondary">
+                  {`${xpToNext.toLocaleString()} XP to Tier ${nextTierInfo.tier}`}
+                </Text>
+              </>
+            )}
           </View>
         </Card>
 
         <Spacing size={24} />
 
-        {/* Level Ladder */}
-        {LEVELS.map((lvl, idx) => (
-          <React.Fragment key={lvl.level}>
-            <LevelCard
-              {...lvl}
-              isCurrent={lvl.level === currentLevel}
-              isUnlocked={lvl.level <= currentLevel}
+        {/* Tier Ladder */}
+        <Text variant="headline" color="primary">All Tiers</Text>
+        <Spacing size={12} />
+
+        {TIERS.map((tier, idx) => (
+          <React.Fragment key={tier.tier}>
+            <TierCard
+              tier={tier}
+              isCurrent={tier.tier === currentTier}
+              isUnlocked={tier.tier <= currentTier}
+              currentXP={currentXP}
             />
-            {idx < LEVELS.length - 1 && <View style={styles.connector} />}
+            {idx < TIERS.length - 1 && (
+              <View style={styles.connectorContainer}>
+                <View style={[
+                  styles.connector, 
+                  tier.tier < currentTier && styles.connectorUnlocked
+                ]} />
+              </View>
+            )}
           </React.Fragment>
         ))}
+
+        <Spacing size={24} />
+
+        {/* How Tiers Work */}
+        <Card variant="default" padding="md">
+          <Text variant="headline" color="primary">How Trust Tiers Work</Text>
+          <Spacing size={12} />
+          <Text variant="body" color="secondary">
+            • Complete tasks to earn XP{'\n'}
+            • Higher tiers = lower platform fees{'\n'}
+            • Higher tiers = access to better tasks{'\n'}
+            • 5-star ratings give bonus XP{'\n'}
+            • Tiers can decrease if you have disputes or low ratings
+          </Text>
+        </Card>
       </ScrollView>
     </View>
   );
 }
 
-function LevelCard({ level, name, xp, perks, isCurrent, isUnlocked }: {
-  level: number;
-  name: string;
-  xp: number;
-  perks: string[];
+interface TierCardProps {
+  tier: TierInfo;
   isCurrent: boolean;
   isUnlocked: boolean;
-}) {
+  currentXP: number;
+}
+
+function TierCard({ tier, isCurrent, isUnlocked, currentXP }: TierCardProps) {
+  const progress = tier.tier > 1 ? Math.min((currentXP / tier.xpRequired) * 100, 100) : 100;
+  
   return (
-    <Card variant={isCurrent ? 'elevated' : 'default'} padding="md" style={!isUnlocked ? styles.locked : undefined}>
-      <View style={styles.levelHeader}>
-        <View style={[styles.levelBadge, isUnlocked && styles.levelBadgeUnlocked]}>
-          <Text variant="headline" color={isUnlocked ? 'inverse' : 'tertiary'}>{level}</Text>
+    <Card 
+      variant={isCurrent ? 'elevated' : 'default'} 
+      padding="md" 
+      style={[!isUnlocked && styles.locked, isCurrent && { borderLeftWidth: 4, borderLeftColor: tier.color }]}
+    >
+      <View style={styles.tierHeader}>
+        <View style={[styles.tierBadge, { backgroundColor: isUnlocked ? tier.color : theme.colors.surface.tertiary }]}>
+          <Text variant="headline" color="inverse">{tier.tier}</Text>
         </View>
-        <View style={styles.levelInfo}>
-          <Text variant="headline" color={isUnlocked ? 'primary' : 'tertiary'}>{name}</Text>
-          <Text variant="caption" color="secondary">{xp.toLocaleString()} XP required</Text>
+        <View style={styles.tierInfo}>
+          <Text variant="headline" color={isUnlocked ? 'primary' : 'tertiary'}>{tier.name}</Text>
+          <Text variant="caption" color="secondary">
+            {tier.xpRequired.toLocaleString()} XP • {tier.platformFee} fee
+          </Text>
         </View>
-        {isCurrent && <Text variant="caption" color="brand">Current</Text>}
-        {isUnlocked && !isCurrent && <Text variant="body">✅</Text>}
+        {isCurrent && (
+          <View style={styles.currentBadge}>
+            <Text variant="caption" color="inverse">YOU</Text>
+          </View>
+        )}
+        {!isCurrent && isUnlocked && <Text variant="body">✅</Text>}
         {!isUnlocked && <Text variant="body">🔒</Text>}
       </View>
+      
       <Spacing size={8} />
+      
       <View style={styles.perks}>
-        {perks.map((perk, i) => (
-          <Text key={i} variant="footnote" color={isUnlocked ? 'secondary' : 'tertiary'}>• {perk}</Text>
+        {tier.perks.map((perk, i) => (
+          <Text key={i} variant="footnote" color={isUnlocked ? 'secondary' : 'tertiary'}>
+            • {perk}
+          </Text>
         ))}
       </View>
     </Card>
@@ -101,21 +217,51 @@ function LevelCard({ level, name, xp, perks, isCurrent, isUnlocked }: {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  scroll: { padding: theme.spacing[4] },
-  currentLevel: { alignItems: 'center' },
-  levelHeader: { flexDirection: 'row', alignItems: 'center' },
-  levelBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    padding: theme.spacing[4],
+  },
+  scroll: { padding: theme.spacing[4], paddingTop: 0 },
+  currentTier: { alignItems: 'center' },
+  progressBar: {
+    width: '100%',
+    height: 8,
     backgroundColor: theme.colors.surface.tertiary,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.brand.primary,
+    borderRadius: 4,
+  },
+  tierHeader: { flexDirection: 'row', alignItems: 'center' },
+  tierBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  levelBadgeUnlocked: { backgroundColor: theme.colors.brand.primary },
-  levelInfo: { flex: 1, marginLeft: theme.spacing[3] },
-  perks: { marginLeft: 52 },
-  connector: { width: 2, height: 20, backgroundColor: theme.colors.surface.tertiary, marginLeft: 19 },
+  tierInfo: { flex: 1, marginLeft: theme.spacing[3] },
+  currentBadge: {
+    backgroundColor: theme.colors.brand.primary,
+    paddingHorizontal: theme.spacing[2],
+    paddingVertical: 2,
+    borderRadius: theme.radii.xs,
+  },
+  perks: { marginLeft: 56 },
+  connectorContainer: { paddingLeft: 21 },
+  connector: { 
+    width: 2, 
+    height: 16, 
+    backgroundColor: theme.colors.surface.tertiary,
+  },
+  connectorUnlocked: {
+    backgroundColor: theme.colors.brand.primary,
+  },
   locked: { opacity: 0.6 },
 });
 
