@@ -20,6 +20,11 @@
 - [x] Custom hooks (useAuth, useTasks)
 - [x] Mock API for development
 - [x] TaskFeedScreen wired to API
+- [x] TaskDetailScreen wired with claim flow
+- [x] HustlerHomeScreen wired with dashboard
+- [x] Full onboarding flow (10 screens) wired
+- [x] PosterHomeScreen + TaskCreation wired
+- [x] SettingsScreen with logout wired
 - [ ] Real-time updates (websockets or polling)
 - [ ] Push notifications setup
 - [ ] Wire remaining screens to API
