@@ -12,13 +12,31 @@ import type { RootStackParamList } from '../../navigation/types';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Text, Spacing, Card, MoneyDisplay, Button } from '../../components';
 import { theme } from '../../theme';
+import { useAuthStore, useTaskStore } from '../../store';
 
 const PERIODS = ['Week', 'Month', 'Year', 'All'];
+
+// Mock earnings data by period
+const EARNINGS_DATA: Record<string, { total: number; tasks: number; hours: number }> = {
+  Week: { total: 347.50, tasks: 5, hours: 12 },
+  Month: { total: 1247.50, tasks: 18, hours: 42 },
+  Year: { total: 8450.00, tasks: 124, hours: 310 },
+  All: { total: 12847.50, tasks: 186, hours: 465 },
+};
 
 export function EarningsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
+  const { user } = useAuthStore();
+  const { tasks } = useTaskStore();
   const [period, setPeriod] = useState('Week');
+  
+  const data = EARNINGS_DATA[period];
+  const completedTasks = tasks.filter(t => t.status === 'completed');
+
+  const handleWithdraw = () => {
+    navigation.navigate('Wallet');
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -44,14 +62,14 @@ export function EarningsScreen() {
 
         {/* Total Earnings */}
         <Card variant="elevated" padding="lg">
-          <Text variant="footnote" color="secondary">Total Earnings ({period})</Text>
+          <Text variant="footnote" color="secondary">{`Total Earnings (${period})`}</Text>
           <Spacing size={4} />
-          <MoneyDisplay amount={847.50} size="lg" />
+          <MoneyDisplay amount={data.total} size="lg" />
           <Spacing size={16} />
           <View style={styles.statsRow}>
-            <StatBox label="Tasks" value="12" />
-            <StatBox label="Hours" value="28" />
-            <StatBox label="Avg/Task" value="$71" />
+            <StatBox label="Tasks" value={String(data.tasks)} />
+            <StatBox label="Hours" value={String(data.hours)} />
+            <StatBox label="Avg/Task" value={`$${Math.round(data.total / data.tasks)}`} />
           </View>
         </Card>
 
@@ -64,7 +82,7 @@ export function EarningsScreen() {
               <Text variant="footnote" color="secondary">Available Balance</Text>
               <MoneyDisplay amount={347.50} size="md" />
             </View>
-            <Button variant="primary" size="sm" onPress={() => {}}>Withdraw</Button>
+            <Button variant="primary" size="sm" onPress={handleWithdraw}>Withdraw</Button>
           </View>
           <Spacing size={8} />
           <Text variant="caption" color="tertiary">$500.00 pending approval</Text>
