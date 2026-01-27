@@ -20,8 +20,8 @@ import Animated, {
 import { HText } from './HText';
 import { hustleColors, hustleRadii, hustleSpacing, hustleShadows } from '../../theme/hustle-tokens';
 
-type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'purple' | 'outline';
-type BadgeSize = 'sm' | 'md' | 'lg';
+export type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'purple' | 'outline' | 'info';
+export type BadgeSize = 'sm' | 'md' | 'lg';
 
 interface HBadgeProps {
   children: React.ReactNode;
@@ -60,6 +60,11 @@ const variantConfig = {
     bg: `${hustleColors.semantic.error}22`,
     border: `${hustleColors.semantic.error}44`,
     text: hustleColors.semantic.error,
+  },
+  info: {
+    bg: `${hustleColors.semantic.info}22`,
+    border: `${hustleColors.semantic.info}44`,
+    text: hustleColors.semantic.info,
   },
   purple: {
     bg: `${hustleColors.purple.core}22`,

@@ -157,7 +157,7 @@ export function EntryScreen({ navigation }: any) {
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {/* Background - implies availability */}
       <LinearGradient
-        colors={hustleGradients.backgroundMesh}
+        colors={[...hustleGradients.backgroundMesh]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
@@ -237,7 +237,7 @@ export function EntryScreen({ navigation }: any) {
           style={[styles.primaryCta, ctaAnimatedStyle, hustleShadows.purpleGlow]}
         >
           <LinearGradient
-            colors={hustleGradients.action}
+            colors={[...hustleGradients.action]}
             style={styles.ctaGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}

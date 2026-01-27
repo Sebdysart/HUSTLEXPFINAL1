@@ -1,104 +1,160 @@
 /**
- * TaskCompletionPosterScreen - Task completed confirmation for poster
+ * TaskCompletionPosterScreen - Task done, payment released
+ * 
+ * Archetype C: Task Lifecycle (Completion)
+ * - "Payment secured" - confident
+ * - Simple confirmation
+ * - Path to post another
  */
 
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  HScreen,
+  HCard,
+  HText,
+  HMoney,
+  HBadge,
+  HButton,
+  HTrustBadge,
+} from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
+import { useTaskStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, Button, MoneyDisplay, TrustBadge } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type RouteProps = RouteProp<RootStackParamList, 'TaskCompletionPoster'>;
 
 export function TaskCompletionPosterScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<RouteProps>();
+  const { taskId } = route.params || {};
+
+  const { tasks } = useTaskStore();
+  const task = taskId ? tasks.find(t => t.id === taskId) : null;
+
+  const handlePostAnother = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs' }],
+    });
+    setTimeout(() => navigation.navigate('TaskCreation'), 100);
+  };
+
+  const handleGoHome = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs' }],
+    });
+  };
+
+  // Mock data - would come from task in real app
+  const hustler = {
+    name: 'John D.',
+    tier: 3,
+    xp: 2600,
+  };
+  const amount = task?.maxPay || 75;
+  const taskTitle = task?.title || 'Help moving furniture';
+
+  const footer = (
+    <View style={styles.footerButtons}>
+      <HButton variant="primary" size="lg" fullWidth onPress={handlePostAnother}>
+        Post Another Task
+      </HButton>
+      <HButton variant="ghost" size="sm" onPress={handleGoHome}>
+        Go Home
+      </HButton>
+    </View>
+  );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <View style={styles.content}>
-        <View style={styles.celebration}>
-          <Text variant="hero">✅</Text>
-          <Spacing size={16} />
-          <Text variant="hero" color="primary" align="center">Task Complete!</Text>
-          <Spacing size={8} />
-          <Text variant="body" color="secondary" align="center">
-            Payment has been released to John
-          </Text>
+    <HScreen ambient footer={footer}>
+      {/* Completion - simple, confident */}
+      <View style={styles.celebration}>
+        <HText variant="hero" center>✓</HText>
+        <View style={styles.spacerMd} />
+        <HText variant="title1" color="primary" center>
+          All done
+        </HText>
+        <View style={styles.spacerSm} />
+        <HBadge variant="success">Payment released</HBadge>
+      </View>
+
+      <View style={styles.spacerXl} />
+
+      {/* Summary */}
+      <HCard variant="default" padding="lg">
+        <View style={styles.summaryRow}>
+          <HText variant="body" color="secondary">Task</HText>
+          <HText variant="body" color="primary">{taskTitle}</HText>
         </View>
+        <View style={styles.spacerMd} />
+        <View style={styles.summaryRow}>
+          <HText variant="body" color="secondary">Paid</HText>
+          <HMoney amount={amount} size="md" />
+        </View>
+        <View style={styles.spacerMd} />
+        <View style={styles.summaryRow}>
+          <HText variant="body" color="secondary">Your rating</HText>
+          <HText variant="body" color="warning">⭐⭐⭐⭐⭐</HText>
+        </View>
+      </HCard>
 
-        <Spacing size={32} />
+      <View style={styles.spacerLg} />
 
-        <Card variant="elevated" padding="lg">
-          <View style={styles.row}>
-            <Text variant="body" color="secondary">Task</Text>
-            <Text variant="body" color="primary">Help moving furniture</Text>
+      {/* Hustler */}
+      <HCard variant="elevated" padding="lg">
+        <View style={styles.hustlerCenter}>
+          <View style={styles.avatar}>
+            <HText variant="title2">👤</HText>
           </View>
-          <Spacing size={12} />
-          <View style={styles.row}>
-            <Text variant="body" color="secondary">Amount Paid</Text>
-            <MoneyDisplay amount={75} size="md" />
-          </View>
-          <Spacing size={12} />
-          <View style={styles.row}>
-            <Text variant="body" color="secondary">Your Rating</Text>
-            <Text variant="body" color="primary">⭐⭐⭐⭐⭐</Text>
-          </View>
-        </Card>
+          <View style={styles.spacerMd} />
+          <HText variant="headline" color="primary">{hustler.name}</HText>
+          <View style={styles.spacerSm} />
+          <HTrustBadge tier={hustler.tier} xp={hustler.xp} size="sm" />
+        </View>
+      </HCard>
 
-        <Spacing size={24} />
+      <View style={styles.spacerLg} />
 
-        <Card variant="default" padding="md">
-          <Text variant="headline" color="primary" align="center">Hustler</Text>
-          <Spacing size={12} />
-          <View style={styles.hustlerInfo}>
-            <View style={styles.avatar}>
-              <Text variant="title2">👤</Text>
-            </View>
-            <Spacing size={12} />
-            <Text variant="headline" color="primary">John D.</Text>
-            <TrustBadge level={3} xp={2600} size="sm" />
-          </View>
-        </Card>
-
-        <Spacing size={24} />
-
-        <Text variant="body" color="secondary" align="center">
-          Thanks for using HustleXP! Your feedback helps build trust in our community.
-        </Text>
-      </View>
-
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={() => console.log('post another')}>
-          Post Another Task
-        </Button>
-        <Spacing size={12} />
-        <Button variant="ghost" size="sm" onPress={() => console.log('home')}>
-          Go Home
-        </Button>
-      </View>
-    </View>
+      <HText variant="body" color="tertiary" center>
+        Thanks for using HustleXP
+      </HText>
+    </HScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  content: { flex: 1, padding: theme.spacing[4], justifyContent: 'center' },
-  celebration: { alignItems: 'center' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  hustlerInfo: { alignItems: 'center' },
-  avatar: { 
-    width: 64, 
-    height: 64, 
-    borderRadius: 32, 
-    backgroundColor: theme.colors.surface.tertiary, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  celebration: {
+    alignItems: 'center',
+    paddingTop: hustleSpacing['4xl'],
   },
-  footer: { padding: theme.spacing[4] },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  hustlerCenter: {
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: hustleColors.dark.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerButtons: {
+    gap: hustleSpacing.md,
+  },
+  spacerSm: { height: hustleSpacing.sm },
+  spacerMd: { height: hustleSpacing.md },
+  spacerLg: { height: hustleSpacing.xl },
+  spacerXl: { height: hustleSpacing['3xl'] },
 });
 
 export default TaskCompletionPosterScreen;

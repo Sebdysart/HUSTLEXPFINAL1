@@ -140,7 +140,7 @@ export function NeonHomePreview() {
 }
 
 // Sub-components
-const StatPill: React.FC<{ label: string; value: string; color: string }> = ({ label, value, color: _color }) => (
+const StatPill: React.FC<{ label: string; value: string; color: string }> = ({ label, value, color }) => (
   <View style={[styles.statPill, { borderColor: `${color}44` }]}>
     <Text variant="title3" color={color}>{value}</Text>
     <Text variant="caption" color={neonColors.text.tertiary}>{label}</Text>

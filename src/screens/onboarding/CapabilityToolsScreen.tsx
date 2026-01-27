@@ -1,100 +1,208 @@
 /**
- * CapabilityToolsScreen - Tools/equipment capability
+ * CapabilityToolsScreen - What do you have?
+ * 
+ * CHOSEN-STATE: Unlocking capabilities, not interrogating
+ * One decision: What equipment do you have?
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard, HTextButton } from '../../components/atoms';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Spacing } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const TOOLS = [
+type ToolOption = {
+  id: string;
+  emoji: string;
+  label: string;
+};
+
+const TOOLS: ToolOption[] = [
   { id: 'basic', emoji: '🔧', label: 'Basic tools' },
   { id: 'power', emoji: '🔌', label: 'Power tools' },
-  { id: 'cleaning', emoji: '🧹', label: 'Cleaning supplies' },
-  { id: 'garden', emoji: '🌱', label: 'Garden equipment' },
-  { id: 'none', emoji: '❌', label: 'No equipment' },
+  { id: 'cleaning', emoji: '🧹', label: 'Cleaning gear' },
+  { id: 'garden', emoji: '🌱', label: 'Garden tools' },
+  { id: 'none', emoji: '✋', label: 'Just me' },
 ];
 
 export function CapabilityToolsScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
   const [selected, setSelected] = useState<string[]>([]);
 
-  const toggle = (id: string) => {
+  const toggleTool = (id: string) => {
     if (id === 'none') {
       setSelected(['none']);
     } else {
       setSelected(prev => {
         const filtered = prev.filter(i => i !== 'none');
-        return filtered.includes(id) ? filtered.filter(i => i !== id) : [...filtered, id];
+        return filtered.includes(id) 
+          ? filtered.filter(i => i !== id)
+          : [...filtered, id];
       });
     }
   };
 
+  const handleContinue = () => {
+    navigation.goBack();
+  };
+
+  const handleSkip = () => {
+    navigation.goBack();
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <View style={styles.footer}>
+          <HButton 
+            variant="primary" 
+            size="lg" 
+            fullWidth 
+            onPress={handleContinue}
+          >
+            Continue
+          </HButton>
+          <HTextButton onPress={handleSkip}>
+            Skip for now
+          </HTextButton>
+        </View>
+      }
+    >
       <View style={styles.content}>
-        <Text variant="title1" color="primary" align="center">
-          What tools do you have?
-        </Text>
-        <Spacing size={8} />
-        <Text variant="body" color="secondary" align="center">
-          Select all that apply
-        </Text>
-        <Spacing size={32} />
+        <View style={styles.header}>
+          <HText variant="title1" center>
+            What do you have?
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary" center>
+            More tools = more task types
+          </HText>
+        </View>
+
+        <View style={styles.spacer} />
 
         <View style={styles.grid}>
-          {TOOLS.map((t) => (
-            <TouchableOpacity
-              key={t.id}
-              style={[styles.chip, selected.includes(t.id) && styles.chipSelected]}
-              onPress={() => toggle(t.id)}
-            >
-              <Text variant="title3">{t.emoji}</Text>
-              <Spacing size={4} />
-              <Text variant="caption" color={selected.includes(t.id) ? 'primary' : 'secondary'}>
-                {t.label}
-              </Text>
-            </TouchableOpacity>
+          {TOOLS.map((tool) => (
+            <ToolChip
+              key={tool.id}
+              emoji={tool.emoji}
+              label={tool.label}
+              selected={selected.includes(tool.id)}
+              onPress={() => toggleTool(tool.id)}
+            />
           ))}
         </View>
-      </View>
 
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={() => console.log(selected)}>
-          Continue
-        </Button>
-        <Spacing size={12} />
-        <Button variant="ghost" size="sm" onPress={() => console.log('skip')}>
-          Skip
-        </Button>
+        {selected.length > 0 && !selected.includes('none') && (
+          <View style={styles.feedback}>
+            <HText variant="caption" color="purple" center>
+              Nice setup — more tasks unlocked
+            </HText>
+          </View>
+        )}
       </View>
-    </View>
+    </HScreen>
+  );
+}
+
+function ToolChip({ 
+  emoji, 
+  label, 
+  selected, 
+  onPress 
+}: { 
+  emoji: string; 
+  label: string; 
+  selected: boolean; 
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.95, { damping: 20, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.chipWrapper}
+    >
+      <Animated.View style={animatedStyle}>
+        <HCard 
+          variant={selected ? 'outlined' : 'default'} 
+          padding="md"
+        >
+          <View style={styles.chipContent}>
+            <HText variant="title2">{emoji}</HText>
+            <HText 
+              variant="callout" 
+              color={selected ? 'primary' : 'secondary'}
+              center
+            >
+              {label}
+            </HText>
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  content: { flex: 1, paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[8] },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: theme.spacing[3] },
-  chip: {
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface.secondary,
-    paddingVertical: theme.spacing[4],
-    paddingHorizontal: theme.spacing[5],
-    borderRadius: theme.radii.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    minWidth: 100,
+  content: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  chipSelected: { borderColor: theme.colors.brand.primary },
-  footer: { paddingHorizontal: theme.spacing[4], paddingBottom: theme.spacing[4] },
+  header: {
+    alignItems: 'center',
+  },
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  spacer: {
+    height: hustleSpacing['2xl'],
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  chipWrapper: {
+    width: '48%',
+    marginBottom: hustleSpacing.md,
+  },
+  chipContent: {
+    alignItems: 'center',
+    paddingVertical: hustleSpacing.md,
+    gap: hustleSpacing.xs,
+  },
+  feedback: {
+    marginTop: hustleSpacing.lg,
+  },
+  footer: {
+    gap: hustleSpacing.sm,
+  },
 });
 
 export default CapabilityToolsScreen;

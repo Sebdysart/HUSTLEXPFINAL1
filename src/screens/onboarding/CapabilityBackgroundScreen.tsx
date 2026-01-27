@@ -1,87 +1,220 @@
 /**
- * CapabilityBackgroundScreen - Background check consent
+ * CapabilityBackgroundScreen - Ready for a background check?
+ * 
+ * CHOSEN-STATE: Unlocking trust, not gatekeeping
+ * One decision: Start check or skip
  */
 
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import React, { useState } from 'react';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard, HBadge, HTextButton } from '../../components/atoms';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Spacing, Card } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+type VerifyOption = {
+  id: string;
+  emoji: string;
+  label: string;
+  hint: string;
+  badge?: string;
+};
+
+const OPTIONS: VerifyOption[] = [
+  { 
+    id: 'yes', 
+    emoji: '✅', 
+    label: 'Let\'s do it', 
+    hint: 'Unlock premium tasks',
+    badge: 'Recommended'
+  },
+  { 
+    id: 'later', 
+    emoji: '⏳', 
+    label: 'Maybe later', 
+    hint: 'You can start anytime' 
+  },
+];
 
 export function CapabilityBackgroundScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const handleContinue = () => {
+    if (selected === 'yes') {
+      // Would start background check flow
+    }
+    navigation.goBack();
+  };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <HButton 
+          variant="primary" 
+          size="lg" 
+          fullWidth 
+          onPress={handleContinue}
+        >
+          Continue
+        </HButton>
+      }
+    >
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Text variant="hero">🔒</Text>
+        <View style={styles.header}>
+          <HText variant="hero" center>🔒</HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="title1" center>
+            Want to get verified?
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary" center>
+            Verified hustlers earn more and get first dibs
+          </HText>
         </View>
 
-        <Spacing size={24} />
+        <View style={styles.spacer} />
 
-        <Text variant="title1" color="primary" align="center">
-          Build trust with a background check
-        </Text>
-        <Spacing size={8} />
-        <Text variant="body" color="secondary" align="center">
-          Verified hustlers get more tasks and higher pay
-        </Text>
+        <View style={styles.list}>
+          {OPTIONS.map((option) => (
+            <OptionCard
+              key={option.id}
+              emoji={option.emoji}
+              label={option.label}
+              hint={option.hint}
+              badge={option.badge}
+              selected={selected === option.id}
+              onPress={() => setSelected(option.id)}
+            />
+          ))}
+        </View>
 
-        <Spacing size={32} />
-
-        <Card variant="default" padding="lg">
-          <BenefitRow emoji="⭐" text="'Verified' badge on your profile" />
-          <Spacing size={12} />
-          <BenefitRow emoji="💰" text="Access to higher-paying tasks" />
-          <Spacing size={12} />
-          <BenefitRow emoji="🤝" text="Posters prefer verified hustlers" />
-          <Spacing size={12} />
-          <BenefitRow emoji="🔐" text="Your data is encrypted and secure" />
-        </Card>
-
-        <Spacing size={24} />
-
-        <Text variant="footnote" color="tertiary" align="center">
-          Background check is optional. You can skip this and complete it later in settings.
-        </Text>
+        <View style={styles.perks}>
+          <HText variant="caption" color="tertiary" center>
+            ⭐ Verified badge • 💰 Premium tasks • 🚀 Priority matching
+          </HText>
+        </View>
       </View>
-
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={() => console.log('start check')}>
-          Start Background Check
-        </Button>
-        <Spacing size={12} />
-        <Button variant="ghost" size="sm" onPress={() => console.log('skip')}>
-          Skip for now
-        </Button>
-      </View>
-    </View>
+    </HScreen>
   );
 }
 
-function BenefitRow({ emoji, text }: { emoji: string; text: string }) {
+function OptionCard({ 
+  emoji, 
+  label, 
+  hint,
+  badge,
+  selected, 
+  onPress 
+}: { 
+  emoji: string; 
+  label: string; 
+  hint: string;
+  badge?: string;
+  selected: boolean; 
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, { damping: 20, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <View style={styles.benefitRow}>
-      <Text variant="body">{emoji}</Text>
-      <Text variant="body" color="primary" style={styles.benefitText}>{text}</Text>
-    </View>
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.cardWrapper}
+    >
+      <Animated.View style={animatedStyle}>
+        <HCard 
+          variant={selected ? 'outlined' : 'default'} 
+          padding="lg"
+        >
+          <View style={styles.cardContent}>
+            <HText variant="title2">{emoji}</HText>
+            <View style={styles.cardText}>
+              <View style={styles.labelRow}>
+                <HText 
+                  variant="headline" 
+                  color={selected ? 'primary' : 'secondary'}
+                >
+                  {label}
+                </HText>
+                {badge && (
+                  <HBadge variant="purple" size="sm">{badge}</HBadge>
+                )}
+              </View>
+              <HText variant="caption" color="tertiary">
+                {hint}
+              </HText>
+            </View>
+            {selected && (
+              <HText variant="body" color="purple">✓</HText>
+            )}
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  content: { flex: 1, paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[8] },
-  iconContainer: { alignItems: 'center' },
-  benefitRow: { flexDirection: 'row', alignItems: 'center' },
-  benefitText: { marginLeft: theme.spacing[3] },
-  footer: { paddingHorizontal: theme.spacing[4], paddingBottom: theme.spacing[4] },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+  },
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  spacer: {
+    height: hustleSpacing['2xl'],
+  },
+  list: {
+    gap: hustleSpacing.md,
+  },
+  cardWrapper: {
+    marginBottom: hustleSpacing.xs,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: hustleSpacing.lg,
+  },
+  cardText: {
+    flex: 1,
+    gap: hustleSpacing.xs,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: hustleSpacing.sm,
+  },
+  perks: {
+    marginTop: hustleSpacing.xl,
+  },
 });
 
 export default CapabilityBackgroundScreen;

@@ -13,13 +13,16 @@ import { hustleColors, hustleTypography } from '../../theme/hustle-tokens';
 
 type TypographyVariant = keyof typeof hustleTypography;
 type TextColor = 'primary' | 'secondary' | 'tertiary' | 'muted' | 'purple' | 'success' | 'warning' | 'error' | string;
+type TextAlign = 'left' | 'center' | 'right';
 
-interface HTextProps extends RNTextProps {
+export interface HTextProps extends RNTextProps {
   /** Typography variant */
   variant?: TypographyVariant;
   /** Text color */
   color?: TextColor;
-  /** Center align */
+  /** Text alignment */
+  align?: TextAlign;
+  /** Center align (shorthand for align="center") */
   center?: boolean;
   /** Bold weight override */
   bold?: boolean;
@@ -41,6 +44,7 @@ const colorMap: Record<string, string> = {
 export const HText: React.FC<HTextProps> = ({
   variant = 'body',
   color = 'primary',
+  align,
   center = false,
   bold = false,
   medium = false,
@@ -55,6 +59,9 @@ export const HText: React.FC<HTextProps> = ({
   if (bold) fontWeight = '700';
   if (medium) fontWeight = '500';
 
+  // Resolve text alignment
+  const textAlign = align || (center ? 'center' : 'left');
+
   return (
     <RNText
       style={[
@@ -64,7 +71,7 @@ export const HText: React.FC<HTextProps> = ({
           fontWeight,
           letterSpacing: typography.letterSpacing,
           color: resolvedColor,
-          textAlign: center ? 'center' : 'left',
+          textAlign,
         },
         style,
       ]}
@@ -97,47 +104,3 @@ export const HBody: React.FC<Omit<HTextProps, 'variant'>> = (props) => (
 export const HCaption: React.FC<Omit<HTextProps, 'variant'>> = (props) => (
   <HText variant="caption" color="tertiary" {...props} />
 );
-
-/**
- * HMoney - Money display with success color
- * Implies: Empowerment, guaranteed outcome
- */
-interface HMoneyProps extends Omit<HTextProps, 'variant' | 'color'> {
-  amount: number;
-  size?: 'sm' | 'md' | 'lg' | 'hero';
-  showCents?: boolean;
-}
-
-export const HMoney: React.FC<HMoneyProps> = ({
-  amount,
-  size = 'md',
-  showCents = true,
-  style,
-  ...props
-}) => {
-  const variantMap = {
-    sm: 'callout',
-    md: 'title3',
-    lg: 'title1',
-    hero: 'hero',
-  } as const;
-
-  const whole = Math.floor(amount);
-  const cents = Math.round((amount - whole) * 100);
-
-  return (
-    <HText
-      variant={variantMap[size]}
-      color={hustleColors.semantic.success}
-      style={[{ fontWeight: '700' }, style]}
-      {...props}
-    >
-      ${whole}
-      {showCents && (
-        <HText variant="body" color={hustleColors.text.tertiary}>
-          .{cents.toString().padStart(2, '0')}
-        </HText>
-      )}
-    </HText>
-  );
-};

@@ -1,5 +1,11 @@
 /**
- * TaskHistoryScreen - Past completed tasks
+ * TaskHistoryScreen - Progress Archetype
+ * 
+ * EMOTIONAL CONTRACT: "Value is accumulating"
+ * - Cards for each task
+ * - Most recent first
+ * - Money earned visible
+ * - Empty: "Your history starts here" + example card
  */
 
 import React, { useState } from 'react';
@@ -7,10 +13,11 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Spacing, Card, MoneyDisplay } from '../../components';
-import { theme } from '../../theme';
 import { useTaskStore, useAuthStore, Task } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
+
+import { HScreen, HText, HCard, HMoney, HBadge, HButton } from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -56,32 +63,41 @@ export function TaskHistoryScreen() {
     navigation.navigate('TaskDetail', { taskId });
   };
 
+  const handleFindTasks = () => {
+    navigation.navigate('TaskFeed');
+  };
+
+  const isEmpty = filteredTasks.length === 0;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <HScreen ambient>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack}>
-          <Text variant="body" color="primary">← Back</Text>
+      <View style={[styles.header, { paddingTop: insets.top + hustleSpacing.md }]}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+          <HText variant="body" color="primary">←</HText>
         </TouchableOpacity>
-        <Text variant="title2" color="primary">Task History</Text>
+        <HText variant="title2" color="primary">History</HText>
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Summary */}
+      {/* Summary - "You've earned" framing */}
       <View style={styles.summary}>
         <View style={styles.summaryItem}>
-          <MoneyDisplay amount={totalEarned || 203} size="md" />
-          <Text variant="caption" color="secondary">Total Earned</Text>
+          <HMoney amount={totalEarned || 203} size="md" label="You've earned" align="center" />
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text variant="title2" color="success">{totalXP || 575}</Text>
-          <Text variant="caption" color="secondary">XP Earned</Text>
+          <HText variant="title2" color={hustleColors.xp.primary} bold>
+            {totalXP || 575}
+          </HText>
+          <HText variant="caption" color="tertiary">XP earned</HText>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text variant="title2" color="primary">{completedTasks.length || 4}</Text>
-          <Text variant="caption" color="secondary">Completed</Text>
+          <HText variant="title2" color="primary" bold>
+            {completedTasks.length || 4}
+          </HText>
+          <HText variant="caption" color="tertiary">Completed</HText>
         </View>
       </View>
 
@@ -93,7 +109,12 @@ export function TaskHistoryScreen() {
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text variant="body" color={activeTab === tab ? 'brand' : 'secondary'}>{tab}</Text>
+            <HText 
+              variant="body" 
+              color={activeTab === tab ? hustleColors.purple.soft : 'tertiary'}
+            >
+              {tab}
+            </HText>
           </TouchableOpacity>
         ))}
       </View>
@@ -102,47 +123,48 @@ export function TaskHistoryScreen() {
       <ScrollView 
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.brand.primary} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={handleRefresh} 
+            tintColor={hustleColors.purple.core} 
+          />
         }
+        showsVerticalScrollIndicator={false}
       >
-        {filteredTasks.length === 0 ? (
+        {isEmpty && activeTab === 'Completed' ? (
+          /* Empty State - "Your history starts here" */
           <View style={styles.empty}>
-            <Text variant="title2">📋</Text>
-            <Spacing size={12} />
-            <Text variant="body" color="secondary" align="center">
-              {`No ${activeTab.toLowerCase()} tasks yet`}
-            </Text>
-            {activeTab === 'Completed' && (
-              <>
-                <Spacing size={12} />
-                <TouchableOpacity onPress={() => navigation.navigate('TaskFeed')}>
-                  <Text variant="body" color="brand">Find tasks →</Text>
-                </TouchableOpacity>
-              </>
-            )}
+            <HText variant="title2" color="primary" align="center">
+              Your history starts here
+            </HText>
+            <HText variant="body" color="secondary" align="center" style={styles.emptySubtext}>
+              Complete your first task to see it appear here
+            </HText>
+            
+            {/* Example card (grayed) */}
+            <ExampleHistoryCard />
+            
+            <HButton variant="primary" size="md" onPress={handleFindTasks}>
+              Find your first task
+            </HButton>
+          </View>
+        ) : isEmpty ? (
+          <View style={styles.empty}>
+            <HText variant="body" color="secondary" align="center">
+              No {activeTab.toLowerCase()} tasks
+            </HText>
           </View>
         ) : (
           filteredTasks.map(task => (
-            <React.Fragment key={task.id}>
-              <HistoryCard task={task} onPress={() => handleTaskPress(task.id)} />
-              <Spacing size={12} />
-            </React.Fragment>
+            <HistoryCard 
+              key={task.id} 
+              task={task} 
+              onPress={() => handleTaskPress(task.id)} 
+            />
           ))
         )}
-
-        {/* Mock data if no real tasks */}
-        {filteredTasks.length === 0 && activeTab === 'Completed' && (
-          <>
-            <Spacing size={24} />
-            <Text variant="caption" color="tertiary" align="center">Sample completed tasks:</Text>
-            <Spacing size={12} />
-            <MockHistoryCard title="Furniture assembly" price={65} date="Jan 24" rating={5} xp={130} />
-            <MockHistoryCard title="Grocery run" price={28} date="Jan 23" rating={5} xp={56} />
-            <MockHistoryCard title="Moving help" price={90} date="Jan 20" rating={5} xp={180} />
-          </>
-        )}
       </ScrollView>
-    </View>
+    </HScreen>
   );
 }
 
@@ -153,85 +175,119 @@ interface HistoryCardProps {
 
 function HistoryCard({ task, onPress }: HistoryCardProps) {
   return (
-    <TouchableOpacity onPress={onPress}>
-      <Card variant="default" padding="md">
-        <View style={styles.cardRow}>
-          <View style={styles.cardInfo}>
-            <Text variant="headline" color="primary">{task.title}</Text>
-            <Text variant="footnote" color="secondary">
-              {task.completedAt ? new Date(task.completedAt).toLocaleDateString() : task.category}
-            </Text>
-          </View>
-          <View style={styles.cardRight}>
-            <MoneyDisplay amount={task.finalPay || task.maxPay} size="sm" />
-            <Text variant="caption" color="success">{`+${task.baseXP} XP`}</Text>
-            {task.hustlerRating && (
-              <Text variant="caption" color="secondary">{`⭐ ${task.hustlerRating}`}</Text>
-            )}
-          </View>
+    <HCard variant="default" padding="lg" onPress={onPress} style={styles.card}>
+      <View style={styles.cardRow}>
+        <View style={styles.cardInfo}>
+          <HText variant="headline" color="primary">{task.title}</HText>
+          <HText variant="footnote" color="tertiary">
+            {task.completedAt 
+              ? new Date(task.completedAt).toLocaleDateString() 
+              : task.category}
+          </HText>
         </View>
-      </Card>
-    </TouchableOpacity>
+        <View style={styles.cardRight}>
+          <HMoney amount={task.finalPay || task.maxPay} size="sm" />
+          <HBadge variant="success" size="sm">+{task.baseXP} XP</HBadge>
+          {task.hustlerRating && (
+            <HText variant="caption" color="tertiary">⭐ {task.hustlerRating}</HText>
+          )}
+        </View>
+      </View>
+    </HCard>
   );
 }
 
-function MockHistoryCard({ title, price, date, rating, xp }: {
-  title: string; price: number; date: string; rating: number; xp: number;
-}) {
+function ExampleHistoryCard() {
   return (
-    <>
-      <Card variant="default" padding="md" style={styles.mockCard}>
-        <View style={styles.cardRow}>
-          <View style={styles.cardInfo}>
-            <Text variant="headline" color="primary">{title}</Text>
-            <Text variant="footnote" color="secondary">{date}</Text>
-          </View>
-          <View style={styles.cardRight}>
-            <MoneyDisplay amount={price} size="sm" />
-            <Text variant="caption" color="success">{`+${xp} XP`}</Text>
-            <Text variant="caption" color="secondary">{`⭐ ${rating}`}</Text>
-          </View>
+    <HCard variant="default" padding="lg" style={styles.exampleCard}>
+      <View style={styles.cardRow}>
+        <View style={styles.cardInfo}>
+          <HText variant="headline" color="muted">Furniture assembly</HText>
+          <HText variant="footnote" color="muted">Your first task</HText>
         </View>
-      </Card>
-      <Spacing size={12} />
-    </>
+        <View style={styles.cardRight}>
+          <HText variant="headline" color="muted">$65</HText>
+          <HText variant="caption" color="muted">+130 XP</HText>
+          <HText variant="caption" color="muted">⭐ 5.0</HText>
+        </View>
+      </View>
+    </HCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center',
-    padding: theme.spacing[4],
+    paddingHorizontal: hustleSpacing.lg,
+    paddingBottom: hustleSpacing.md,
   },
+  backBtn: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+  },
+  headerSpacer: { width: 44 },
   summary: { 
     flexDirection: 'row', 
-    paddingHorizontal: theme.spacing[4],
-    paddingBottom: theme.spacing[4],
+    paddingHorizontal: hustleSpacing.lg,
+    paddingBottom: hustleSpacing.xl,
   },
-  summaryItem: { flex: 1, alignItems: 'center' },
-  summaryDivider: { width: 1, backgroundColor: theme.colors.surface.tertiary },
+  summaryItem: { 
+    flex: 1, 
+    alignItems: 'center',
+  },
+  summaryDivider: { 
+    width: 1, 
+    backgroundColor: hustleColors.glass.border,
+  },
   tabs: { 
     flexDirection: 'row', 
-    paddingHorizontal: theme.spacing[4], 
+    paddingHorizontal: hustleSpacing.lg, 
     borderBottomWidth: 1, 
-    borderBottomColor: theme.colors.surface.secondary,
+    borderBottomColor: hustleColors.glass.border,
   },
   tab: { 
-    paddingVertical: theme.spacing[3], 
-    paddingHorizontal: theme.spacing[3], 
-    marginRight: theme.spacing[2],
+    paddingVertical: hustleSpacing.md, 
+    paddingHorizontal: hustleSpacing.md, 
+    marginRight: hustleSpacing.sm,
   },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: theme.colors.brand.primary },
-  list: { padding: theme.spacing[4] },
-  empty: { alignItems: 'center', paddingVertical: theme.spacing[8] },
-  cardRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  cardInfo: { flex: 1 },
-  cardRight: { alignItems: 'flex-end' },
-  mockCard: { opacity: 0.7 },
-  headerSpacer: { width: 50 },
+  tabActive: { 
+    borderBottomWidth: 2, 
+    borderBottomColor: hustleColors.purple.core,
+  },
+  list: { 
+    padding: hustleSpacing.lg,
+    paddingBottom: hustleSpacing['4xl'],
+  },
+  empty: { 
+    alignItems: 'center', 
+    paddingVertical: hustleSpacing['3xl'],
+  },
+  emptySubtext: {
+    marginTop: hustleSpacing.sm,
+    marginBottom: hustleSpacing.xl,
+  },
+  card: { 
+    marginBottom: hustleSpacing.md,
+  },
+  exampleCard: {
+    opacity: 0.4,
+    marginBottom: hustleSpacing.xl,
+    width: '100%',
+  },
+  cardRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between',
+  },
+  cardInfo: { 
+    flex: 1,
+  },
+  cardRight: { 
+    alignItems: 'flex-end',
+    gap: hustleSpacing.xs,
+  },
 });
 
 export default TaskHistoryScreen;

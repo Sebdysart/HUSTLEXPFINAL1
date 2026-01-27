@@ -9,13 +9,13 @@
  */
 
 import React, { ReactNode } from 'react';
-import { View, ScrollView, StyleSheet, StatusBar, ViewStyle } from 'react-native';
+import { View, ScrollView, StyleSheet, StatusBar, ViewStyle, RefreshControl, RefreshControlProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { hustleColors, hustleGradients } from '../../theme/hustle-tokens';
 import { HAmbientOrb } from './HAmbient';
 
-interface HScreenProps {
+export interface HScreenProps {
   children: ReactNode;
   /** Show ambient orb animation */
   ambient?: boolean;
@@ -27,6 +27,8 @@ interface HScreenProps {
   header?: ReactNode;
   /** Footer component (fixed at bottom) */
   footer?: ReactNode;
+  /** RefreshControl for pull-to-refresh */
+  refreshControl?: React.ReactElement<RefreshControlProps>;
   /** Custom style */
   style?: ViewStyle;
 }
@@ -38,6 +40,7 @@ export const HScreen: React.FC<HScreenProps> = ({
   padding = 20,
   header,
   footer,
+  refreshControl,
   style,
 }) => {
   const insets = useSafeAreaInsets();
@@ -49,6 +52,7 @@ export const HScreen: React.FC<HScreenProps> = ({
         { padding, paddingBottom: padding + (footer ? 100 : 0) },
       ]}
       showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
     >
       {children}
     </ScrollView>
@@ -64,7 +68,7 @@ export const HScreen: React.FC<HScreenProps> = ({
       
       {/* Background gradient */}
       <LinearGradient
-        colors={hustleGradients.backgroundMesh}
+        colors={[...hustleGradients.backgroundMesh]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}

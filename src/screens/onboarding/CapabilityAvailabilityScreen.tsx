@@ -1,105 +1,218 @@
 /**
- * CapabilityAvailabilityScreen - Availability schedule
+ * CapabilityAvailabilityScreen - When are you around?
+ * 
+ * CHOSEN-STATE: System calibrating to your rhythm
+ * One decision: When can you work?
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard, HTextButton } from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Spacing } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const TIMES = ['Morning', 'Afternoon', 'Evening'];
+type TimeSlot = {
+  id: string;
+  emoji: string;
+  label: string;
+  hint: string;
+};
+
+const TIME_SLOTS: TimeSlot[] = [
+  { id: 'morning', emoji: '🌅', label: 'Mornings', hint: '6am - 12pm' },
+  { id: 'afternoon', emoji: '☀️', label: 'Afternoons', hint: '12pm - 6pm' },
+  { id: 'evening', emoji: '🌙', label: 'Evenings', hint: '6pm - 12am' },
+  { id: 'flexible', emoji: '✨', label: 'Flexible', hint: 'Whenever' },
+];
 
 export function CapabilityAvailabilityScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
-  const [availability, setAvailability] = useState<Record<string, string[]>>({});
+  const navigation = useNavigation<NavigationProp>();
+  const [selected, setSelected] = useState<string[]>([]);
 
-  const toggle = (day: string, time: string) => {
-    setAvailability(prev => {
-      const dayTimes = prev[day] || [];
-      const updated = dayTimes.includes(time)
-        ? dayTimes.filter(t => t !== time)
-        : [...dayTimes, time];
-      return { ...prev, [day]: updated };
-    });
+  const toggleSlot = (id: string) => {
+    if (id === 'flexible') {
+      setSelected(['flexible']);
+    } else {
+      setSelected(prev => {
+        const filtered = prev.filter(i => i !== 'flexible');
+        return filtered.includes(id) 
+          ? filtered.filter(i => i !== id)
+          : [...filtered, id];
+      });
+    }
   };
 
-  const isSelected = (day: string, time: string) => 
-    (availability[day] || []).includes(time);
+  const handleContinue = () => {
+    navigation.goBack();
+  };
+
+  const handleSkip = () => {
+    navigation.goBack();
+  };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <View style={styles.footer}>
+          <HButton 
+            variant="primary" 
+            size="lg" 
+            fullWidth 
+            onPress={handleContinue}
+          >
+            Continue
+          </HButton>
+          <HTextButton onPress={handleSkip}>
+            Set up later
+          </HTextButton>
+        </View>
+      }
+    >
       <View style={styles.content}>
-        <Text variant="title1" color="primary" align="center">
-          When are you available?
-        </Text>
-        <Spacing size={8} />
-        <Text variant="body" color="secondary" align="center">
-          Tap to select your typical availability
-        </Text>
+        <View style={styles.header}>
+          <HText variant="title1" center>
+            When are you around?
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary" center>
+            We'll match you with tasks that fit
+          </HText>
+        </View>
 
-        <Spacing size={32} />
+        <View style={styles.spacer} />
 
-        {/* Header row */}
-        <View style={styles.row}>
-          <View style={styles.dayLabel} />
-          {TIMES.map(t => (
-            <Text key={t} variant="caption" color="secondary" style={styles.timeLabel}>
-              {t.slice(0, 3)}
-            </Text>
+        <View style={styles.list}>
+          {TIME_SLOTS.map((slot) => (
+            <TimeSlotCard
+              key={slot.id}
+              emoji={slot.emoji}
+              label={slot.label}
+              hint={slot.hint}
+              selected={selected.includes(slot.id)}
+              onPress={() => toggleSlot(slot.id)}
+            />
           ))}
         </View>
 
-        {/* Day rows */}
-        {DAYS.map(day => (
-          <View key={day} style={styles.row}>
-            <Text variant="body" color="primary" style={styles.dayLabel}>{day}</Text>
-            {TIMES.map(time => (
-              <TouchableOpacity
-                key={time}
-                style={[styles.cell, isSelected(day, time) && styles.cellSelected]}
-                onPress={() => toggle(day, time)}
-              />
-            ))}
+        {selected.length > 0 && (
+          <View style={styles.feedback}>
+            <HText variant="caption" color="purple" center>
+              Perfect — we'll tune your feed
+            </HText>
           </View>
-        ))}
+        )}
       </View>
+    </HScreen>
+  );
+}
 
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={() => console.log(availability)}>
-          Continue
-        </Button>
-        <Spacing size={12} />
-        <Button variant="ghost" size="sm" onPress={() => console.log('skip')}>
-          Set up later
-        </Button>
-      </View>
-    </View>
+function TimeSlotCard({ 
+  emoji, 
+  label, 
+  hint,
+  selected, 
+  onPress 
+}: { 
+  emoji: string; 
+  label: string; 
+  hint: string;
+  selected: boolean; 
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, { damping: 20, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.cardWrapper}
+    >
+      <Animated.View style={animatedStyle}>
+        <HCard 
+          variant={selected ? 'outlined' : 'default'} 
+          padding="lg"
+        >
+          <View style={styles.cardContent}>
+            <HText variant="title2">{emoji}</HText>
+            <View style={styles.cardText}>
+              <HText 
+                variant="headline" 
+                color={selected ? 'primary' : 'secondary'}
+              >
+                {label}
+              </HText>
+              <HText variant="caption" color="tertiary">
+                {hint}
+              </HText>
+            </View>
+            {selected && (
+              <HText variant="body" color="purple">✓</HText>
+            )}
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  content: { flex: 1, paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[8] },
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing[2] },
-  dayLabel: { width: 50 },
-  timeLabel: { flex: 1, textAlign: 'center' },
-  cell: {
+  content: {
     flex: 1,
-    height: 40,
-    backgroundColor: theme.colors.surface.secondary,
-    marginHorizontal: 4,
-    borderRadius: theme.radii.sm,
+    justifyContent: 'center',
   },
-  cellSelected: { backgroundColor: theme.colors.brand.primary },
-  footer: { paddingHorizontal: theme.spacing[4], paddingBottom: theme.spacing[4] },
+  header: {
+    alignItems: 'center',
+  },
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  spacer: {
+    height: hustleSpacing['2xl'],
+  },
+  list: {
+    gap: hustleSpacing.md,
+  },
+  cardWrapper: {
+    marginBottom: hustleSpacing.xs,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: hustleSpacing.lg,
+  },
+  cardText: {
+    flex: 1,
+  },
+  feedback: {
+    marginTop: hustleSpacing.xl,
+  },
+  footer: {
+    gap: hustleSpacing.sm,
+  },
 });
 
 export default CapabilityAvailabilityScreen;

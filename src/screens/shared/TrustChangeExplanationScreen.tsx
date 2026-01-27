@@ -1,102 +1,193 @@
 /**
- * TrustChangeExplanationScreen - Explains trust score changes
+ * TrustChangeExplanationScreen - Progress Archetype
+ * 
+ * EMOTIONAL CONTRACT: "Value is accumulating"
+ * - Celebratory without being loud
+ * - Numbers that feel earned
+ * - Progress feels inevitable
  */
 
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, Button, TrustBadge } from '../../components';
-import { theme } from '../../theme';
+import { HScreen, HText, HCard, HButton, HTrustBadge, HBadge } from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function TrustChangeExplanationScreen() {
   const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
+
+  const handleDone = () => {
+    navigation.goBack();
+  };
+
+  // These would come from route params in real usage
+  const beforeXP = 2400;
+  const afterXP = 2600;
+  const xpGained = afterXP - beforeXP;
+  const tier = 3;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+    <HScreen ambient>
+      <ScrollView 
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + hustleSpacing['2xl'] }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Celebratory Header */}
         <View style={styles.header}>
-          <Text variant="hero">📊</Text>
-          <Spacing size={16} />
-          <Text variant="title1" color="primary" align="center">Your Trust Score Changed</Text>
+          <HText variant="hero" style={styles.icon}>🎉</HText>
+          <HText variant="title1" color="primary" align="center">
+            Nice work!
+          </HText>
+          <HText variant="body" color="secondary" align="center" style={styles.subtitle}>
+            Your trust score just went up
+          </HText>
         </View>
 
-        <Spacing size={24} />
-
-        {/* Change Summary */}
-        <Card variant="elevated" padding="lg">
+        {/* Change Summary - Visual */}
+        <HCard variant="elevated" padding="xl">
           <View style={styles.changeRow}>
             <View style={styles.changeItem}>
-              <Text variant="caption" color="secondary">Before</Text>
-              <TrustBadge level={3} xp={2400} size="sm" />
+              <HText variant="caption" color="muted">Before</HText>
+              <View style={styles.badgeWrapper}>
+                <HTrustBadge tier={tier} xp={beforeXP} size="sm" />
+              </View>
             </View>
-            <Text variant="title2" color="brand">→</Text>
+            
+            <HText variant="title2" color={hustleColors.purple.soft}>→</HText>
+            
             <View style={styles.changeItem}>
-              <Text variant="caption" color="secondary">After</Text>
-              <TrustBadge level={3} xp={2600} size="sm" />
+              <HText variant="caption" color="muted">Now</HText>
+              <View style={styles.badgeWrapper}>
+                <HTrustBadge tier={tier} xp={afterXP} size="sm" />
+              </View>
             </View>
           </View>
-          <Spacing size={12} />
-          <Text variant="headline" color="success" align="center">+200 XP</Text>
-        </Card>
+          
+          <View style={styles.xpGainedContainer}>
+            <HText variant="title2" color={hustleColors.xp.primary} bold>
+              +{xpGained} XP
+            </HText>
+          </View>
+        </HCard>
 
-        <Spacing size={24} />
-
-        {/* Breakdown */}
-        <Text variant="headline" color="primary">What happened</Text>
-        <Spacing size={12} />
+        {/* What Happened - Breakdown */}
+        <View style={styles.section}>
+          <HText variant="headline" color="primary">What happened</HText>
+        </View>
         
-        <ChangeItem emoji="✅" title="Task Completed" xp={150} desc="Help moving furniture" />
-        <ChangeItem emoji="⭐" title="5-Star Rating" xp={50} desc="From Sarah M." />
+        <ChangeItem 
+          emoji="✅" 
+          title="Task Completed" 
+          xp={150} 
+          desc="Help moving furniture" 
+        />
+        <ChangeItem 
+          emoji="⭐" 
+          title="5-Star Rating" 
+          xp={50} 
+          desc="From Sarah M." 
+        />
 
-        <Spacing size={24} />
-
-        <Card variant="default" padding="md">
-          <Text variant="footnote" color="secondary">
-            💡 Your trust score is based on completed tasks, ratings, response time, and profile completeness.
-          </Text>
-        </Card>
+        {/* Tip */}
+        <HCard variant="default" padding="lg" style={styles.tipCard}>
+          <HText variant="footnote" color="secondary">
+            💡 Your trust score is based on completed tasks, ratings, and response time. Keep hustling!
+          </HText>
+        </HCard>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={() => console.log('done')}>
+      {/* Footer */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + hustleSpacing.lg }]}>
+        <HButton variant="primary" size="lg" onPress={handleDone}>
           Got it
-        </Button>
+        </HButton>
       </View>
-    </View>
+    </HScreen>
   );
 }
 
-function ChangeItem({ emoji, title, xp, desc }: { emoji: string; title: string; xp: number; desc: string }) {
+interface ChangeItemProps {
+  emoji: string;
+  title: string;
+  xp: number;
+  desc: string;
+}
+
+function ChangeItem({ emoji, title, xp, desc }: ChangeItemProps) {
   return (
-    <Card variant="default" padding="md" style={styles.changeCard}>
+    <HCard variant="default" padding="lg" style={styles.changeCard}>
       <View style={styles.changeCardRow}>
-        <Text variant="title2">{emoji}</Text>
+        <HText variant="title2">{emoji}</HText>
         <View style={styles.changeCardInfo}>
-          <Text variant="headline" color="primary">{title}</Text>
-          <Text variant="footnote" color="secondary">{desc}</Text>
+          <HText variant="headline" color="primary">{title}</HText>
+          <HText variant="footnote" color="tertiary">{desc}</HText>
         </View>
-        <Text variant="headline" color="success">+{xp}</Text>
+        <HText variant="headline" color={hustleColors.xp.primary} bold>
+          +{xp}
+        </HText>
       </View>
-    </Card>
+    </HCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  scroll: { padding: theme.spacing[4] },
-  header: { alignItems: 'center' },
-  changeRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  changeItem: { alignItems: 'center' },
-  changeCard: { marginBottom: theme.spacing[2] },
-  changeCardRow: { flexDirection: 'row', alignItems: 'center' },
-  changeCardInfo: { flex: 1, marginLeft: theme.spacing[3] },
-  footer: { padding: theme.spacing[4] },
+  scroll: { 
+    padding: hustleSpacing.lg,
+    paddingBottom: hustleSpacing['4xl'],
+  },
+  header: { 
+    alignItems: 'center',
+    marginBottom: hustleSpacing.xl,
+  },
+  icon: {
+    marginBottom: hustleSpacing.md,
+  },
+  subtitle: {
+    marginTop: hustleSpacing.xs,
+  },
+  changeRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-around', 
+    alignItems: 'center',
+  },
+  changeItem: { 
+    alignItems: 'center',
+  },
+  badgeWrapper: {
+    marginTop: hustleSpacing.sm,
+  },
+  xpGainedContainer: {
+    alignItems: 'center',
+    marginTop: hustleSpacing.xl,
+  },
+  section: {
+    marginTop: hustleSpacing.xl,
+    marginBottom: hustleSpacing.md,
+  },
+  changeCard: { 
+    marginBottom: hustleSpacing.sm,
+  },
+  changeCardRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+  },
+  changeCardInfo: { 
+    flex: 1, 
+    marginLeft: hustleSpacing.md,
+  },
+  tipCard: {
+    marginTop: hustleSpacing.xl,
+  },
+  footer: { 
+    padding: hustleSpacing.lg,
+  },
 });
 
 export default TrustChangeExplanationScreen;

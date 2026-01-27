@@ -1,5 +1,11 @@
 /**
- * TrustTierLadderScreen - Trust level progression
+ * TrustTierLadderScreen - Progress Archetype
+ * 
+ * EMOTIONAL CONTRACT: "Value is accumulating"
+ * - Current tier prominent
+ * - "Level up" not "Next tier"
+ * - "{X} to go" not "{X} remaining"
+ * - Progress feels inevitable
  */
 
 import React from 'react';
@@ -7,10 +13,11 @@ import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Spacing, Card, TrustBadge } from '../../components';
-import { theme } from '../../theme';
 import { useAuthStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
+
+import { HScreen, HText, HCard, HTrustBadge, HBadge } from '../../components/atoms';
+import { hustleColors, hustleSpacing, hustleRadii } from '../../theme/hustle-tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -30,39 +37,39 @@ const TIERS: TierInfo[] = [
     xpRequired: 0, 
     platformFee: '15%',
     perks: ['Access to basic tasks', 'Standard support'],
-    color: '#6B7280', // gray
+    color: hustleColors.text.tertiary,
   },
   { 
     tier: 2, 
     name: 'Rising', 
     xpRequired: 500, 
     platformFee: '14%',
-    perks: ['Access to $50+ tasks', 'Priority matching', '1% fee reduction'],
-    color: '#10B981', // green
+    perks: ['Access to $50+ tasks', 'Priority matching'],
+    color: hustleColors.semantic.success,
   },
   { 
     tier: 3, 
     name: 'Trusted', 
     xpRequired: 2000, 
     platformFee: '12%',
-    perks: ['Access to $100+ tasks', 'Verified badge', '3% fee reduction', 'Priority support'],
-    color: '#3B82F6', // blue
+    perks: ['Access to $100+ tasks', 'Verified badge', 'Priority support'],
+    color: hustleColors.semantic.info,
   },
   { 
     tier: 4, 
     name: 'Expert', 
     xpRequired: 5000, 
     platformFee: '10%',
-    perks: ['Access to premium tasks', 'Featured profile', '5% fee reduction', 'Early access'],
-    color: '#8B5CF6', // purple
+    perks: ['Access to premium tasks', 'Featured profile', 'Early access'],
+    color: hustleColors.purple.soft,
   },
   { 
     tier: 5, 
     name: 'Elite', 
     xpRequired: 10000, 
     platformFee: '8%',
-    perks: ['All task access', 'Elite badge', '7% fee reduction', 'VIP support', 'Exclusive events'],
-    color: '#F59E0B', // gold
+    perks: ['All task access', 'Elite badge', 'VIP support', 'Exclusive events'],
+    color: hustleColors.xp.primary,
   },
 ];
 
@@ -76,58 +83,58 @@ export function TrustTierLadderScreen() {
   const currentTierInfo = TIERS.find(t => t.tier === currentTier) || TIERS[0];
   const nextTierInfo = TIERS.find(t => t.tier === currentTier + 1);
   const xpToNext = nextTierInfo ? nextTierInfo.xpRequired - currentXP : 0;
+  const progress = nextTierInfo 
+    ? Math.min((currentXP / nextTierInfo.xpRequired) * 100, 100) 
+    : 100;
 
   const handleBack = () => navigation.goBack();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <HScreen ambient>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack}>
-          <Text variant="body" color="primary">← Back</Text>
+      <View style={[styles.header, { paddingTop: insets.top + hustleSpacing.md }]}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+          <HText variant="body" color="primary">←</HText>
         </TouchableOpacity>
-        <Text variant="title2" color="primary">Trust Tiers</Text>
+        <HText variant="title2" color="primary">Trust Tiers</HText>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Current Tier Card */}
-        <Card variant="elevated" padding="lg">
+      <ScrollView 
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Current Tier Card - Prominent */}
+        <HCard variant="elevated" padding="xl">
           <View style={styles.currentTier}>
-            <TrustBadge level={currentTier} xp={currentXP} size="lg" />
-            <Spacing size={12} />
-            <Text variant="title2" color="primary">
-              {`Tier ${currentTier}: ${currentTierInfo.name}`}
-            </Text>
-            <Spacing size={4} />
-            <Text variant="body" color="secondary">
-              {`Current fee: ${currentTierInfo.platformFee}`}
-            </Text>
+            <HTrustBadge tier={currentTier} xp={currentXP} size="lg" />
+            
+            <HText variant="title2" color="primary" style={styles.tierTitle}>
+              {currentTierInfo.name}
+            </HText>
+            <HText variant="body" color="secondary">
+              Current fee: {currentTierInfo.platformFee}
+            </HText>
+            
             {nextTierInfo && (
               <>
-                <Spacing size={12} />
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { width: `${Math.min((currentXP / nextTierInfo.xpRequired) * 100, 100)}%` }
-                    ]} 
-                  />
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: `${progress}%` }]} />
+                  </View>
                 </View>
-                <Spacing size={8} />
-                <Text variant="caption" color="secondary">
-                  {`${xpToNext.toLocaleString()} XP to Tier ${nextTierInfo.tier}`}
-                </Text>
+                <HText variant="caption" color="secondary">
+                  {xpToNext.toLocaleString()} XP to level up
+                </HText>
               </>
             )}
           </View>
-        </Card>
+        </HCard>
 
-        <Spacing size={24} />
-
-        {/* Tier Ladder */}
-        <Text variant="headline" color="primary">All Tiers</Text>
-        <Spacing size={12} />
+        {/* All Tiers */}
+        <View style={styles.section}>
+          <HText variant="headline" color="primary">All Tiers</HText>
+        </View>
 
         {TIERS.map((tier, idx) => (
           <React.Fragment key={tier.tier}>
@@ -147,22 +154,18 @@ export function TrustTierLadderScreen() {
           </React.Fragment>
         ))}
 
-        <Spacing size={24} />
-
-        {/* How Tiers Work */}
-        <Card variant="default" padding="md">
-          <Text variant="headline" color="primary">How Trust Tiers Work</Text>
-          <Spacing size={12} />
-          <Text variant="body" color="secondary">
+        {/* How It Works */}
+        <HCard variant="default" padding="lg" style={styles.infoCard}>
+          <HText variant="headline" color="primary">How Trust Tiers Work</HText>
+          <HText variant="body" color="secondary" style={styles.infoText}>
             • Complete tasks to earn XP{'\n'}
             • Higher tiers = lower platform fees{'\n'}
-            • Higher tiers = access to better tasks{'\n'}
             • 5-star ratings give bonus XP{'\n'}
-            • Tiers can decrease if you have disputes or low ratings
-          </Text>
-        </Card>
+            • Level up to access better tasks
+          </HText>
+        </HCard>
       </ScrollView>
-    </View>
+    </HScreen>
   );
 }
 
@@ -174,66 +177,109 @@ interface TierCardProps {
 
 function TierCard({ tier, isCurrent, isUnlocked }: TierCardProps) {
   return (
-    <Card 
+    <HCard 
       variant={isCurrent ? 'elevated' : 'default'} 
-      padding="md" 
-      style={[!isUnlocked && styles.locked, isCurrent && styles.currentTierCard]}
+      padding="lg" 
+      style={StyleSheet.flatten([
+        styles.tierCard,
+        !isUnlocked && styles.tierCardLocked, 
+        isCurrent && styles.tierCardCurrent
+      ])}
     >
       <View style={styles.tierHeader}>
-        <View style={[styles.tierBadge, { backgroundColor: isUnlocked ? tier.color : theme.colors.surface.tertiary }]}>
-          <Text variant="headline" color="inverse">{tier.tier}</Text>
+        <View style={[styles.tierBadge, { backgroundColor: isUnlocked ? tier.color : hustleColors.glass.medium }]}>
+          <HText variant="headline" color="primary" bold>{tier.tier}</HText>
         </View>
         <View style={styles.tierInfo}>
-          <Text variant="headline" color={isUnlocked ? 'primary' : 'tertiary'}>{tier.name}</Text>
-          <Text variant="caption" color="secondary">
+          <HText variant="headline" color={isUnlocked ? 'primary' : 'muted'}>
+            {tier.name}
+          </HText>
+          <HText variant="caption" color="tertiary">
             {tier.xpRequired.toLocaleString()} XP • {tier.platformFee} fee
-          </Text>
+          </HText>
         </View>
         {isCurrent && (
-          <View style={styles.currentBadge}>
-            <Text variant="caption" color="inverse">YOU</Text>
-          </View>
+          <HBadge variant="purple" size="sm">YOU</HBadge>
         )}
-        {!isCurrent && isUnlocked && <Text variant="body">✅</Text>}
-        {!isUnlocked && <Text variant="body">🔒</Text>}
+        {!isCurrent && isUnlocked && (
+          <HText variant="body">✅</HText>
+        )}
+        {!isUnlocked && (
+          <HText variant="body">🔒</HText>
+        )}
       </View>
-      
-      <Spacing size={8} />
       
       <View style={styles.perks}>
         {tier.perks.map((perk, i) => (
-          <Text key={i} variant="footnote" color={isUnlocked ? 'secondary' : 'tertiary'}>
+          <HText key={i} variant="footnote" color={isUnlocked ? 'secondary' : 'muted'}>
             • {perk}
-          </Text>
+          </HText>
         ))}
       </View>
-    </Card>
+    </HCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center',
-    padding: theme.spacing[4],
+    paddingHorizontal: hustleSpacing.lg,
+    paddingBottom: hustleSpacing.md,
   },
-  scroll: { padding: theme.spacing[4], paddingTop: 0 },
-  currentTier: { alignItems: 'center' },
-  progressBar: {
+  backBtn: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+  },
+  headerSpacer: { width: 44 },
+  scroll: { 
+    padding: hustleSpacing.lg, 
+    paddingTop: 0,
+    paddingBottom: hustleSpacing['4xl'],
+  },
+  currentTier: { 
+    alignItems: 'center',
+  },
+  tierTitle: {
+    marginTop: hustleSpacing.md,
+    marginBottom: hustleSpacing.xs,
+  },
+  progressContainer: {
     width: '100%',
+    marginTop: hustleSpacing.xl,
+    marginBottom: hustleSpacing.sm,
+  },
+  progressBar: {
     height: 8,
-    backgroundColor: theme.colors.surface.tertiary,
-    borderRadius: 4,
+    backgroundColor: hustleColors.glass.medium,
+    borderRadius: hustleRadii.full,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: theme.colors.brand.primary,
-    borderRadius: 4,
+    backgroundColor: hustleColors.purple.core,
+    borderRadius: hustleRadii.full,
   },
-  tierHeader: { flexDirection: 'row', alignItems: 'center' },
+  section: {
+    marginTop: hustleSpacing.xl,
+    marginBottom: hustleSpacing.md,
+  },
+  tierCard: {
+    marginBottom: 0,
+  },
+  tierCardLocked: { 
+    opacity: 0.5,
+  },
+  tierCardCurrent: { 
+    borderLeftWidth: 3, 
+    borderLeftColor: hustleColors.purple.core,
+  },
+  tierHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+  },
   tierBadge: {
     width: 44,
     height: 44,
@@ -241,26 +287,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tierInfo: { flex: 1, marginLeft: theme.spacing[3] },
-  currentBadge: {
-    backgroundColor: theme.colors.brand.primary,
-    paddingHorizontal: theme.spacing[2],
-    paddingVertical: 2,
-    borderRadius: theme.radii.xs,
+  tierInfo: { 
+    flex: 1, 
+    marginLeft: hustleSpacing.md,
   },
-  perks: { marginLeft: 56 },
-  connectorContainer: { paddingLeft: 21 },
+  perks: { 
+    marginTop: hustleSpacing.sm,
+    marginLeft: 56,
+  },
+  connectorContainer: { 
+    paddingLeft: 21,
+  },
   connector: { 
     width: 2, 
     height: 16, 
-    backgroundColor: theme.colors.surface.tertiary,
+    backgroundColor: hustleColors.glass.medium,
   },
   connectorUnlocked: {
-    backgroundColor: theme.colors.brand.primary,
+    backgroundColor: hustleColors.purple.core,
   },
-  locked: { opacity: 0.6 },
-  headerSpacer: { width: 50 },
-  currentTierCard: { borderLeftWidth: 4, borderLeftColor: theme.colors.brand.primary },
+  infoCard: {
+    marginTop: hustleSpacing.xl,
+  },
+  infoText: {
+    marginTop: hustleSpacing.sm,
+  },
 });
 
 export default TrustTierLadderScreen;

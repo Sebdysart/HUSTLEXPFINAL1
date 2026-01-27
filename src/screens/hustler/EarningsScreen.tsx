@@ -1,5 +1,10 @@
 /**
- * EarningsScreen - Earnings dashboard
+ * EarningsScreen - Progress Archetype
+ * 
+ * EMOTIONAL CONTRACT: "Value is accumulating"
+ * - Hero number at top
+ * - "You've earned" not "Total earnings"
+ * - Quiet power, not dashboard overload
  */
 
 import React, { useState } from 'react';
@@ -9,9 +14,10 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
+import { HScreen, HText, HCard, HButton, HMoney, HStatCard, HBadge } from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
+
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, MoneyDisplay, Button } from '../../components';
-import { theme } from '../../theme';
 
 const PERIODS = ['Week', 'Month', 'Year', 'All'];
 
@@ -35,13 +41,23 @@ export function EarningsScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text variant="title1" color="primary">Earnings</Text>
-        
-        <Spacing size={16} />
+    <HScreen ambient>
+      <ScrollView 
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + hustleSpacing.lg }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero Earnings - "You've earned" */}
+        <View style={styles.hero}>
+          <HMoney 
+            amount={data.total} 
+            size="hero" 
+            label={`You've earned this ${period.toLowerCase()}`}
+            glow
+            align="center"
+          />
+        </View>
 
-        {/* Period Selector */}
+        {/* Period Selector - Subtle */}
         <View style={styles.periods}>
           {PERIODS.map(p => (
             <TouchableOpacity
@@ -49,89 +65,160 @@ export function EarningsScreen() {
               style={[styles.periodBtn, period === p && styles.periodBtnActive]}
               onPress={() => setPeriod(p)}
             >
-              <Text variant="caption" color={period === p ? 'inverse' : 'primary'}>{p}</Text>
+              <HText variant="caption" color={period === p ? 'primary' : 'muted'}>
+                {p}
+              </HText>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Spacing size={20} />
+        {/* Stats - Clean, not overloaded */}
+        <View style={styles.statsRow}>
+          <HStatCard 
+            label="Tasks" 
+            value={String(data.tasks)} 
+            color={hustleColors.text.primary}
+          />
+          <HStatCard 
+            label="Hours" 
+            value={String(data.hours)} 
+            color={hustleColors.text.primary}
+          />
+          <HStatCard 
+            label="Per task" 
+            value={`$${Math.round(data.total / data.tasks)}`} 
+            color={hustleColors.money.primary}
+          />
+        </View>
 
-        {/* Total Earnings */}
-        <Card variant="elevated" padding="lg">
-          <Text variant="footnote" color="secondary">{`Total Earnings (${period})`}</Text>
-          <Spacing size={4} />
-          <MoneyDisplay amount={data.total} size="lg" />
-          <Spacing size={16} />
-          <View style={styles.statsRow}>
-            <StatBox label="Tasks" value={String(data.tasks)} />
-            <StatBox label="Hours" value={String(data.hours)} />
-            <StatBox label="Avg/Task" value={`$${Math.round(data.total / data.tasks)}`} />
-          </View>
-        </Card>
-
-        <Spacing size={20} />
-
-        {/* Balance */}
-        <Card variant="default" padding="md">
+        {/* Balance Card */}
+        <HCard variant="elevated" padding="lg">
           <View style={styles.balanceRow}>
             <View>
-              <Text variant="footnote" color="secondary">Available Balance</Text>
-              <MoneyDisplay amount={347.50} size="md" />
+              <HText variant="footnote" color="secondary">Ready to withdraw</HText>
+              <HMoney amount={347.50} size="md" />
             </View>
-            <Button variant="primary" size="sm" onPress={handleWithdraw}>Withdraw</Button>
+            <HButton variant="primary" size="sm" onPress={handleWithdraw}>
+              Withdraw
+            </HButton>
           </View>
-          <Spacing size={8} />
-          <Text variant="caption" color="tertiary">$500.00 pending approval</Text>
-        </Card>
+          <View style={styles.pendingRow}>
+            <HBadge variant="default" size="sm">
+              $500.00 pending
+            </HBadge>
+          </View>
+        </HCard>
 
-        <Spacing size={20} />
+        {/* Recent Activity - Expandable hint */}
+        <View style={styles.section}>
+          <HText variant="headline" color="primary">Recent Activity</HText>
+        </View>
 
-        {/* Recent Transactions */}
-        <Text variant="headline" color="primary">Recent Transactions</Text>
-        <Spacing size={12} />
-        <TransactionRow title="Moving help" amount={90} date="Jan 20" type="earned" />
-        <TransactionRow title="Withdrawal" amount={200} date="Jan 19" type="withdrawn" />
-        <TransactionRow title="Furniture assembly" amount={65} date="Jan 18" type="earned" />
-        <TransactionRow title="Dog walking" amount={35} date="Jan 17" type="earned" />
+        <TransactionCard 
+          title="Moving help" 
+          amount={90} 
+          date="Jan 20" 
+          type="earned" 
+        />
+        <TransactionCard 
+          title="Withdrawal" 
+          amount={200} 
+          date="Jan 19" 
+          type="withdrawn" 
+        />
+        <TransactionCard 
+          title="Furniture assembly" 
+          amount={65} 
+          date="Jan 18" 
+          type="earned" 
+        />
+        <TransactionCard 
+          title="Dog walking" 
+          amount={35} 
+          date="Jan 17" 
+          type="earned" 
+        />
       </ScrollView>
-    </View>
+    </HScreen>
   );
 }
 
-function StatBox({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.statBox}>
-      <Text variant="title2" color="primary">{value}</Text>
-      <Text variant="caption" color="secondary">{label}</Text>
-    </View>
-  );
+interface TransactionCardProps {
+  title: string;
+  amount: number;
+  date: string;
+  type: 'earned' | 'withdrawn';
 }
 
-function TransactionRow({ title, amount, date, type }: { title: string; amount: number; date: string; type: 'earned' | 'withdrawn' }) {
+function TransactionCard({ title, amount, date, type }: TransactionCardProps) {
   return (
-    <Card variant="default" padding="sm" style={styles.transaction}>
+    <HCard variant="default" padding="md" style={styles.transaction}>
       <View style={styles.transactionInfo}>
-        <Text variant="body" color="primary">{title}</Text>
-        <Text variant="caption" color="secondary">{date}</Text>
+        <HText variant="body" color="primary">{title}</HText>
+        <HText variant="caption" color="tertiary">{date}</HText>
       </View>
-      <Text variant="headline" color={type === 'earned' ? 'success' : 'secondary'}>
+      <HText 
+        variant="headline" 
+        color={type === 'earned' ? hustleColors.money.primary : hustleColors.text.secondary}
+        bold
+      >
         {type === 'earned' ? '+' : '-'}${amount}
-      </Text>
-    </Card>
+      </HText>
+    </HCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  scroll: { padding: theme.spacing[4] },
-  periods: { flexDirection: 'row', gap: theme.spacing[2] },
-  periodBtn: { paddingVertical: theme.spacing[2], paddingHorizontal: theme.spacing[4], backgroundColor: theme.colors.surface.secondary, borderRadius: theme.radii.full },
-  periodBtnActive: { backgroundColor: theme.colors.brand.primary },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  statBox: { alignItems: 'center' },
-  balanceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  transaction: { marginBottom: theme.spacing[2], flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  transactionInfo: { flex: 1 },
+  scroll: { 
+    padding: hustleSpacing.lg,
+    paddingBottom: hustleSpacing['4xl'],
+  },
+  hero: {
+    alignItems: 'center',
+    marginBottom: hustleSpacing['2xl'],
+  },
+  periods: { 
+    flexDirection: 'row', 
+    justifyContent: 'center',
+    gap: hustleSpacing.sm,
+    marginBottom: hustleSpacing.xl,
+  },
+  periodBtn: { 
+    paddingVertical: hustleSpacing.sm, 
+    paddingHorizontal: hustleSpacing.lg, 
+    backgroundColor: hustleColors.glass.subtle, 
+    borderRadius: 999,
+  },
+  periodBtnActive: { 
+    backgroundColor: hustleColors.purple.core,
+  },
+  statsRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between',
+    gap: hustleSpacing.md,
+    marginBottom: hustleSpacing.xl,
+  },
+  balanceRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+  },
+  pendingRow: {
+    marginTop: hustleSpacing.md,
+  },
+  section: {
+    marginTop: hustleSpacing.xl,
+    marginBottom: hustleSpacing.md,
+  },
+  transaction: { 
+    marginBottom: hustleSpacing.sm, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+  },
+  transactionInfo: { 
+    flex: 1,
+  },
 });
 
 export default EarningsScreen;

@@ -4,12 +4,12 @@
 
 ## Screens
 - TaskDetailScreen ✅
-- TaskInProgressScreen
-- HustlerEnRouteMapScreen
-- HustlerOnWayScreen (poster side)
-- TaskCompletionHustlerScreen
-- TaskCompletionPosterScreen
-- TaskReviewScreen
+- TaskInProgressScreen ✅
+- HustlerEnRouteMapScreen ✅
+- HustlerOnWayScreen (poster side) ✅
+- TaskCompletionHustlerScreen ✅
+- TaskCompletionPosterScreen ✅
+- TaskReviewScreen ✅
 
 ## Emotional Contract
 > "This is already in motion."

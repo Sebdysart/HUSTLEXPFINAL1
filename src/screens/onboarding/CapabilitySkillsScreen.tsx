@@ -1,107 +1,205 @@
 /**
- * CapabilitySkillsScreen - Skills/expertise selection
+ * CapabilitySkillsScreen - What are you good at?
+ * 
+ * CHOSEN-STATE: Surfacing your strengths
+ * One decision: What resonates?
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard } from '../../components/atoms';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Spacing } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const SKILLS = [
+type SkillOption = {
+  id: string;
+  emoji: string;
+  label: string;
+};
+
+const SKILLS: SkillOption[] = [
   { id: 'handyman', emoji: '🔨', label: 'Handyman' },
   { id: 'cleaning', emoji: '✨', label: 'Cleaning' },
   { id: 'organizing', emoji: '📦', label: 'Organizing' },
-  { id: 'tech', emoji: '💻', label: 'Tech Support' },
+  { id: 'tech', emoji: '💻', label: 'Tech' },
   { id: 'driving', emoji: '🚗', label: 'Driving' },
-  { id: 'heavy', emoji: '💪', label: 'Heavy Lifting' },
+  { id: 'lifting', emoji: '💪', label: 'Lifting' },
   { id: 'painting', emoji: '🎨', label: 'Painting' },
-  { id: 'plumbing', emoji: '🔧', label: 'Basic Plumbing' },
-  { id: 'electrical', emoji: '⚡', label: 'Basic Electrical' },
+  { id: 'plumbing', emoji: '🔧', label: 'Plumbing' },
+  { id: 'electrical', emoji: '⚡', label: 'Electrical' },
   { id: 'gardening', emoji: '🌿', label: 'Gardening' },
-  { id: 'pet', emoji: '🐕', label: 'Pet Care' },
-  { id: 'shopping', emoji: '🛒', label: 'Shopping/Errands' },
+  { id: 'pets', emoji: '🐕', label: 'Pets' },
+  { id: 'errands', emoji: '🛒', label: 'Errands' },
 ];
 
 export function CapabilitySkillsScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
   const [selected, setSelected] = useState<string[]>([]);
 
-  const toggle = (id: string) => {
+  const toggleSkill = (id: string) => {
     setSelected(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      prev.includes(id) 
+        ? prev.filter(i => i !== id)
+        : [...prev, id]
     );
   };
 
+  const handleContinue = () => {
+    navigation.goBack();
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <View style={styles.header}>
-        <Text variant="title1" color="primary" align="center">
-          What are you good at?
-        </Text>
-        <Spacing size={8} />
-        <Text variant="body" color="secondary" align="center">
-          Select your skills to get matched with relevant tasks
-        </Text>
-      </View>
-
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.grid}>
-        {SKILLS.map((s) => (
-          <TouchableOpacity
-            key={s.id}
-            style={[styles.chip, selected.includes(s.id) && styles.chipSelected]}
-            onPress={() => toggle(s.id)}
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <View style={styles.footer}>
+          {selected.length > 0 && (
+            <HText variant="caption" color="purple" center>
+              {selected.length} skills — nice range
+            </HText>
+          )}
+          <HButton 
+            variant="primary" 
+            size="lg" 
+            fullWidth 
+            onPress={handleContinue}
           >
-            <Text variant="title3">{s.emoji}</Text>
-            <Text variant="caption" color={selected.includes(s.id) ? 'primary' : 'secondary'}>
-              {s.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            Continue
+          </HButton>
+        </View>
+      }
+    >
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <HText variant="title1" center>
+            What are you good at?
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary" center>
+            Tap any that resonate
+          </HText>
+        </View>
 
-      <View style={styles.footer}>
-        <Text variant="footnote" color="tertiary" align="center">
-          {selected.length} skills selected
-        </Text>
-        <Spacing size={12} />
-        <Button variant="primary" size="lg" onPress={() => console.log(selected)}>
-          Continue
-        </Button>
+        <View style={styles.spacer} />
+
+        <ScrollView 
+          style={styles.scroll} 
+          contentContainerStyle={styles.grid}
+          showsVerticalScrollIndicator={false}
+        >
+          {SKILLS.map((skill) => (
+            <SkillChip
+              key={skill.id}
+              emoji={skill.emoji}
+              label={skill.label}
+              selected={selected.includes(skill.id)}
+              onPress={() => toggleSkill(skill.id)}
+            />
+          ))}
+        </ScrollView>
       </View>
-    </View>
+    </HScreen>
+  );
+}
+
+function SkillChip({ 
+  emoji, 
+  label, 
+  selected, 
+  onPress 
+}: { 
+  emoji: string; 
+  label: string; 
+  selected: boolean; 
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.95, { damping: 20, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.chipWrapper}
+    >
+      <Animated.View style={animatedStyle}>
+        <HCard 
+          variant={selected ? 'outlined' : 'default'} 
+          padding="md"
+        >
+          <View style={styles.chipContent}>
+            <HText variant="title2">{emoji}</HText>
+            <HText 
+              variant="callout" 
+              color={selected ? 'primary' : 'secondary'}
+              center
+            >
+              {label}
+            </HText>
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  header: { paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[8] },
-  scroll: { flex: 1, marginTop: theme.spacing[6] },
-  grid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    justifyContent: 'center', 
-    paddingHorizontal: theme.spacing[4],
-    gap: theme.spacing[3],
+  content: {
+    flex: 1,
   },
-  chip: {
+  header: {
     alignItems: 'center',
-    backgroundColor: theme.colors.surface.secondary,
-    paddingVertical: theme.spacing[3],
-    paddingHorizontal: theme.spacing[4],
-    borderRadius: theme.radii.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    minWidth: 100,
+    paddingTop: hustleSpacing.lg,
   },
-  chipSelected: { borderColor: theme.colors.brand.primary },
-  footer: { paddingHorizontal: theme.spacing[4], paddingBottom: theme.spacing[4] },
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  spacer: {
+    height: hustleSpacing.xl,
+  },
+  scroll: {
+    flex: 1,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingBottom: hustleSpacing['2xl'],
+  },
+  chipWrapper: {
+    width: '31%',
+    marginBottom: hustleSpacing.md,
+  },
+  chipContent: {
+    alignItems: 'center',
+    paddingVertical: hustleSpacing.sm,
+    gap: hustleSpacing.xs,
+  },
+  footer: {
+    gap: hustleSpacing.md,
+  },
 });
 
 export default CapabilitySkillsScreen;

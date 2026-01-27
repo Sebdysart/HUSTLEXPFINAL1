@@ -1,112 +1,175 @@
 /**
- * HustlerEnRouteMapScreen - Navigation to task location
+ * HustlerEnRouteMapScreen - Navigation to task
+ * 
+ * Archetype C: Task Lifecycle (Map Screen)
+ * - Map is background, status card overlays
+ * - "On the way" feeling
+ * - CTA: "I'm here"
  */
 
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  HCard,
+  HText,
+  HBadge,
+  HButton,
+  HActivityIndicator,
+} from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
+import { useTaskStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, Button } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type RouteProps = RouteProp<RootStackParamList, 'HustlerEnRouteMap'>;
 
 export function HustlerEnRouteMapScreen() {
   const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<RouteProps>();
+  const { taskId } = route.params;
+
+  const { tasks, updateTask } = useTaskStore();
+  const task = tasks.find(t => t.id === taskId);
+
+  const handleArrived = () => {
+    if (task) {
+      updateTask(taskId, { status: 'arrived' });
+      navigation.navigate('TaskInProgress', { taskId });
+    }
+  };
+
+  const handleMessage = () => {
+    navigation.navigate('TaskConversation', { taskId });
+  };
+
+  const handleOpenMaps = () => {
+    // TODO: Deep link to maps app
+    console.log('Open external maps');
+  };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Map Placeholder */}
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Map Background */}
       <View style={styles.mapContainer}>
         <View style={styles.mapPlaceholder}>
-          <Text variant="title2" color="secondary">🗺️</Text>
-          <Text variant="body" color="secondary">Map View</Text>
-          <Text variant="caption" color="tertiary">Navigation integration pending</Text>
+          <HText variant="title2" color="tertiary">🗺️</HText>
+          <HText variant="body" color="tertiary">Map View</HText>
+          <View style={styles.spacer} />
+          <HActivityIndicator active label="Loading route..." />
         </View>
       </View>
 
-      {/* Bottom Card */}
-      <View style={styles.bottomSheet}>
-        <Card variant="elevated" padding="lg">
-          <View style={styles.header}>
-            <View style={styles.statusBadge}>
-              <Text variant="caption" color="inverse">En Route</Text>
-            </View>
-            <Text variant="caption" color="secondary">ETA: 12 min</Text>
+      {/* Status Card Overlay */}
+      <View style={[styles.overlay, { paddingBottom: insets.bottom + 16 }]}>
+        <HCard variant="elevated" padding="lg">
+          {/* Status Row */}
+          <View style={styles.statusRow}>
+            <HBadge variant="purple" pulsing dot>
+              On the way
+            </HBadge>
+            <HText variant="headline" color="primary">~12 min</HText>
           </View>
 
-          <Spacing size={16} />
+          <View style={styles.spacerLg} />
 
-          <Text variant="headline" color="primary">Help moving furniture</Text>
-          <Spacing size={4} />
-          <Text variant="body" color="secondary">123 Main St, Apt 2B</Text>
+          {/* Task Info - minimal */}
+          <HText variant="title3" color="primary">
+            {task?.title || 'Task'}
+          </HText>
+          <View style={styles.spacerSm} />
+          <HText variant="body" color="secondary">
+            📍 {task?.address || 'Loading...'}
+          </HText>
 
-          <Spacing size={16} />
+          <View style={styles.spacerLg} />
 
-          <View style={styles.posterInfo}>
+          {/* Poster Info */}
+          <View style={styles.posterRow}>
             <View style={styles.avatar}>
-              <Text variant="body">👤</Text>
+              <HText variant="body">👤</HText>
             </View>
-            <View style={styles.posterText}>
-              <Text variant="body" color="primary">Sarah M.</Text>
-              <Text variant="caption" color="secondary">Waiting for you</Text>
+            <View style={styles.posterInfo}>
+              <HText variant="body" color="primary">
+                {task?.posterName || 'Poster'}
+              </HText>
+              <HText variant="caption" color="tertiary">
+                Ready for you
+              </HText>
             </View>
-            <Button variant="secondary" size="sm" onPress={() => console.log('message')}>
+            <HButton variant="secondary" size="sm" onPress={handleMessage}>
               Message
-            </Button>
+            </HButton>
           </View>
 
-          <Spacing size={16} />
+          <View style={styles.spacerLg} />
 
-          <View style={styles.actions}>
-            <Button variant="primary" size="lg" onPress={() => console.log('arrived')} style={styles.actionBtn}>
-              I've Arrived
-            </Button>
-          </View>
+          {/* Primary CTA */}
+          <HButton variant="primary" size="lg" fullWidth onPress={handleArrived}>
+            I'm here
+          </HButton>
 
-          <Spacing size={12} />
+          <View style={styles.spacerMd} />
 
-          <Button variant="ghost" size="sm" onPress={() => console.log('navigate')}>
-            Open in Maps App
-          </Button>
-        </Card>
+          {/* Secondary action */}
+          <HButton variant="ghost" size="sm" onPress={handleOpenMaps}>
+            Open in Maps
+          </HButton>
+        </HCard>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  mapContainer: { flex: 1 },
-  mapPlaceholder: { 
-    flex: 1, 
-    backgroundColor: theme.colors.surface.secondary, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  container: {
+    flex: 1,
+    backgroundColor: hustleColors.dark.void,
   },
-  bottomSheet: { padding: theme.spacing[4] },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  statusBadge: { 
-    backgroundColor: theme.colors.brand.primary, 
-    paddingHorizontal: theme.spacing[3], 
-    paddingVertical: theme.spacing[1], 
-    borderRadius: theme.radii.full 
+  mapContainer: {
+    flex: 1,
   },
-  posterInfo: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
-    backgroundColor: theme.colors.surface.tertiary, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  mapPlaceholder: {
+    flex: 1,
+    backgroundColor: hustleColors.dark.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  posterText: { flex: 1, marginLeft: theme.spacing[3] },
-  actions: { flexDirection: 'row' },
-  actionBtn: { flex: 1 },
+  overlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: hustleSpacing.lg,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  posterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: hustleColors.dark.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  posterInfo: {
+    flex: 1,
+    marginLeft: hustleSpacing.md,
+  },
+  spacer: { height: hustleSpacing.md },
+  spacerSm: { height: hustleSpacing.sm },
+  spacerMd: { height: hustleSpacing.md },
+  spacerLg: { height: hustleSpacing.xl },
 });
 
 export default HustlerEnRouteMapScreen;

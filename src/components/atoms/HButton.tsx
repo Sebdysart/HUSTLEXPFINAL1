@@ -129,7 +129,7 @@ export const HButton: React.FC<HButtonProps> = ({
         {...props}
       >
         <LinearGradient
-          colors={hustleGradients.action}
+          colors={[...hustleGradients.action]}
           style={[styles.button, buttonStyle]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -157,7 +157,7 @@ export const HButton: React.FC<HButtonProps> = ({
         {...props}
       >
         <LinearGradient
-          colors={hustleGradients.earnings}
+          colors={[...hustleGradients.earnings]}
           style={[styles.button, buttonStyle]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}

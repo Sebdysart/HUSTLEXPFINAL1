@@ -1,110 +1,220 @@
 /**
  * EligibilityMismatchScreen - Can't accept task due to missing requirements
+ * 
+ * Archetype: Interrupt
+ * Emotion: "The system has this under control"
+ * - Never blame user
+ * - Explain simply, offer clear next step
+ * - "Hmm, that didn't work" energy
+ * - Calm, factual, helpful
  */
 
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, Button } from '../../components';
-import { theme } from '../../theme';
+import { HScreen, HCard, HText, HButton } from '../../components/atoms';
+import { hustleColors, hustleSpacing, hustleRadii } from '../../theme/hustle-tokens';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function EligibilityMismatchScreen() {
   const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
+
+  const handleBack = () => navigation.goBack();
+  const handleVerify = () => navigation.navigate('WorkEligibility');
+  const handleBrowse = () => navigation.navigate('TaskFeed');
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.header}>
-          <Text variant="hero">🚫</Text>
-          <Spacing size={16} />
-          <Text variant="title1" color="primary" align="center">Can't Accept This Task</Text>
-          <Spacing size={8} />
-          <Text variant="body" color="secondary" align="center">
-            This task requires qualifications you haven't verified yet.
-          </Text>
+    <HScreen ambient={false}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + hustleSpacing.sm }]}>
+        <HButton variant="ghost" size="sm" onPress={handleBack}>
+          ← Back
+        </HButton>
+      </View>
+
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scroll}
+      >
+        {/* Header - calm, not alarming */}
+        <View style={styles.heroSection}>
+          <View style={styles.iconCircle}>
+            <HText variant="hero">🔒</HText>
+          </View>
+          <HText variant="title1" color="primary" center style={styles.title}>
+            This one needs a bit more
+          </HText>
+          <HText variant="body" color="secondary" center>
+            This task requires some qualifications you haven't added yet.
+          </HText>
         </View>
 
-        <Spacing size={32} />
-
         {/* Task Info */}
-        <Card variant="default" padding="md">
-          <Text variant="headline" color="primary">Task: Electrical repair</Text>
-          <Text variant="footnote" color="secondary">Requires licensed electrician</Text>
-        </Card>
+        <HCard variant="default" padding="md" style={styles.taskCard}>
+          <View style={styles.taskRow}>
+            <View style={styles.taskInfo}>
+              <HText variant="headline" color="primary">Electrical repair</HText>
+              <HText variant="caption" color="secondary">Requires licensed electrician</HText>
+            </View>
+            <HText variant="caption" color="purple">Premium</HText>
+          </View>
+        </HCard>
 
-        <Spacing size={24} />
+        {/* Missing Requirements - calm, actionable */}
+        <HText variant="headline" color="primary" style={styles.sectionTitle}>
+          What's needed
+        </HText>
 
-        {/* Missing Requirements */}
-        <Text variant="headline" color="primary">Missing Requirements</Text>
-        <Spacing size={12} />
-
-        <RequirementItem
+        <RequirementCard
           title="Licensed Electrician"
           description="This task requires a valid electrician license"
-          action="Add License"
+          actionLabel="Add License"
+          onAction={() => console.log('add license')}
         />
-        <Spacing size={8} />
-        <RequirementItem
+        
+        <RequirementCard
           title="Liability Insurance"
-          description="$1M minimum coverage required"
-          action="Add Insurance"
+          description="$1M minimum coverage required for electrical work"
+          actionLabel="Add Insurance"
+          onAction={() => console.log('add insurance')}
         />
 
-        <Spacing size={24} />
-
-        <Card variant="default" padding="md">
-          <Text variant="footnote" color="secondary">
-            💡 Once you add these qualifications, you'll be able to access premium tasks like this one with higher pay.
-          </Text>
-        </Card>
+        {/* Helpful info */}
+        <HCard variant="default" padding="md" style={styles.infoCard}>
+          <HText variant="footnote" color="secondary">
+            Once you add these qualifications, you'll unlock premium tasks like this one — they typically pay more and have less competition.
+          </HText>
+        </HCard>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={() => console.log('verify')}>
+      {/* Footer */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + hustleSpacing.lg }]}>
+        <HButton 
+          variant="primary" 
+          size="lg" 
+          onPress={handleVerify}
+          style={styles.primaryBtn}
+        >
           Complete Verification
-        </Button>
-        <Spacing size={12} />
-        <Button variant="ghost" size="sm" onPress={() => console.log('browse')}>
-          Browse Other Tasks
-        </Button>
+        </HButton>
+        <HButton 
+          variant="ghost" 
+          size="sm" 
+          onPress={handleBrowse}
+          style={styles.secondaryBtn}
+        >
+          Browse other tasks
+        </HButton>
       </View>
-    </View>
+    </HScreen>
   );
 }
 
-function RequirementItem({ title, description, action }: {
+interface RequirementCardProps {
   title: string;
   description: string;
-  action: string;
-}) {
+  actionLabel: string;
+  onAction: () => void;
+}
+
+function RequirementCard({ title, description, actionLabel, onAction }: RequirementCardProps) {
   return (
-    <Card variant="default" padding="md">
-      <View style={styles.reqRow}>
-        <View style={styles.reqInfo}>
-          <Text variant="headline" color="danger">❌ {title}</Text>
-          <Text variant="footnote" color="secondary">{description}</Text>
+    <HCard variant="default" padding="md" style={styles.requirementCard}>
+      <View style={styles.requirementRow}>
+        <View style={styles.requirementIcon}>
+          <HText variant="body">○</HText>
         </View>
-        <Button variant="secondary" size="sm" onPress={() => console.log(action)}>
-          {action}
-        </Button>
+        <View style={styles.requirementInfo}>
+          <HText variant="headline" color="primary">{title}</HText>
+          <HText variant="caption" color="secondary">{description}</HText>
+        </View>
+        <HButton variant="secondary" size="sm" onPress={onAction}>
+          {actionLabel}
+        </HButton>
       </View>
-    </Card>
+    </HCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  scroll: { padding: theme.spacing[4] },
-  header: { alignItems: 'center' },
-  reqRow: { flexDirection: 'row', alignItems: 'center' },
-  reqInfo: { flex: 1 },
-  footer: { padding: theme.spacing[4] },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: hustleSpacing.lg,
+    paddingBottom: hustleSpacing.md,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scroll: { 
+    padding: hustleSpacing.lg,
+    paddingTop: 0,
+  },
+  heroSection: { 
+    alignItems: 'center',
+    marginBottom: hustleSpacing['2xl'],
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: hustleColors.dark.elevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: hustleSpacing.lg,
+  },
+  title: {
+    marginBottom: hustleSpacing.sm,
+  },
+  taskCard: {
+    marginBottom: hustleSpacing.xl,
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  taskInfo: {
+    flex: 1,
+  },
+  sectionTitle: {
+    marginBottom: hustleSpacing.md,
+  },
+  requirementCard: {
+    marginBottom: hustleSpacing.sm,
+  },
+  requirementRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+  },
+  requirementIcon: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  requirementInfo: { 
+    flex: 1,
+    marginLeft: hustleSpacing.sm,
+    marginRight: hustleSpacing.md,
+  },
+  infoCard: {
+    marginTop: hustleSpacing.lg,
+  },
+  footer: { 
+    padding: hustleSpacing.lg,
+  },
+  primaryBtn: {
+    marginBottom: hustleSpacing.sm,
+  },
+  secondaryBtn: {
+    alignSelf: 'center',
+  },
 });
 
 export default EligibilityMismatchScreen;

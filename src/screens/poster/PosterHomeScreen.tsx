@@ -1,31 +1,48 @@
 /**
- * PosterHomeScreen - Dashboard for task posters
+ * PosterHomeScreen - Feed Archetype (B)
+ * "Things are happening. You're next."
  */
 
 import React from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore, useTaskStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
+import {
+  HScreen,
+  HText,
+  HCard,
+  HButton,
+  HMoney,
+  HTrustBadge,
+  HSignalStream,
+  HBadge,
+} from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, Button, MoneyDisplay, TrustBadge } from '../../components';
-import { theme } from '../../theme';
+
+function getTimeGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Morning';
+  if (hour < 17) return 'Afternoon';
+  if (hour < 21) return 'Evening';
+  return 'Night owl';
+}
 
 export function PosterHomeScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuthStore();
   const { tasks } = useTaskStore();
   const [refreshing, setRefreshing] = React.useState(false);
-  
+
   // Filter tasks posted by current user
   const myTasks = tasks.filter(t => t.posterId === user?.id || t.posterName === user?.name);
+  const activeTasks = myTasks.filter(t => t.status !== 'completed');
   const completedTasks = myTasks.filter(t => t.status === 'completed');
   const totalSpent = completedTasks.reduce((sum, t) => sum + (t.finalPay || t.maxPay), 0);
-  
+
   const handlePostTask = () => navigation.navigate('TaskCreation');
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -33,42 +50,56 @@ export function PosterHomeScreen() {
     setRefreshing(false);
   };
 
+  const greeting = getTimeGreeting();
+  const firstName = user?.name?.split(' ')[0] || 'Boss';
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView 
-        contentContainerStyle={styles.scroll}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.brand.primary} />
-        }
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text variant="body" color="secondary">Welcome back</Text>
-            <Text variant="title1" color="primary">{user?.name || 'Poster'}</Text>
-          </View>
-          <TrustBadge level={user?.trustTier || 1} xp={user?.xp || 0} size="md" />
+    <HScreen
+      ambient
+      scroll
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={hustleColors.purple.core}
+        />
+      }
+    >
+      {/* Floating Activity Signals */}
+      <HSignalStream
+        signals={[
+          { text: '3 hustlers browsing your area', icon: '👀' },
+          { text: 'Task completed nearby', icon: '✓' },
+          { text: '$127 paid out this hour', icon: '💸' },
+        ]}
+      />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <HText variant="body" color="secondary">{greeting},</HText>
+          <HText variant="title1" color="primary">{firstName}</HText>
         </View>
+        <HTrustBadge tier={user?.trustTier || 1} xp={user?.xp || 0} size="md" />
+      </View>
 
-        <Spacing size={24} />
+      {/* Quick Post CTA */}
+      <HCard variant="elevated" padding="lg" style={styles.ctaCard}>
+        <HText variant="headline" color="primary">Ready to get help?</HText>
+        <HText variant="body" color="secondary" style={styles.ctaSubtext}>
+          Hustlers are active around you
+        </HText>
+        <HButton variant="primary" size="lg" onPress={handlePostTask}>
+          Let's go
+        </HButton>
+      </HCard>
 
-        {/* Quick Post */}
-        <Card variant="elevated" padding="lg">
-          <Text variant="headline" color="primary">Need help with something?</Text>
-          <Spacing size={12} />
-          <Button variant="primary" size="lg" onPress={handlePostTask}>
-            + Post a Task
-          </Button>
-        </Card>
-
-        <Spacing size={20} />
-
-        {/* Active Tasks */}
+      {/* Active Tasks */}
+      <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text variant="headline" color="primary">Your Active Tasks</Text>
-          <Button variant="ghost" size="sm" onPress={() => {}}>See all</Button>
+          <HText variant="headline" color="primary">Your Tasks</HText>
+          <HBadge variant="info">{`${activeTasks.length || 2} active`}</HBadge>
         </View>
-        <Spacing size={12} />
 
         <ActiveTaskCard
           title="Help moving furniture"
@@ -76,37 +107,38 @@ export function PosterHomeScreen() {
           hustler="John D."
           price={75}
         />
-        <Spacing size={12} />
         <ActiveTaskCard
           title="Grocery shopping"
           status="pending"
           hustler={null}
           price={30}
         />
+      </View>
 
-        <Spacing size={24} />
-
-        {/* Spending Summary */}
-        <Text variant="headline" color="primary">This Month</Text>
-        <Spacing size={12} />
-        <Card variant="default" padding="md">
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <MoneyDisplay amount={totalSpent || 245} size="md" />
-              <Text variant="caption" color="secondary">Spent</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text variant="title2" color="primary">{myTasks.length || 4}</Text>
-              <Text variant="caption" color="secondary">Tasks Posted</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text variant="title2" color="primary">{completedTasks.length || 3}</Text>
-              <Text variant="caption" color="secondary">Completed</Text>
-            </View>
+      {/* Stats - Proof of Life */}
+      <HCard variant="default" padding="md" style={styles.statsCard}>
+        <HText variant="caption" color="secondary" style={styles.statsLabel}>This Month</HText>
+        <View style={styles.statsRow}>
+          <View style={styles.stat}>
+            <HMoney amount={totalSpent || 245} size="md" />
+            <HText variant="caption" color="secondary">Spent</HText>
           </View>
-        </Card>
-      </ScrollView>
-    </View>
+          <View style={styles.stat}>
+            <HText variant="title2" color="primary">{myTasks.length || 4}</HText>
+            <HText variant="caption" color="secondary">Posted</HText>
+          </View>
+          <View style={styles.stat}>
+            <HText variant="title2" color="primary">{completedTasks.length || 3}</HText>
+            <HText variant="caption" color="secondary">Done</HText>
+          </View>
+        </View>
+      </HCard>
+
+      {/* Browse CTA */}
+      <HButton variant="secondary" size="md" onPress={() => navigation.navigate('TaskFeed')}>
+        Browse what's out there
+      </HButton>
+    </HScreen>
   );
 }
 
@@ -116,38 +148,80 @@ function ActiveTaskCard({ title, status, hustler, price }: {
   hustler: string | null;
   price: number;
 }) {
-  const statusText = {
-    pending: '🔍 Finding hustler...',
-    in_progress: '🔨 In progress',
-    completed: '✅ Completed',
+  const statusConfig = {
+    pending: { label: 'Finding hustler...', variant: 'warning' as const },
+    in_progress: { label: 'In progress', variant: 'info' as const },
+    completed: { label: 'Done', variant: 'success' as const },
   };
 
   return (
-    <Card variant="default" padding="md">
+    <HCard variant="default" padding="md" style={styles.taskCard}>
       <View style={styles.taskHeader}>
-        <Text variant="headline" color="primary">{title}</Text>
-        <MoneyDisplay amount={price} size="sm" />
+        <View style={styles.taskInfo}>
+          <HText variant="headline" color="primary">{title}</HText>
+          {hustler && <HText variant="footnote" color="secondary">{hustler}</HText>}
+        </View>
+        <View style={styles.taskMeta}>
+          <HMoney amount={price} size="sm" glow />
+          <HBadge variant={statusConfig[status].variant}>{statusConfig[status].label}</HBadge>
+        </View>
       </View>
-      <Spacing size={8} />
-      <Text variant="footnote" color="secondary">{statusText[status]}</Text>
-      {hustler && (
-        <>
-          <Spacing size={4} />
-          <Text variant="footnote" color="secondary">Hustler: {hustler}</Text>
-        </>
-      )}
-    </Card>
+    </HCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  scroll: { padding: theme.spacing[4] },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  stat: { alignItems: 'center' },
-  taskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hustleSpacing.lg,
+  },
+  ctaCard: {
+    marginBottom: hustleSpacing.xl,
+  },
+  ctaSubtext: {
+    marginTop: hustleSpacing.xs,
+    marginBottom: hustleSpacing.lg,
+  },
+  section: {
+    marginBottom: hustleSpacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hustleSpacing.md,
+  },
+  statsCard: {
+    marginBottom: hustleSpacing.lg,
+  },
+  statsLabel: {
+    marginBottom: hustleSpacing.sm,
+    textAlign: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  stat: {
+    alignItems: 'center',
+  },
+  taskCard: {
+    marginBottom: hustleSpacing.md,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  taskInfo: {
+    flex: 1,
+  },
+  taskMeta: {
+    alignItems: 'flex-end',
+    gap: hustleSpacing.sm,
+  },
 });
 
 export default PosterHomeScreen;

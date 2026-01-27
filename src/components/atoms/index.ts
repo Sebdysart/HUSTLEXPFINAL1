@@ -8,11 +8,22 @@
  * Cursor cannot drift if atoms are correct.
  */
 
+// Typography & Money
 export * from './HText';
+// HMoney is exported from HText
+
+// Layout & Containers
 export * from './HCard';
+export * from './HScreen';
+export * from './HAmbient';
+
+// Interactive
 export * from './HButton';
 export * from './HInput';
+
+// Status & Feedback
 export * from './HBadge';
+// HTrustBadge is exported from HBadge
 export * from './HSignal';
-export * from './HAmbient';
-export * from './HScreen';
+// HActivityIndicator is exported from HSignal
+export * from './HMoney';

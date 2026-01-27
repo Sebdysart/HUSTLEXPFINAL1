@@ -51,7 +51,7 @@ export const HInput: React.FC<HInputProps> = ({
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
-  const borderColor = useSharedValue(hustleColors.glass.border);
+  const borderColor = useSharedValue<string>(hustleColors.glass.border);
 
   const handleFocus = (e: any) => {
     setIsFocused(true);

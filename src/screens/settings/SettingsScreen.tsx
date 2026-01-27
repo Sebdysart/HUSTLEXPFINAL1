@@ -1,16 +1,25 @@
 /**
  * SettingsScreen - App settings
+ * 
+ * Archetype: Interrupt
+ * Emotion: "The system has this under control"
+ * - Grouped logically
+ * - Toggles for booleans
+ * - Navigation for sub-screens
+ * - No overwhelming options
+ * - Calm, organized, trustworthy
  */
 
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Spacing, Card } from '../../components';
-import { theme } from '../../theme';
-import { useAuthStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
+
+import { HScreen, HCard, HText, HButton } from '../../components/atoms';
+import { hustleColors, hustleSpacing, hustleRadii } from '../../theme/hustle-tokens';
+import { useAuthStore } from '../../store';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -19,17 +28,21 @@ export function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { user, logout } = useAuthStore();
 
+  // Toggle states
+  const [darkMode, setDarkMode] = useState(true);
+  const [notifications, setNotifications] = useState(true);
+  const [locationServices, setLocationServices] = useState(true);
+
   const handleBack = () => navigation.goBack();
 
   const handleLogout = () => {
     Alert.alert(
       'Sign Out',
-      'Are you sure you want to sign out?',
+      'You\'ll need to sign in again to access your account.',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Sign Out', 
-          style: 'destructive',
           onPress: () => {
             logout();
             navigation.reset({
@@ -45,19 +58,18 @@ export function SettingsScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
-      'This action cannot be undone. All your data will be permanently deleted.',
+      'This will permanently remove your account and all data. This can\'t be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => Alert.alert('Contact Support', 'Please email support@hustlexp.com to delete your account.')
+          text: 'Learn More', 
+          onPress: () => Alert.alert('Contact Us', 'Please reach out to support@hustlexp.com for account deletion.')
         },
       ]
     );
   };
 
-  const handleNavigation = (screen: string) => {
+  const navigateTo = (screen: string) => {
     switch (screen) {
       case 'Profile':
         navigation.navigate('Profile');
@@ -72,92 +84,111 @@ export function SettingsScreen() {
         navigation.navigate('WorkEligibility');
         break;
       default:
-        Alert.alert('Coming Soon', 'This feature is not yet available.');
+        Alert.alert('Coming Soon', 'This feature is on the way.');
     }
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <HScreen ambient={false}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack}>
-          <Text variant="body" color="primary">← Back</Text>
-        </TouchableOpacity>
-        <Text variant="title2" color="primary">Settings</Text>
+      <View style={[styles.header, { paddingTop: insets.top + hustleSpacing.sm }]}>
+        <HButton variant="ghost" size="sm" onPress={handleBack}>
+          ← Back
+        </HButton>
+        <HText variant="title2" color="primary">Settings</HText>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scroll}
+      >
         {/* User Info */}
-        <Card variant="elevated" padding="md">
+        <HCard variant="elevated" padding="md" style={styles.userCard}>
           <View style={styles.userRow}>
             <View style={styles.avatar}>
-              <Text variant="title2">👤</Text>
+              <HText variant="title2">👤</HText>
             </View>
             <View style={styles.userInfo}>
-              <Text variant="headline" color="primary">{user?.name || 'User'}</Text>
-              <Text variant="caption" color="secondary">{user?.email || 'user@example.com'}</Text>
+              <HText variant="headline" color="primary">{user?.name || 'User'}</HText>
+              <HText variant="caption" color="secondary">{user?.email || 'user@example.com'}</HText>
             </View>
-            <TouchableOpacity onPress={() => handleNavigation('Profile')}>
-              <Text variant="body" color="brand">Edit</Text>
-            </TouchableOpacity>
+            <HButton variant="ghost" size="sm" onPress={() => navigateTo('Profile')}>
+              Edit
+            </HButton>
           </View>
-        </Card>
+        </HCard>
 
-        <Spacing size={24} />
+        {/* Account Section */}
+        <HText variant="footnote" color="tertiary" style={styles.sectionLabel}>
+          ACCOUNT
+        </HText>
+        <HCard variant="default" padding="none" style={styles.sectionCard}>
+          <SettingsRow icon="👤" label="Edit Profile" onPress={() => navigateTo('Profile')} />
+          <SettingsRow icon="💳" label="Wallet" onPress={() => navigateTo('Wallet')} />
+          <SettingsRow icon="📋" label="Work Eligibility" onPress={() => navigateTo('WorkEligibility')} last />
+        </HCard>
 
-        {/* Account */}
-        <Text variant="headline" color="secondary">Account</Text>
-        <Spacing size={12} />
-        <Card variant="default" padding="none">
-          <SettingsRow icon="👤" label="Edit Profile" onPress={() => handleNavigation('Profile')} />
-          <SettingsRow icon="🔔" label="Notifications" onPress={() => handleNavigation('Notifications')} />
-          <SettingsRow icon="💳" label="Wallet & Payments" onPress={() => handleNavigation('Wallet')} />
-          <SettingsRow icon="📋" label="Work Eligibility" onPress={() => handleNavigation('WorkEligibility')} last />
-        </Card>
+        {/* Preferences Section */}
+        <HText variant="footnote" color="tertiary" style={styles.sectionLabel}>
+          PREFERENCES
+        </HText>
+        <HCard variant="default" padding="none" style={styles.sectionCard}>
+          <SettingsToggle 
+            icon="🔔" 
+            label="Notifications" 
+            value={notifications} 
+            onToggle={setNotifications} 
+          />
+          <SettingsToggle 
+            icon="📍" 
+            label="Location Services" 
+            value={locationServices} 
+            onToggle={setLocationServices} 
+          />
+          <SettingsToggle 
+            icon="🌙" 
+            label="Dark Mode" 
+            value={darkMode} 
+            onToggle={setDarkMode}
+            last
+          />
+        </HCard>
 
-        <Spacing size={24} />
-
-        {/* Preferences */}
-        <Text variant="headline" color="secondary">Preferences</Text>
-        <Spacing size={12} />
-        <Card variant="default" padding="none">
-          <SettingsRow icon="📍" label="Location Settings" onPress={() => handleNavigation('Location')} />
-          <SettingsRow icon="🌙" label="Dark Mode" value="On" onPress={() => {}} />
-          <SettingsRow icon="🔤" label="Language" value="English" onPress={() => {}} last />
-        </Card>
-
-        <Spacing size={24} />
-
-        {/* Support */}
-        <Text variant="headline" color="secondary">Support</Text>
-        <Spacing size={12} />
-        <Card variant="default" padding="none">
-          <SettingsRow icon="❓" label="Help Center" onPress={() => handleNavigation('Help')} />
-          <SettingsRow icon="💬" label="Contact Support" onPress={() => handleNavigation('Support')} />
-          <SettingsRow icon="📜" label="Terms of Service" onPress={() => handleNavigation('Terms')} />
-          <SettingsRow icon="🔐" label="Privacy Policy" onPress={() => handleNavigation('Privacy')} last />
-        </Card>
-
-        <Spacing size={24} />
+        {/* Support Section */}
+        <HText variant="footnote" color="tertiary" style={styles.sectionLabel}>
+          SUPPORT
+        </HText>
+        <HCard variant="default" padding="none" style={styles.sectionCard}>
+          <SettingsRow icon="❓" label="Help Center" onPress={() => navigateTo('Help')} />
+          <SettingsRow icon="💬" label="Contact Support" onPress={() => navigateTo('Support')} />
+          <SettingsRow icon="📜" label="Terms of Service" onPress={() => navigateTo('Terms')} />
+          <SettingsRow icon="🔐" label="Privacy Policy" onPress={() => navigateTo('Privacy')} last />
+        </HCard>
 
         {/* Danger Zone */}
-        <Card variant="default" padding="none">
-          <SettingsRow icon="🚪" label="Sign Out" danger onPress={handleLogout} />
-          <SettingsRow icon="🗑️" label="Delete Account" danger onPress={handleDeleteAccount} last />
-        </Card>
+        <HCard variant="default" padding="none" style={styles.sectionCard}>
+          <SettingsRow icon="🚪" label="Sign Out" onPress={handleLogout} />
+          <SettingsRow 
+            icon="🗑️" 
+            label="Delete Account" 
+            onPress={handleDeleteAccount} 
+            danger 
+            last 
+          />
+        </HCard>
 
-        <Spacing size={24} />
-
-        <Text variant="caption" color="tertiary" align="center">
-          HustleXP v1.0.0
-        </Text>
-        <Spacing size={8} />
-        <Text variant="caption" color="tertiary" align="center">
-          {`Trust Tier ${user?.trustTier || 1} • ${user?.xp || 0} XP`}
-        </Text>
+        {/* Footer info */}
+        <View style={styles.footer}>
+          <HText variant="caption" color="tertiary" center>
+            HustleXP v1.0.0
+          </HText>
+          <HText variant="caption" color="tertiary" center style={styles.footerDetail}>
+            Trust Tier {user?.trustTier || 1} · {user?.xp || 0} XP
+          </HText>
+        </View>
       </ScrollView>
-    </View>
+    </HScreen>
   );
 }
 
@@ -172,45 +203,117 @@ interface SettingsRowProps {
 
 function SettingsRow({ icon, label, value, danger, last, onPress }: SettingsRowProps) {
   return (
-    <TouchableOpacity style={[styles.row, !last && styles.rowBorder]} onPress={onPress}>
-      <Text variant="body">{icon}</Text>
-      <Text variant="body" color={danger ? 'error' : 'primary'} style={styles.rowLabel}>{label}</Text>
-      {value && <Text variant="body" color="secondary">{value}</Text>}
-      <Text variant="body" color="tertiary"> ›</Text>
+    <TouchableOpacity 
+      style={[styles.row, !last && styles.rowBorder]} 
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <HText variant="body">{icon}</HText>
+      <HText 
+        variant="body" 
+        color={danger ? 'error' : 'primary'} 
+        style={styles.rowLabel}
+      >
+        {label}
+      </HText>
+      {value && <HText variant="body" color="secondary">{value}</HText>}
+      <HText variant="body" color="tertiary">›</HText>
     </TouchableOpacity>
   );
 }
 
+interface SettingsToggleProps {
+  icon: string;
+  label: string;
+  value: boolean;
+  last?: boolean;
+  onToggle: (value: boolean) => void;
+}
+
+function SettingsToggle({ icon, label, value, last, onToggle }: SettingsToggleProps) {
+  return (
+    <View style={[styles.row, !last && styles.rowBorder]}>
+      <HText variant="body">{icon}</HText>
+      <HText variant="body" color="primary" style={styles.rowLabel}>{label}</HText>
+      <Switch
+        value={value}
+        onValueChange={onToggle}
+        trackColor={{ 
+          false: hustleColors.dark.surface, 
+          true: hustleColors.purple.soft 
+        }}
+        thumbColor={hustleColors.white}
+        ios_backgroundColor={hustleColors.dark.surface}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center',
-    padding: theme.spacing[4],
+    paddingHorizontal: hustleSpacing.lg,
+    paddingBottom: hustleSpacing.md,
   },
-  scroll: { padding: theme.spacing[4], paddingTop: 0 },
-  userRow: { flexDirection: 'row', alignItems: 'center' },
+  headerSpacer: { width: 60 },
+  scrollContainer: {
+    flex: 1,
+  },
+  scroll: { 
+    padding: hustleSpacing.lg,
+    paddingTop: 0,
+    paddingBottom: hustleSpacing['3xl'],
+  },
+  userCard: {
+    marginBottom: hustleSpacing.xl,
+  },
+  userRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+  },
   avatar: { 
     width: 56, 
     height: 56, 
     borderRadius: 28, 
-    backgroundColor: theme.colors.surface.tertiary, 
+    backgroundColor: hustleColors.dark.surface, 
     justifyContent: 'center', 
-    alignItems: 'center' 
+    alignItems: 'center',
   },
-  userInfo: { flex: 1, marginLeft: theme.spacing[3] },
+  userInfo: { 
+    flex: 1, 
+    marginLeft: hustleSpacing.md,
+  },
+  sectionLabel: {
+    marginBottom: hustleSpacing.sm,
+    marginTop: hustleSpacing.md,
+    paddingLeft: hustleSpacing.sm,
+  },
+  sectionCard: {
+    marginBottom: hustleSpacing.md,
+  },
   row: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    padding: theme.spacing[4],
+    paddingVertical: hustleSpacing.md,
+    paddingHorizontal: hustleSpacing.lg,
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.surface.secondary,
+    borderBottomColor: hustleColors.dark.border,
   },
-  rowLabel: { flex: 1, marginLeft: theme.spacing[3] },
-  headerSpacer: { width: 50 },
+  rowLabel: { 
+    flex: 1, 
+    marginLeft: hustleSpacing.md,
+  },
+  footer: {
+    marginTop: hustleSpacing.xl,
+    alignItems: 'center',
+  },
+  footerDetail: {
+    marginTop: hustleSpacing.xs,
+  },
 });
 
 export default SettingsScreen;

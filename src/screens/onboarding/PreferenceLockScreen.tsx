@@ -1,99 +1,147 @@
 /**
- * PreferenceLockScreen - Confirm preferences before proceeding
+ * PreferenceLockScreen - All set!
+ * 
+ * CHOSEN-STATE: Confirmation, not summary
+ * One decision: Ready to go?
  */
 
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard, HBadge, HTextButton } from '../../components/atoms';
+import { hustleSpacing, hustleColors } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Spacing, Card } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function PreferenceLockScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
 
   const handleConfirm = () => {
-    console.log('Preferences confirmed');
+    // Proceed to main app
+    navigation.goBack();
   };
 
   const handleEdit = () => {
-    console.log('Edit preferences');
+    navigation.goBack();
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <View style={styles.footer}>
+          <HButton 
+            variant="primary" 
+            size="lg" 
+            fullWidth 
+            onPress={handleConfirm}
+          >
+            Continue
+          </HButton>
+          <HTextButton onPress={handleEdit}>
+            Make changes
+          </HTextButton>
+        </View>
+      }
+    >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text variant="title1" color="primary" align="center">
-            Ready to go!
-          </Text>
-          <Spacing size={8} />
-          <Text variant="body" color="secondary" align="center">
-            Here's what we've set up for you
-          </Text>
+          <HText variant="hero" center>🎯</HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="title1" center>
+            You're dialed in
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary" center>
+            System's calibrated to you
+          </HText>
         </View>
 
-        <Spacing size={32} />
+        <View style={styles.spacer} />
 
-        <Card variant="default" padding="lg">
-          <PreferenceRow label="Role" value="Hustler & Poster" />
-          <Spacing size={16} />
-          <PreferenceRow label="Interests" value="Delivery, Tech Help, Assembly" />
-          <Spacing size={16} />
-          <PreferenceRow label="Notifications" value="Enabled" />
-        </Card>
+        <HCard variant="default" padding="lg">
+          <View style={styles.summary}>
+            <SummaryRow emoji="👤" label="Mode" value="Hustler & Poster" />
+            <View style={styles.divider} />
+            <SummaryRow emoji="🎯" label="Interests" value="Delivery, Tech, Assembly" />
+            <View style={styles.divider} />
+            <SummaryRow emoji="🔔" label="Notifications" value="On" />
+          </View>
+        </HCard>
 
-        <Spacing size={16} />
-
-        <Button variant="ghost" size="sm" onPress={handleEdit}>
-          Edit preferences
-        </Button>
+        <View style={styles.badges}>
+          <HBadge variant="purple" pulsing>Ready to earn</HBadge>
+        </View>
       </View>
-
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={handleConfirm}>
-          Let's Go!
-        </Button>
-      </View>
-    </View>
+    </HScreen>
   );
 }
 
-function PreferenceRow({ label, value }: { label: string; value: string }) {
+function SummaryRow({ 
+  emoji, 
+  label, 
+  value 
+}: { 
+  emoji: string; 
+  label: string; 
+  value: string;
+}) {
   return (
-    <View style={styles.prefRow}>
-      <Text variant="footnote" color="secondary">{label}</Text>
-      <Text variant="body" color="primary">{value}</Text>
+    <View style={styles.row}>
+      <View style={styles.rowLeft}>
+        <HText variant="body">{emoji}</HText>
+        <HText variant="callout" color="tertiary">{label}</HText>
+      </View>
+      <HText variant="callout" color="primary">{value}</HText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.surface.primary,
-  },
   content: {
     flex: 1,
-    paddingHorizontal: theme.spacing[4],
     justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
   },
-  prefRow: {
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  spacer: {
+    height: hustleSpacing['2xl'],
+  },
+  summary: {
+    gap: hustleSpacing.md,
+  },
+  row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: hustleSpacing.sm,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: hustleColors.glass.border,
+  },
+  badges: {
+    marginTop: hustleSpacing.xl,
+    alignItems: 'center',
+  },
   footer: {
-    paddingHorizontal: theme.spacing[4],
-    paddingBottom: theme.spacing[4],
+    gap: hustleSpacing.sm,
   },
 });
 

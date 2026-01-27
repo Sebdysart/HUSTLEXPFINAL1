@@ -1,11 +1,21 @@
 /**
- * InstantInterruptCard - Urgent task notification overlay
+ * InstantInterruptCard - Task notification overlay
+ * 
+ * Archetype: Interrupt
+ * Emotion: "The system has this under control"
+ * - Calm, confident presentation
+ * - Authority without aggression
+ * - Clear information hierarchy
+ * - Actions obvious but not urgent
+ * - NO neon accents, NO urgent language
  */
 
 import React from 'react';
 import { View, StyleSheet, Modal } from 'react-native';
-import { Text, Spacing, Card, Button, MoneyDisplay } from '../../components';
-import { theme } from '../../theme';
+
+import { HCard, HText, HButton, HBadge } from '../../components/atoms';
+import { MoneyDisplay } from '../../components';
+import { hustleColors, hustleSpacing, hustleRadii } from '../../theme/hustle-tokens';
 
 interface InstantInterruptCardProps {
   visible: boolean;
@@ -21,64 +31,57 @@ interface InstantInterruptCardProps {
 
 export function InstantInterruptCard({ visible, onAccept, onDecline, task }: InstantInterruptCardProps) {
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
-        <Card variant="elevated" padding="lg" style={styles.card}>
-          {/* Urgent Badge */}
-          <View style={styles.urgentBadge}>
-            <Text variant="caption" color="inverse">⚡ {task.urgency}</Text>
+        <HCard variant="elevated" padding="lg" style={styles.card}>
+          {/* Status indicator - calm, not alarming */}
+          <HBadge variant="default" size="md">
+            {task.urgency}
+          </HBadge>
+
+          <View style={styles.content}>
+            <HText variant="title2" color="primary" center>
+              New task available
+            </HText>
+
+            <View style={styles.taskDetails}>
+              <HText variant="headline" color="primary" center>
+                {task.title}
+              </HText>
+              <HText variant="body" color="secondary" center>
+                {task.distance} away
+              </HText>
+            </View>
+
+            <View style={styles.priceContainer}>
+              <MoneyDisplay amount={task.price} size="lg" />
+            </View>
           </View>
-
-          <Spacing size={16} />
-
-          <Text variant="title2" color="primary" align="center">
-            New Task Nearby!
-          </Text>
-
-          <Spacing size={20} />
-
-          <Text variant="headline" color="primary" align="center">
-            {task.title}
-          </Text>
-          <Spacing size={4} />
-          <Text variant="body" color="secondary" align="center">
-            {task.distance} away
-          </Text>
-
-          <Spacing size={20} />
-
-          <View style={styles.priceContainer}>
-            <MoneyDisplay amount={task.price} size="lg" />
-          </View>
-
-          <Spacing size={24} />
 
           <View style={styles.actions}>
-            <Button 
+            <HButton 
               variant="secondary" 
               size="lg" 
               onPress={onDecline}
               style={styles.actionBtn}
             >
-              Pass
-            </Button>
+              Not now
+            </HButton>
             <View style={styles.actionSpacer} />
-            <Button 
+            <HButton 
               variant="primary" 
               size="lg" 
               onPress={onAccept}
               style={styles.actionBtn}
             >
               Accept
-            </Button>
+            </HButton>
           </View>
 
-          <Spacing size={12} />
-
-          <Text variant="caption" color="tertiary" align="center">
-            This offer expires in 2 minutes
-          </Text>
-        </Card>
+          <HText variant="caption" color="tertiary" center style={styles.expiry}>
+            Available for the next 2 minutes
+          </HText>
+        </HCard>
       </View>
     </Modal>
   );
@@ -90,9 +93,9 @@ export function InstantInterruptCardDemo() {
 
   return (
     <View style={styles.demoContainer}>
-      <Button variant="primary" onPress={() => setVisible(true)}>
-        Show Interrupt
-      </Button>
+      <HButton variant="primary" onPress={() => setVisible(true)}>
+        Show Task
+      </HButton>
       <InstantInterruptCard
         visible={visible}
         onAccept={() => {
@@ -104,10 +107,10 @@ export function InstantInterruptCardDemo() {
           setVisible(false);
         }}
         task={{
-          title: 'Urgent grocery pickup',
+          title: 'Grocery pickup',
           price: 35,
           distance: '0.3 mi',
-          urgency: 'ASAP',
+          urgency: 'Nearby',
         }}
       />
     </View>
@@ -117,40 +120,48 @@ export function InstantInterruptCardDemo() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
-    padding: theme.spacing[4],
+    padding: hustleSpacing.xl,
   },
   card: {
     alignItems: 'center',
   },
-  urgentBadge: {
-    backgroundColor: theme.colors.semantic.warning,
-    paddingHorizontal: theme.spacing[4],
-    paddingVertical: theme.spacing[2],
-    borderRadius: theme.radii.full,
+  content: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: hustleSpacing.xl,
+  },
+  taskDetails: {
+    marginTop: hustleSpacing.lg,
+    alignItems: 'center',
   },
   priceContainer: {
-    backgroundColor: theme.colors.surface.secondary,
-    paddingHorizontal: theme.spacing[6],
-    paddingVertical: theme.spacing[4],
-    borderRadius: theme.radii.md,
+    backgroundColor: hustleColors.dark.surface,
+    paddingHorizontal: hustleSpacing['2xl'],
+    paddingVertical: hustleSpacing.lg,
+    borderRadius: hustleRadii.lg,
+    marginTop: hustleSpacing.xl,
   },
   actions: {
     flexDirection: 'row',
     width: '100%',
+    marginTop: hustleSpacing.xl,
   },
   actionBtn: {
     flex: 1,
   },
   actionSpacer: {
-    width: theme.spacing[3],
+    width: hustleSpacing.md,
+  },
+  expiry: {
+    marginTop: hustleSpacing.lg,
   },
   demoContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface.primary,
+    backgroundColor: hustleColors.dark.base,
   },
 });
 

@@ -1,97 +1,226 @@
 /**
- * CapabilityTradesScreen - Trades/certifications
+ * CapabilityTradesScreen - Any certifications?
+ * 
+ * CHOSEN-STATE: Unlocking pro-tier tasks
+ * One decision: Got credentials?
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard, HBadge } from '../../components/atoms';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Spacing } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const TRADES = [
-  { id: 'plumber', emoji: '🔧', label: 'Licensed Plumber' },
-  { id: 'electrician', emoji: '⚡', label: 'Licensed Electrician' },
-  { id: 'hvac', emoji: '❄️', label: 'HVAC Certified' },
-  { id: 'contractor', emoji: '🏗️', label: 'General Contractor' },
-  { id: 'painter', emoji: '🎨', label: 'Professional Painter' },
-  { id: 'locksmith', emoji: '🔐', label: 'Locksmith' },
-  { id: 'appliance', emoji: '🔌', label: 'Appliance Repair' },
-  { id: 'none', emoji: '✨', label: 'No certifications' },
+type TradeOption = {
+  id: string;
+  emoji: string;
+  label: string;
+  pro?: boolean;
+};
+
+const TRADES: TradeOption[] = [
+  { id: 'plumber', emoji: '🔧', label: 'Plumber', pro: true },
+  { id: 'electrician', emoji: '⚡', label: 'Electrician', pro: true },
+  { id: 'hvac', emoji: '❄️', label: 'HVAC', pro: true },
+  { id: 'contractor', emoji: '🏗️', label: 'Contractor', pro: true },
+  { id: 'painter', emoji: '🎨', label: 'Painter' },
+  { id: 'locksmith', emoji: '🔐', label: 'Locksmith', pro: true },
+  { id: 'appliance', emoji: '🔌', label: 'Appliance' },
+  { id: 'none', emoji: '✨', label: 'No certs yet' },
 ];
 
 export function CapabilityTradesScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
   const [selected, setSelected] = useState<string[]>([]);
 
-  const toggle = (id: string) => {
+  const toggleTrade = (id: string) => {
     if (id === 'none') {
       setSelected(['none']);
     } else {
       setSelected(prev => {
         const filtered = prev.filter(i => i !== 'none');
-        return filtered.includes(id) ? filtered.filter(i => i !== id) : [...filtered, id];
+        return filtered.includes(id) 
+          ? filtered.filter(i => i !== id)
+          : [...filtered, id];
       });
     }
   };
 
+  const handleContinue = () => {
+    navigation.goBack();
+  };
+
+  const proCount = selected.filter(id => 
+    TRADES.find(t => t.id === id)?.pro
+  ).length;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <View style={styles.header}>
-        <Text variant="title1" color="primary" align="center">
-          Any professional certifications?
-        </Text>
-        <Spacing size={8} />
-        <Text variant="body" color="secondary" align="center">
-          Certified pros get access to specialized, higher-paying tasks
-        </Text>
-      </View>
-
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.list}>
-        {TRADES.map((t) => (
-          <TouchableOpacity
-            key={t.id}
-            style={[styles.option, selected.includes(t.id) && styles.optionSelected]}
-            onPress={() => toggle(t.id)}
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <View style={styles.footer}>
+          {proCount > 0 && (
+            <HText variant="caption" color="purple" center>
+              {proCount} pro cert{proCount > 1 ? 's' : ''} — premium tasks unlocked
+            </HText>
+          )}
+          <HButton 
+            variant="primary" 
+            size="lg" 
+            fullWidth 
+            onPress={handleContinue}
           >
-            <Text variant="title2">{t.emoji}</Text>
-            <Text variant="body" color="primary" style={styles.optionLabel}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            Continue
+          </HButton>
+        </View>
+      }
+    >
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <HText variant="title1" center>
+            Any certifications?
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary" center>
+            Pros get access to higher-paying tasks
+          </HText>
+        </View>
 
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={() => console.log(selected)}>
-          Continue
-        </Button>
+        <View style={styles.spacer} />
+
+        <ScrollView 
+          style={styles.scroll} 
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        >
+          {TRADES.map((trade) => (
+            <TradeCard
+              key={trade.id}
+              emoji={trade.emoji}
+              label={trade.label}
+              pro={trade.pro}
+              selected={selected.includes(trade.id)}
+              onPress={() => toggleTrade(trade.id)}
+            />
+          ))}
+        </ScrollView>
       </View>
-    </View>
+    </HScreen>
+  );
+}
+
+function TradeCard({ 
+  emoji, 
+  label, 
+  pro,
+  selected, 
+  onPress 
+}: { 
+  emoji: string; 
+  label: string; 
+  pro?: boolean;
+  selected: boolean; 
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, { damping: 20, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.cardWrapper}
+    >
+      <Animated.View style={animatedStyle}>
+        <HCard 
+          variant={selected ? 'outlined' : 'default'} 
+          padding="lg"
+        >
+          <View style={styles.cardContent}>
+            <HText variant="title2">{emoji}</HText>
+            <View style={styles.cardText}>
+              <View style={styles.labelRow}>
+                <HText 
+                  variant="headline" 
+                  color={selected ? 'primary' : 'secondary'}
+                >
+                  {label}
+                </HText>
+                {pro && (
+                  <HBadge variant="success" size="sm">PRO</HBadge>
+                )}
+              </View>
+            </View>
+            {selected && (
+              <HText variant="body" color="purple">✓</HText>
+            )}
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  header: { paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[8] },
-  scroll: { flex: 1, marginTop: theme.spacing[6] },
-  list: { paddingHorizontal: theme.spacing[4] },
-  option: {
+  content: {
+    flex: 1,
+  },
+  header: {
+    alignItems: 'center',
+    paddingTop: hustleSpacing.lg,
+  },
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  spacer: {
+    height: hustleSpacing.xl,
+  },
+  scroll: {
+    flex: 1,
+  },
+  list: {
+    gap: hustleSpacing.md,
+    paddingBottom: hustleSpacing['2xl'],
+  },
+  cardWrapper: {},
+  cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface.secondary,
-    padding: theme.spacing[4],
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing[3],
-    borderWidth: 2,
-    borderColor: 'transparent',
+    gap: hustleSpacing.lg,
   },
-  optionSelected: { borderColor: theme.colors.brand.primary },
-  optionLabel: { marginLeft: theme.spacing[4] },
-  footer: { paddingHorizontal: theme.spacing[4], paddingBottom: theme.spacing[4] },
+  cardText: {
+    flex: 1,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: hustleSpacing.sm,
+  },
+  footer: {
+    gap: hustleSpacing.md,
+  },
 });
 
 export default CapabilityTradesScreen;

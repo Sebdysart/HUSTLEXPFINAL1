@@ -1,19 +1,19 @@
 # Archetype D: Calibration / Capability Screens
 
-**Status:** 🔄 Transform after Lifecycle
+**Status:** ✅ Complete
 
 ## Screens
 - CalibrationScreen ✅
-- CapabilityAvailabilityScreen
-- CapabilityBackgroundScreen
-- CapabilityInsuranceScreen
-- CapabilityLocationScreen
-- CapabilitySkillsScreen
-- CapabilityToolsScreen
-- CapabilityTradesScreen
-- CapabilityVehicleScreen
-- PreferenceLockScreen
-- WorkEligibilityScreen
+- CapabilityAvailabilityScreen ✅
+- CapabilityBackgroundScreen ✅
+- CapabilityInsuranceScreen ✅
+- CapabilityLocationScreen ✅
+- CapabilitySkillsScreen ✅
+- CapabilityToolsScreen ✅
+- CapabilityTradesScreen ✅
+- CapabilityVehicleScreen ✅
+- PreferenceLockScreen ✅
+- WorkEligibilityScreen ✅
 
 ## Emotional Contract
 > "We're tuning the system to you."

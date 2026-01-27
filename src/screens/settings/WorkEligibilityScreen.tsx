@@ -1,112 +1,229 @@
 /**
- * WorkEligibilityScreen - Work eligibility verification
+ * WorkEligibilityScreen - Unlock more tasks
+ * 
+ * CHOSEN-STATE: Progression, not gatekeeping
+ * One decision per item: Start verification?
  */
 
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HCard, HBadge } from '../../components/atoms';
+import { hustleSpacing, hustleColors } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, Button } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+type VerificationStatus = 'verified' | 'pending' | 'available';
+
+type VerificationItem = {
+  id: string;
+  emoji: string;
+  title: string;
+  hint: string;
+  status: VerificationStatus;
+};
+
+const VERIFICATIONS: VerificationItem[] = [
+  { 
+    id: 'identity', 
+    emoji: '🪪', 
+    title: 'Identity', 
+    hint: 'Verified with ID',
+    status: 'verified' 
+  },
+  { 
+    id: 'background', 
+    emoji: '🔍', 
+    title: 'Background', 
+    hint: 'Check in progress',
+    status: 'pending' 
+  },
+  { 
+    id: 'work', 
+    emoji: '📋', 
+    title: 'Work Auth', 
+    hint: 'Tap to verify',
+    status: 'available' 
+  },
+  { 
+    id: 'insurance', 
+    emoji: '🛡️', 
+    title: 'Insurance', 
+    hint: 'Unlock premium tasks',
+    status: 'available' 
+  },
+];
 
 export function WorkEligibilityScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
+
+  const handleItemPress = (id: string, status: VerificationStatus) => {
+    if (status === 'available') {
+      // Would navigate to verification flow
+      console.log('Start verification:', id);
+    }
+  };
+
+  const verifiedCount = VERIFICATIONS.filter(v => v.status === 'verified').length;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text variant="title1" color="primary">Work Eligibility</Text>
-        <Spacing size={8} />
-        <Text variant="body" color="secondary">
-          Complete verification to unlock more tasks
-        </Text>
+    <HScreen ambient scroll={false}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <HText variant="title1">
+            Your verifications
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary">
+            More verifications = more task types
+          </HText>
+        </View>
 
-        <Spacing size={24} />
+        <View style={styles.progress}>
+          <HBadge variant="purple">
+            {verifiedCount}/{VERIFICATIONS.length} complete
+          </HBadge>
+        </View>
 
-        <VerificationItem
-          title="Identity Verification"
-          description="Verify your identity with a government ID"
-          status="verified"
-        />
-        <Spacing size={12} />
-        <VerificationItem
-          title="Background Check"
-          description="Complete a background check for premium tasks"
-          status="pending"
-        />
-        <Spacing size={12} />
-        <VerificationItem
-          title="Work Authorization"
-          description="Confirm you're authorized to work"
-          status="not_started"
-        />
-        <Spacing size={12} />
-        <VerificationItem
-          title="Vehicle Insurance"
-          description="Add proof of vehicle insurance"
-          status="not_started"
-        />
+        <ScrollView 
+          style={styles.scroll} 
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        >
+          {VERIFICATIONS.map((item) => (
+            <VerificationCard
+              key={item.id}
+              emoji={item.emoji}
+              title={item.title}
+              hint={item.hint}
+              status={item.status}
+              onPress={() => handleItemPress(item.id, item.status)}
+            />
+          ))}
+        </ScrollView>
 
-        <Spacing size={24} />
-
-        <Card variant="default" padding="md">
-          <Text variant="footnote" color="secondary">
-            🔒 Your documents are encrypted and stored securely. We only share verification status, never your actual documents.
-          </Text>
-        </Card>
-      </ScrollView>
-    </View>
+        <View style={styles.note}>
+          <HText variant="caption" color="tertiary" center>
+            🔒 Your data is encrypted and secure
+          </HText>
+        </View>
+      </View>
+    </HScreen>
   );
 }
 
-function VerificationItem({ title, description, status }: {
-  title: string;
-  description: string;
-  status: 'verified' | 'pending' | 'not_started';
+function VerificationCard({ 
+  emoji, 
+  title, 
+  hint,
+  status,
+  onPress 
+}: { 
+  emoji: string; 
+  title: string; 
+  hint: string;
+  status: VerificationStatus;
+  onPress: () => void;
 }) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    if (status === 'available') {
+      scale.value = withSpring(0.98, { damping: 20, stiffness: 400 });
+    }
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   const statusConfig = {
-    verified: { icon: '✅', text: 'Verified', color: 'success' as const },
-    pending: { icon: '⏳', text: 'Pending', color: 'warning' as const },
-    not_started: { icon: '○', text: 'Not started', color: 'secondary' as const },
+    verified: { badge: 'Verified', variant: 'success' as const, icon: '✓' },
+    pending: { badge: 'Pending', variant: 'warning' as const, icon: '⏳' },
+    available: { badge: 'Start', variant: 'purple' as const, icon: '→' },
   };
 
   const config = statusConfig[status];
 
   return (
-    <Card variant="default" padding="md">
-      <View style={styles.itemRow}>
-        <View style={styles.itemInfo}>
-          <Text variant="headline" color="primary">{title}</Text>
-          <Text variant="footnote" color="secondary">{description}</Text>
-        </View>
-        <View style={styles.itemStatus}>
-          <Text variant="body">{config.icon}</Text>
-          <Text variant="caption" color={config.color}>{config.text}</Text>
-        </View>
-      </View>
-      {status === 'not_started' && (
-        <>
-          <Spacing size={12} />
-          <Button variant="secondary" size="sm" onPress={() => {}}>
-            Start Verification
-          </Button>
-        </>
-      )}
-    </Card>
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={status !== 'available'}
+    >
+      <Animated.View style={animatedStyle}>
+        <HCard 
+          variant={status === 'verified' ? 'success' : 'default'} 
+          padding="lg"
+        >
+          <View style={styles.cardContent}>
+            <HText variant="title2">{emoji}</HText>
+            <View style={styles.cardText}>
+              <HText 
+                variant="headline" 
+                color={status === 'verified' ? 'success' : 'primary'}
+              >
+                {title}
+              </HText>
+              <HText variant="caption" color="tertiary">
+                {hint}
+              </HText>
+            </View>
+            <HBadge variant={config.variant} size="sm">
+              {config.badge}
+            </HBadge>
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  scroll: { padding: theme.spacing[4] },
-  itemRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  itemInfo: { flex: 1 },
-  itemStatus: { alignItems: 'flex-end' },
+  content: {
+    flex: 1,
+  },
+  header: {
+    paddingTop: hustleSpacing.lg,
+  },
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  progress: {
+    marginTop: hustleSpacing.lg,
+    alignItems: 'flex-start',
+  },
+  scroll: {
+    flex: 1,
+    marginTop: hustleSpacing.xl,
+  },
+  list: {
+    gap: hustleSpacing.md,
+    paddingBottom: hustleSpacing['2xl'],
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: hustleSpacing.lg,
+  },
+  cardText: {
+    flex: 1,
+  },
+  note: {
+    paddingVertical: hustleSpacing.lg,
+  },
 });
 
 export default WorkEligibilityScreen;

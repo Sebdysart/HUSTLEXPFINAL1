@@ -1,258 +1,486 @@
 /**
- * TaskCreationScreen - Post a new task
+ * TaskCreationScreen - Calibration archetype
+ * 
+ * CHOSEN-STATE: "What needs doing?" not "Create Task"
+ * One step at a time. Never feels like a form.
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Spacing, Card, Button, Input } from '../../components';
-import { theme } from '../../theme';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  FadeIn,
+  FadeOut,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard, HInput } from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 import { useTaskStore, useAuthStore, Task, TaskCategory } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const CATEGORIES: { id: TaskCategory; label: string; emoji: string }[] = [
-  { id: 'moving', label: 'Moving', emoji: '📦' },
-  { id: 'cleaning', label: 'Cleaning', emoji: '🧹' },
-  { id: 'delivery', label: 'Delivery', emoji: '🚚' },
-  { id: 'assembly', label: 'Assembly', emoji: '🔧' },
-  { id: 'handyman', label: 'Handyman', emoji: '🔨' },
-  { id: 'yard_work', label: 'Yard', emoji: '🌱' },
-  { id: 'pet_care', label: 'Pet Care', emoji: '🐕' },
-  { id: 'errands', label: 'Errands', emoji: '🏃' },
-  { id: 'tech_help', label: 'Tech', emoji: '💻' },
-  { id: 'other', label: 'Other', emoji: '📋' },
+type Step = 'category' | 'description' | 'budget' | 'review';
+
+const CATEGORIES: { id: TaskCategory; emoji: string; label: string }[] = [
+  { id: 'moving', emoji: '📦', label: 'Moving' },
+  { id: 'cleaning', emoji: '🧹', label: 'Cleaning' },
+  { id: 'delivery', emoji: '🚚', label: 'Delivery' },
+  { id: 'assembly', emoji: '🔧', label: 'Assembly' },
+  { id: 'handyman', emoji: '🔨', label: 'Handyman' },
+  { id: 'yard_work', emoji: '🌱', label: 'Yard' },
+  { id: 'pet_care', emoji: '🐕', label: 'Pet Care' },
+  { id: 'errands', emoji: '🏃', label: 'Errands' },
+  { id: 'tech_help', emoji: '💻', label: 'Tech' },
+  { id: 'other', emoji: '✨', label: 'Other' },
 ];
 
 export function TaskCreationScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { addTask } = useTaskStore();
   const { user } = useAuthStore();
-  
+
+  const [step, setStep] = useState<Step>('category');
+  const [category, setCategory] = useState<TaskCategory | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [category, setCategory] = useState<TaskCategory | ''>('');
-  const [address, setAddress] = useState('');
-  const [duration, setDuration] = useState('60');
+  const [budget, setBudget] = useState('');
   const [posting, setPosting] = useState(false);
 
-  const handleBack = () => navigation.goBack();
+  const handleBack = () => {
+    switch (step) {
+      case 'description':
+        setStep('category');
+        break;
+      case 'budget':
+        setStep('description');
+        break;
+      case 'review':
+        setStep('budget');
+        break;
+      default:
+        navigation.goBack();
+    }
+  };
+
+  const handleNext = () => {
+    switch (step) {
+      case 'category':
+        if (category) setStep('description');
+        break;
+      case 'description':
+        if (title.trim()) setStep('budget');
+        break;
+      case 'budget':
+        if (budget.trim()) setStep('review');
+        break;
+    }
+  };
 
   const handlePost = async () => {
-    if (!title || !description || !maxPrice || !category) {
-      Alert.alert('Missing Info', 'Please fill in all required fields.');
-      return;
-    }
+    if (!category || !title || !budget) return;
 
     setPosting(true);
 
-    // Create new task
     const newTask: Task = {
       id: `task_${Date.now()}`,
       title,
-      description,
-      category: category as TaskCategory,
+      description: description || title,
+      category,
       status: 'open',
       posterId: user?.id || 'poster_1',
       posterName: user?.name || 'You',
-      address: address || '123 Main St, Seattle, WA',
+      address: 'Seattle, WA',
       latitude: 47.6062,
       longitude: -122.3321,
-      minPay: parseInt(minPrice, 10) || parseInt(maxPrice, 10),
-      maxPay: parseInt(maxPrice, 10),
-      baseXP: Math.round(parseInt(maxPrice, 10) * 2),
-      estimatedMinutes: parseInt(duration, 10),
+      minPay: parseInt(budget, 10),
+      maxPay: parseInt(budget, 10),
+      baseXP: Math.round(parseInt(budget, 10) * 2),
+      estimatedMinutes: 60,
       requiredTrustTier: 1,
       requiresVehicle: ['moving', 'delivery'].includes(category),
       requiresTools: [],
       requiresBackground: false,
     };
 
-    // Add to store
     addTask(newTask);
-
     setPosting(false);
+    navigation.navigate('PosterHome');
+  };
 
-    // Navigate to review
-    Alert.alert(
-      'Task Posted! 🎉',
-      'Your task is now live. Hustlers will be notified.',
-      [
-        {
-          text: 'View My Tasks',
-          onPress: () => navigation.navigate('PosterHome'),
-        },
-        {
-          text: 'Post Another',
-          onPress: () => {
-            setTitle('');
-            setDescription('');
-            setMinPrice('');
-            setMaxPrice('');
-            setCategory('');
-            setAddress('');
-          },
-        },
-      ]
-    );
+  const renderStep = () => {
+    switch (step) {
+      case 'category':
+        return <CategoryStep category={category} setCategory={setCategory} />;
+      case 'description':
+        return (
+          <DescriptionStep
+            title={title}
+            setTitle={setTitle}
+            description={description}
+            setDescription={setDescription}
+          />
+        );
+      case 'budget':
+        return <BudgetStep budget={budget} setBudget={setBudget} />;
+      case 'review':
+        return (
+          <ReviewStep
+            category={category!}
+            title={title}
+            budget={budget}
+          />
+        );
+    }
+  };
+
+  const getButtonText = () => {
+    switch (step) {
+      case 'category':
+        return category ? 'Continue' : 'Pick one';
+      case 'description':
+        return title.trim() ? 'Continue' : 'Add a title';
+      case 'budget':
+        return budget.trim() ? 'Review' : 'Set your budget';
+      case 'review':
+        return `Post — $${budget}`;
+    }
+  };
+
+  const isStepValid = () => {
+    switch (step) {
+      case 'category':
+        return !!category;
+      case 'description':
+        return title.trim().length > 0;
+      case 'budget':
+        return budget.trim().length > 0 && parseInt(budget, 10) > 0;
+      case 'review':
+        return true;
+    }
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-        <Text variant="body" color="primary">← Back</Text>
-      </TouchableOpacity>
-
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text variant="title1" color="primary">Post a Task</Text>
-        <Spacing size={8} />
-        <Text variant="body" color="secondary">
-          Describe what you need help with
-        </Text>
-
-        <Spacing size={24} />
-
-        <Card variant="default" padding="lg">
-          <Input
-            label="Task Title *"
-            placeholder="e.g., Help moving furniture"
-            value={title}
-            onChangeText={setTitle}
-          />
-
-          <Spacing size={16} />
-
-          <Input
-            label="Description *"
-            placeholder="Describe the task in detail..."
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-          />
-
-          <Spacing size={16} />
-
-          <Text variant="headline" color="primary">Category *</Text>
-          <Spacing size={12} />
-          <View style={styles.categories}>
-            {CATEGORIES.map(cat => (
-              <TouchableOpacity
-                key={cat.id}
-                style={[styles.categoryBtn, category === cat.id && styles.categoryBtnActive]}
-                onPress={() => setCategory(cat.id)}
-              >
-                <Text variant="body">{cat.emoji}</Text>
-                <Text variant="caption" color={category === cat.id ? 'inverse' : 'primary'}>
-                  {cat.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Card>
-
-        <Spacing size={16} />
-
-        <Card variant="default" padding="lg">
-          <Text variant="headline" color="primary">Budget *</Text>
-          <Spacing size={12} />
-          <View style={styles.priceRow}>
-            <View style={styles.priceInput}>
-              <Input
-                label="Min ($)"
-                placeholder="30"
-                value={minPrice}
-                onChangeText={setMinPrice}
-                keyboardType="numeric"
-              />
-            </View>
-            <Text variant="body" color="secondary" style={styles.priceDash}>—</Text>
-            <View style={styles.priceInput}>
-              <Input
-                label="Max ($)"
-                placeholder="50"
-                value={maxPrice}
-                onChangeText={setMaxPrice}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          <Spacing size={16} />
-
-          <Input
-            label="Estimated Duration (minutes)"
-            placeholder="60"
-            value={duration}
-            onChangeText={setDuration}
-            keyboardType="numeric"
-          />
-        </Card>
-
-        <Spacing size={16} />
-
-        <Card variant="default" padding="lg">
-          <Input
-            label="Location"
-            placeholder="Address or area"
-            value={address}
-            onChangeText={setAddress}
-          />
-        </Card>
-
-        <Spacing size={16} />
-
-        <Card variant="default" padding="md">
-          <Text variant="footnote" color="secondary">
-            💡 Tip: Be specific about what you need. Tasks with clear descriptions get completed faster.
-          </Text>
-        </Card>
-
-        <Spacing size={80} />
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <Button
-          variant="primary"
+    <HScreen
+      ambient
+      scroll={false}
+      header={
+        <Pressable onPress={handleBack} style={styles.backButton}>
+          <HText variant="body" color="purple">← Back</HText>
+        </Pressable>
+      }
+      footer={
+        <HButton
+          variant={step === 'review' ? 'success' : 'primary'}
           size="lg"
-          onPress={handlePost}
-          disabled={!title || !description || !maxPrice || !category}
+          fullWidth
+          onPress={step === 'review' ? handlePost : handleNext}
+          disabled={!isStepValid()}
           loading={posting}
         >
-          {`Post Task${maxPrice ? ` — $${maxPrice}` : ''}`}
-        </Button>
+          {getButtonText()}
+        </HButton>
+      }
+    >
+      <View style={styles.content}>
+        {renderStep()}
       </View>
-    </View>
+    </HScreen>
+  );
+}
+
+// Step 1: Category
+function CategoryStep({
+  category,
+  setCategory,
+}: {
+  category: TaskCategory | null;
+  setCategory: (c: TaskCategory) => void;
+}) {
+  return (
+    <Animated.View entering={FadeIn.duration(300)} style={styles.stepContainer}>
+      <View style={styles.header}>
+        <HText variant="title1" center>
+          What needs doing?
+        </HText>
+        <View style={styles.headerSpacer} />
+        <HText variant="body" color="secondary" center>
+          Tap what fits
+        </HText>
+      </View>
+
+      <View style={styles.spacer} />
+
+      <View style={styles.grid}>
+        {CATEGORIES.map((cat) => (
+          <CategoryChip
+            key={cat.id}
+            emoji={cat.emoji}
+            label={cat.label}
+            selected={category === cat.id}
+            onPress={() => setCategory(cat.id)}
+          />
+        ))}
+      </View>
+    </Animated.View>
+  );
+}
+
+// Step 2: Description
+function DescriptionStep({
+  title,
+  setTitle,
+  description,
+  setDescription,
+}: {
+  title: string;
+  setTitle: (t: string) => void;
+  description: string;
+  setDescription: (d: string) => void;
+}) {
+  return (
+    <Animated.View entering={FadeIn.duration(300)} style={styles.stepContainer}>
+      <View style={styles.header}>
+        <HText variant="title1" center>
+          Tell us more
+        </HText>
+        <View style={styles.headerSpacer} />
+        <HText variant="body" color="secondary" center>
+          Keep it simple
+        </HText>
+      </View>
+
+      <View style={styles.spacer} />
+
+      <HInput
+        label="What's the gig?"
+        placeholder="e.g., Help moving furniture"
+        value={title}
+        onChangeText={setTitle}
+        autoFocus
+      />
+
+      <View style={styles.inputSpacer} />
+
+      <HInput
+        label="Any details? (optional)"
+        placeholder="Add context if it helps..."
+        value={description}
+        onChangeText={setDescription}
+        multiline
+        numberOfLines={3}
+      />
+    </Animated.View>
+  );
+}
+
+// Step 3: Budget
+function BudgetStep({
+  budget,
+  setBudget,
+}: {
+  budget: string;
+  setBudget: (b: string) => void;
+}) {
+  return (
+    <Animated.View entering={FadeIn.duration(300)} style={styles.stepContainer}>
+      <View style={styles.header}>
+        <HText variant="title1" center>
+          What's it worth?
+        </HText>
+        <View style={styles.headerSpacer} />
+        <HText variant="body" color="secondary" center>
+          Fair pay attracts great hustlers
+        </HText>
+      </View>
+
+      <View style={styles.spacer} />
+
+      <View style={styles.budgetContainer}>
+        <HText variant="hero" color="success">$</HText>
+        <HInput
+          placeholder="50"
+          value={budget}
+          onChangeText={(text) => setBudget(text.replace(/[^0-9]/g, ''))}
+          keyboardType="numeric"
+          containerStyle={styles.budgetInput}
+          autoFocus
+        />
+      </View>
+
+      {budget && parseInt(budget, 10) > 0 && (
+        <View style={styles.feedback}>
+          <HText variant="caption" color="purple" center>
+            Hustlers earn ~${Math.round(parseInt(budget, 10) * 2)} XP
+          </HText>
+        </View>
+      )}
+    </Animated.View>
+  );
+}
+
+// Step 4: Review
+function ReviewStep({
+  category,
+  title,
+  budget,
+}: {
+  category: TaskCategory;
+  title: string;
+  budget: string;
+}) {
+  const cat = CATEGORIES.find((c) => c.id === category);
+
+  return (
+    <Animated.View entering={FadeIn.duration(300)} style={styles.stepContainer}>
+      <View style={styles.header}>
+        <HText variant="title1" center>
+          Looking good
+        </HText>
+        <View style={styles.headerSpacer} />
+        <HText variant="body" color="secondary" center>
+          Ready to post?
+        </HText>
+      </View>
+
+      <View style={styles.spacer} />
+
+      <HCard variant="elevated" padding="lg">
+        <View style={styles.reviewRow}>
+          <HText variant="title2">{cat?.emoji}</HText>
+          <View style={styles.reviewText}>
+            <HText variant="headline">{title}</HText>
+            <HText variant="caption" color="secondary">{cat?.label}</HText>
+          </View>
+          <HText variant="title2" color="success">${budget}</HText>
+        </View>
+      </HCard>
+
+      <View style={styles.feedback}>
+        <HText variant="footnote" color="tertiary" center>
+          Hustlers nearby will be notified
+        </HText>
+      </View>
+    </Animated.View>
+  );
+}
+
+// Reusable chip
+function CategoryChip({
+  emoji,
+  label,
+  selected,
+  onPress,
+}: {
+  emoji: string;
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.95, { damping: 20, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.chipWrapper}
+    >
+      <Animated.View style={animatedStyle}>
+        <HCard variant={selected ? 'outlined' : 'default'} padding="md">
+          <View style={styles.chipContent}>
+            <HText variant="title2">{emoji}</HText>
+            <View style={styles.chipSpacer} />
+            <HText
+              variant="callout"
+              color={selected ? 'primary' : 'secondary'}
+              center
+            >
+              {label}
+            </HText>
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  backButton: { padding: theme.spacing[4], paddingBottom: 0 },
-  scroll: { padding: theme.spacing[4] },
-  categories: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing[2] },
-  categoryBtn: { 
-    paddingHorizontal: theme.spacing[3],
-    paddingVertical: theme.spacing[2],
-    backgroundColor: theme.colors.surface.secondary,
-    borderRadius: theme.radii.sm,
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  stepContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  header: {
     alignItems: 'center',
-    minWidth: 70,
   },
-  categoryBtnActive: {
-    backgroundColor: theme.colors.brand.primary,
+  headerSpacer: {
+    height: hustleSpacing.sm,
   },
-  priceRow: { flexDirection: 'row', alignItems: 'center' },
-  priceInput: { flex: 1 },
-  priceDash: { marginHorizontal: theme.spacing[2], marginTop: 20 },
-  footer: { padding: theme.spacing[4], borderTopWidth: 1, borderTopColor: theme.colors.surface.secondary },
+  spacer: {
+    height: hustleSpacing['2xl'],
+  },
+  inputSpacer: {
+    height: hustleSpacing.lg,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  chipWrapper: {
+    width: '48%',
+    marginBottom: hustleSpacing.md,
+  },
+  chipContent: {
+    alignItems: 'center',
+    paddingVertical: hustleSpacing.sm,
+  },
+  chipSpacer: {
+    height: hustleSpacing.xs,
+  },
+  backButton: {
+    paddingVertical: hustleSpacing.sm,
+  },
+  budgetContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  budgetInput: {
+    flex: 0,
+    width: 150,
+    marginLeft: hustleSpacing.sm,
+  },
+  feedback: {
+    marginTop: hustleSpacing.lg,
+  },
+  reviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: hustleSpacing.md,
+  },
+  reviewText: {
+    flex: 1,
+  },
 });
 
 export default TaskCreationScreen;

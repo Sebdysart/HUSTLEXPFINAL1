@@ -1,93 +1,199 @@
 /**
- * CapabilityInsuranceScreen - Insurance/liability info
+ * CapabilityInsuranceScreen - Got insurance?
+ * 
+ * CHOSEN-STATE: Calibrating access, not gatekeeping
+ * One decision: Do you have liability coverage?
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard } from '../../components/atoms';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Spacing, Card } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+type InsuranceOption = {
+  id: string;
+  emoji: string;
+  label: string;
+  hint: string;
+};
+
+const OPTIONS: InsuranceOption[] = [
+  { 
+    id: 'yes', 
+    emoji: '🛡️', 
+    label: 'Yes, I\'m covered', 
+    hint: 'Unlock premium tasks' 
+  },
+  { 
+    id: 'no', 
+    emoji: '👋', 
+    label: 'Not yet', 
+    hint: 'Plenty of tasks still available' 
+  },
+];
 
 export function CapabilityInsuranceScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
-  const [hasInsurance, setHasInsurance] = useState<boolean | null>(null);
+  const navigation = useNavigation<NavigationProp>();
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const handleContinue = () => {
+    navigation.goBack();
+  };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <View style={styles.content}>
-        <Text variant="title1" color="primary" align="center">
-          Do you have liability insurance?
-        </Text>
-        <Spacing size={8} />
-        <Text variant="body" color="secondary" align="center">
-          Some tasks require proof of insurance
-        </Text>
-
-        <Spacing size={32} />
-
-        <TouchableOpacity
-          style={[styles.option, hasInsurance === true && styles.optionSelected]}
-          onPress={() => setHasInsurance(true)}
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <HButton 
+          variant="primary" 
+          size="lg" 
+          fullWidth 
+          onPress={handleContinue}
         >
-          <Text variant="title2">✅</Text>
-          <View style={styles.optionText}>
-            <Text variant="headline" color="primary">Yes, I have insurance</Text>
-            <Text variant="footnote" color="secondary">Access to premium tasks</Text>
-          </View>
-        </TouchableOpacity>
-
-        <Spacing size={12} />
-
-        <TouchableOpacity
-          style={[styles.option, hasInsurance === false && styles.optionSelected]}
-          onPress={() => setHasInsurance(false)}
-        >
-          <Text variant="title2">❌</Text>
-          <View style={styles.optionText}>
-            <Text variant="headline" color="primary">No insurance</Text>
-            <Text variant="footnote" color="secondary">Standard tasks available</Text>
-          </View>
-        </TouchableOpacity>
-
-        <Spacing size={24} />
-
-        <Card variant="default" padding="md">
-          <Text variant="footnote" color="secondary">
-            💡 Not having insurance doesn't disqualify you. Many tasks don't require it. You can add insurance info later.
-          </Text>
-        </Card>
-      </View>
-
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={() => console.log(hasInsurance)} disabled={hasInsurance === null}>
           Continue
-        </Button>
+        </HButton>
+      }
+    >
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <HText variant="title1" center>
+            Got liability insurance?
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary" center>
+            Some tasks need it — most don't
+          </HText>
+        </View>
+
+        <View style={styles.spacer} />
+
+        <View style={styles.list}>
+          {OPTIONS.map((option) => (
+            <OptionCard
+              key={option.id}
+              emoji={option.emoji}
+              label={option.label}
+              hint={option.hint}
+              selected={selected === option.id}
+              onPress={() => setSelected(option.id)}
+            />
+          ))}
+        </View>
+
+        <View style={styles.note}>
+          <HText variant="caption" color="tertiary" center>
+            💡 You can add insurance info anytime in settings
+          </HText>
+        </View>
       </View>
-    </View>
+    </HScreen>
+  );
+}
+
+function OptionCard({ 
+  emoji, 
+  label, 
+  hint,
+  selected, 
+  onPress 
+}: { 
+  emoji: string; 
+  label: string; 
+  hint: string;
+  selected: boolean; 
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, { damping: 20, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.cardWrapper}
+    >
+      <Animated.View style={animatedStyle}>
+        <HCard 
+          variant={selected ? 'outlined' : 'default'} 
+          padding="lg"
+        >
+          <View style={styles.cardContent}>
+            <HText variant="title2">{emoji}</HText>
+            <View style={styles.cardText}>
+              <HText 
+                variant="headline" 
+                color={selected ? 'primary' : 'secondary'}
+              >
+                {label}
+              </HText>
+              <HText variant="caption" color="tertiary">
+                {hint}
+              </HText>
+            </View>
+            {selected && (
+              <HText variant="body" color="purple">✓</HText>
+            )}
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  content: { flex: 1, paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[8] },
-  option: {
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+  },
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  spacer: {
+    height: hustleSpacing['2xl'],
+  },
+  list: {
+    gap: hustleSpacing.md,
+  },
+  cardWrapper: {
+    marginBottom: hustleSpacing.xs,
+  },
+  cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface.secondary,
-    padding: theme.spacing[4],
-    borderRadius: theme.radii.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    gap: hustleSpacing.lg,
   },
-  optionSelected: { borderColor: theme.colors.brand.primary },
-  optionText: { marginLeft: theme.spacing[4], flex: 1 },
-  footer: { paddingHorizontal: theme.spacing[4], paddingBottom: theme.spacing[4] },
+  cardText: {
+    flex: 1,
+  },
+  note: {
+    marginTop: hustleSpacing.xl,
+  },
 });
 
 export default CapabilityInsuranceScreen;
