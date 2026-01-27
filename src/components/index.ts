@@ -70,5 +70,8 @@ export type {
   MoneySize,
 } from './MoneyDisplay';
 
+// Error Boundary
+export { ErrorBoundary } from './ErrorBoundary';
+
 // Re-export theme for convenience
 export { theme, colors, spacing, radii, typography, shadows } from '../theme';

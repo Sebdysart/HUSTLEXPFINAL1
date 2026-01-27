@@ -3,21 +3,26 @@
  */
 
 import React from 'react';
-import { StatusBar } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar, LogBox } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { AppProviders } from './src/providers/AppProviders';
 import { RootNavigator } from './src/navigation';
 
-// Dark theme for navigation
+if (__DEV__) {
+  LogBox.ignoreLogs([
+    'Non-serializable values were found in the navigation state',
+  ]);
+}
+
 const DarkTheme = {
   dark: true,
   colors: {
-    primary: '#FACC15',
-    background: '#0F0F0F',
-    card: '#1A1A1A',
+    primary: '#5856D6',
+    background: '#1C1C1E',
+    card: '#2C2C2E',
     text: '#FFFFFF',
-    border: '#2A2A2A',
-    notification: '#FACC15',
+    border: '#3A3A3C',
+    notification: '#5856D6',
   },
   fonts: {
     regular: { fontFamily: 'System', fontWeight: '400' as const },
@@ -29,12 +34,12 @@ const DarkTheme = {
 
 function App() {
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="light-content" backgroundColor="#0F0F0F" />
+    <AppProviders>
+      <StatusBar barStyle="light-content" backgroundColor="#1C1C1E" />
       <NavigationContainer theme={DarkTheme}>
         <RootNavigator />
       </NavigationContainer>
-    </SafeAreaProvider>
+    </AppProviders>
   );
 }
 
