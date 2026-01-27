@@ -1,18 +1,24 @@
 /**
- * CalibrationScreen - User preferences setup
- * Helps personalize the experience
+ * CalibrationScreen - App learns your vibe
+ * 
+ * CHOSEN-STATE: Not "tell us about you" - "we're calibrating to you"
+ * One decision: What kind of work resonates?
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard } from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
-// type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Spacing } from '../../components';
-import { theme } from '../../theme';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type InterestOption = {
   id: string;
@@ -21,19 +27,18 @@ type InterestOption = {
 };
 
 const INTERESTS: InterestOption[] = [
-  { id: 'delivery', emoji: '📦', label: 'Delivery & Errands' },
+  { id: 'delivery', emoji: '📦', label: 'Delivery' },
   { id: 'cleaning', emoji: '🧹', label: 'Cleaning' },
-  { id: 'moving', emoji: '🚚', label: 'Moving & Lifting' },
+  { id: 'moving', emoji: '🚚', label: 'Moving' },
   { id: 'assembly', emoji: '🔧', label: 'Assembly' },
-  { id: 'tech', emoji: '💻', label: 'Tech Help' },
-  { id: 'yard', emoji: '🌱', label: 'Yard Work' },
-  { id: 'pet', emoji: '🐕', label: 'Pet Care' },
+  { id: 'tech', emoji: '💻', label: 'Tech' },
+  { id: 'yard', emoji: '🌱', label: 'Yard' },
+  { id: 'pet', emoji: '🐕', label: 'Pets' },
   { id: 'other', emoji: '✨', label: 'Other' },
 ];
 
 export function CalibrationScreen() {
-  const insets = useSafeAreaInsets();
-  // Navigation available via useNavigation<NavigationProp>() when needed
+  const navigation = useNavigation<NavigationProp>();
   const [selected, setSelected] = useState<string[]>([]);
 
   const toggleInterest = (id: string) => {
@@ -45,112 +50,151 @@ export function CalibrationScreen() {
   };
 
   const handleContinue = () => {
-    console.log('Selected interests:', selected);
+    // Proceed regardless of selection - no forced choices
+    navigation.navigate('OnboardingComplete');
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <HButton 
+          variant="primary" 
+          size="lg" 
+          fullWidth 
+          onPress={handleContinue}
+        >
+          {selected.length > 0 ? "I'm ready" : "Continue"}
+        </HButton>
+      }
+    >
       <View style={styles.content}>
-        {/* Header */}
+        {/* Header - calibrating, not interrogating */}
         <View style={styles.header}>
-          <Text variant="title1" color="primary" align="center">
-            What interests you?
-          </Text>
-          <Spacing size={8} />
-          <Text variant="body" color="secondary" align="center">
-            Select all that apply. You can change these later.
-          </Text>
+          <HText variant="title1" center>
+            Quick calibration
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary" center>
+            Tap what resonates — we'll surface relevant tasks
+          </HText>
         </View>
 
-        <Spacing size={32} />
+        <View style={styles.spacer} />
 
-        {/* Interest Grid */}
+        {/* Interest grid */}
         <View style={styles.grid}>
           {INTERESTS.map((interest) => (
-            <TouchableOpacity
+            <InterestChip
               key={interest.id}
-              style={[
-                styles.interestCard,
-                selected.includes(interest.id) && styles.interestCardSelected,
-              ]}
+              emoji={interest.emoji}
+              label={interest.label}
+              selected={selected.includes(interest.id)}
               onPress={() => toggleInterest(interest.id)}
-              activeOpacity={0.7}
-            >
-              <Text variant="title2">{interest.emoji}</Text>
-              <Spacing size={8} />
-              <Text 
-                variant="caption" 
-                color={selected.includes(interest.id) ? 'primary' : 'secondary'}
-                align="center"
-              >
-                {interest.label}
-              </Text>
-            </TouchableOpacity>
+            />
           ))}
         </View>
-      </View>
 
-      {/* CTA */}
-      <View style={styles.footer}>
-        <Text variant="footnote" color="tertiary" align="center">
-          {selected.length} selected
-        </Text>
-        <Spacing size={12} />
-        <Button
-          variant="primary"
-          size="lg"
-          onPress={handleContinue}
-          disabled={selected.length === 0}
-        >
-          Continue
-        </Button>
-        <Spacing size={12} />
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={handleContinue}
-        >
-          Skip for now
-        </Button>
+        {/* Subtle feedback */}
+        {selected.length > 0 && (
+          <View style={styles.feedback}>
+            <HText variant="caption" color="purple" center>
+              {selected.length} selected — nice choices
+            </HText>
+          </View>
+        )}
       </View>
-    </View>
+    </HScreen>
+  );
+}
+
+function InterestChip({ 
+  emoji, 
+  label, 
+  selected, 
+  onPress 
+}: { 
+  emoji: string; 
+  label: string; 
+  selected: boolean; 
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.95, { damping: 20, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.chipWrapper}
+    >
+      <Animated.View style={animatedStyle}>
+        <HCard 
+          variant={selected ? 'outlined' : 'default'} 
+          padding="md"
+        >
+          <View style={styles.chipContent}>
+            <HText variant="title2">{emoji}</HText>
+            <View style={styles.chipSpacer} />
+            <HText 
+              variant="callout" 
+              color={selected ? 'primary' : 'secondary'}
+              center
+            >
+              {label}
+            </HText>
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.surface.primary,
-  },
   content: {
     flex: 1,
-    paddingHorizontal: theme.spacing[4],
+    justifyContent: 'center',
   },
   header: {
-    marginTop: theme.spacing[8],
+    alignItems: 'center',
+  },
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  spacer: {
+    height: hustleSpacing['2xl'],
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  interestCard: {
+  chipWrapper: {
     width: '48%',
-    backgroundColor: theme.colors.surface.secondary,
-    padding: theme.spacing[4],
-    borderRadius: theme.radii.md,
+    marginBottom: hustleSpacing.md,
+  },
+  chipContent: {
     alignItems: 'center',
-    marginBottom: theme.spacing[3],
-    borderWidth: 2,
-    borderColor: 'transparent',
+    paddingVertical: hustleSpacing.sm,
   },
-  interestCardSelected: {
-    borderColor: theme.colors.brand.primary,
-    backgroundColor: theme.colors.surface.tertiary,
+  chipSpacer: {
+    height: hustleSpacing.xs,
   },
-  footer: {
-    paddingHorizontal: theme.spacing[4],
-    paddingBottom: theme.spacing[4],
+  feedback: {
+    marginTop: hustleSpacing.lg,
   },
 });
 

@@ -1,21 +1,21 @@
 /**
- * LoginScreen - User authentication
+ * LoginScreen - Chosen-State Edition
+ * 
+ * "Welcome back" — not a gate, a homecoming.
  */
 
 import React, { useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Text, Input, Spacing, Card } from '../components';
-import { theme } from '../theme';
+import { HScreen, HText, HInput, HButton, HTextButton, HCard } from '../components/atoms';
+import { hustleSpacing, hustleColors } from '../theme/hustle-tokens';
 import { useAuthStore } from '../store';
 import type { RootStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function LoginScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { login } = useAuthStore();
   
@@ -31,7 +31,6 @@ export function LoginScreen() {
     try {
       const success = await login(email, password);
       if (success) {
-        // Check if user needs onboarding
         const { user } = useAuthStore.getState();
         if (user?.onboardingComplete) {
           navigation.reset({
@@ -46,7 +45,7 @@ export function LoginScreen() {
         }
       }
     } catch {
-      setError('Login failed. Please try again.');
+      setError("Hmm, that didn't work. Double-check your details?");
     } finally {
       setLoading(false);
     }
@@ -61,99 +60,102 @@ export function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text variant="hero" color="primary" align="center">
-            HustleXP
-          </Text>
-          <Spacing size={8} />
-          <Text variant="body" color="secondary" align="center">
-            Sign in to continue
-          </Text>
+    <HScreen ambient scroll={false}>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.content}>
+          {/* Header - Welcoming, not demanding */}
+          <View style={styles.header}>
+            <HText variant="hero" color="primary" center>
+              HustleXP
+            </HText>
+            <View style={styles.spacerSm} />
+            <HText variant="body" color="secondary" center>
+              Welcome back
+            </HText>
+          </View>
+
+          <View style={styles.spacerXl} />
+
+          {/* Login Form */}
+          <HCard variant="default" padding="lg">
+            <HInput
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setError('');
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            
+            <View style={styles.spacerMd} />
+            
+            <HInput
+              label="Password"
+              placeholder="Your password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setError('');
+              }}
+              secureTextEntry
+              error={error}
+            />
+
+            <View style={styles.spacerSm} />
+
+            <HTextButton onPress={handleForgotPassword}>
+              Forgot password?
+            </HTextButton>
+
+            <View style={styles.spacerLg} />
+
+            <HButton
+              variant="primary"
+              size="lg"
+              onPress={handleLogin}
+              loading={loading}
+              disabled={!email || !password}
+              fullWidth
+            >
+              Continue
+            </HButton>
+          </HCard>
+
+          <View style={styles.spacerXl} />
+
+          {/* Sign Up Link */}
+          <View style={styles.footer}>
+            <HText variant="body" color="secondary" center>
+              New here?
+            </HText>
+            <View style={styles.spacerSm} />
+            <HButton
+              variant="secondary"
+              size="md"
+              onPress={handleSignUp}
+            >
+              Create Account
+            </HButton>
+          </View>
         </View>
-
-        <Spacing size={40} />
-
-        {/* Login Form */}
-        <Card variant="default" padding="lg">
-          <Input
-            label="Email"
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            error={error}
-          />
-          
-          <Spacing size={16} />
-          
-          <Input
-            label="Password"
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-
-          <Spacing size={8} />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={handleForgotPassword}
-          >
-            Forgot password?
-          </Button>
-
-          <Spacing size={24} />
-
-          <Button
-            variant="primary"
-            size="lg"
-            onPress={handleLogin}
-            loading={loading}
-            disabled={!email || !password}
-          >
-            Sign In
-          </Button>
-        </Card>
-
-        <Spacing size={24} />
-
-        {/* Sign Up Link */}
-        <View style={styles.footer}>
-          <Text variant="body" color="secondary">
-            Don't have an account?
-          </Text>
-          <Spacing size={8} />
-          <Button
-            variant="secondary"
-            size="md"
-            onPress={handleSignUp}
-          >
-            Create Account
-          </Button>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </HScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.surface.primary,
   },
   content: {
     flex: 1,
-    paddingHorizontal: theme.spacing[4],
     justifyContent: 'center',
   },
   header: {
@@ -161,6 +163,18 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
+  },
+  spacerSm: {
+    height: hustleSpacing.sm,
+  },
+  spacerMd: {
+    height: hustleSpacing.lg,
+  },
+  spacerLg: {
+    height: hustleSpacing['2xl'],
+  },
+  spacerXl: {
+    height: hustleSpacing['4xl'],
   },
 });
 

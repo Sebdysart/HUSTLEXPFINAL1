@@ -1,14 +1,28 @@
 /**
  * TaskFeedScreen - Browse available tasks
+ * 
+ * CHOSEN-STATE: Never empty, always alive
+ * - HSignalStream shows activity when no tasks match
+ * - Task cards use HCard + HMoney
+ * - Soft colors for distance/time
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Spacing, Card, MoneyDisplay, Button, Input } from '../../components';
-import { theme } from '../../theme';
+import {
+  HScreen,
+  HText,
+  HCard,
+  HButton,
+  HBadge,
+  HMoney,
+  HSearchInput,
+  HSignalStream,
+  HActivityIndicator,
+} from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 import { useTasks } from '../../hooks';
 import { Task } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
@@ -17,8 +31,17 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const FILTERS = ['All', 'Nearby', 'High Pay', 'Quick', 'New'];
 
+// Activity signals - show these when list is empty to keep system alive
+const ACTIVITY_SIGNALS = [
+  { text: 'New task posted in your area', icon: '✨' },
+  { text: 'Hustler completed a delivery', icon: '🚀' },
+  { text: '$47 earned nearby', icon: '💰' },
+  { text: 'High-pay task unlocked', icon: '⭐' },
+  { text: 'Someone just got paid', icon: '✓' },
+  { text: 'Task accepted in seconds', icon: '⚡' },
+];
+
 export function TaskFeedScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { tasks, isLoading, error, refresh } = useTasks();
   
@@ -47,7 +70,7 @@ export function TaskFeedScreen() {
       case 'Quick':
         return task.estimatedMinutes <= 60;
       case 'New':
-        return true; // Would check createdAt in real implementation
+        return true;
       default:
         return true;
     }
@@ -57,60 +80,73 @@ export function TaskFeedScreen() {
     navigation.navigate('TaskDetail', { taskId });
   };
 
-  return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text variant="title1" color="primary">Find Tasks</Text>
-        <Spacing size={12} />
-        <Input
-          placeholder="Search tasks..."
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
+  const header = (
+    <View>
+      <HText variant="title1">Find Tasks</HText>
+      <View style={styles.spacer12} />
+      <HSearchInput
+        placeholder="Search tasks..."
+        value={search}
+        onChangeText={setSearch}
+      />
+    </View>
+  );
 
+  return (
+    <HScreen header={header} scroll={false} ambient>
       {/* Filters */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.filters}
+        contentContainerStyle={styles.filtersContent}
+      >
         {FILTERS.map(f => (
-          <TouchableOpacity
+          <HBadge
             key={f}
-            style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
-            onPress={() => setActiveFilter(f)}
+            variant={activeFilter === f ? 'purple' : 'default'}
+            size="md"
+            style={styles.filterChip}
+            pulsing={activeFilter === f}
           >
-            <Text variant="caption" color={activeFilter === f ? 'inverse' : 'primary'}>{f}</Text>
-          </TouchableOpacity>
+            {f}
+          </HBadge>
         ))}
       </ScrollView>
 
       {/* Error State */}
       {error && (
-        <View style={styles.errorContainer}>
-          <Text variant="body" color="error">{error}</Text>
-          <Spacing size={8} />
-          <Button variant="secondary" size="sm" onPress={refresh}>
+        <View style={styles.centerContainer}>
+          <HText variant="body" color="error">{error}</HText>
+          <View style={styles.spacer12} />
+          <HButton variant="secondary" size="sm" onPress={refresh}>
             Try Again
-          </Button>
+          </HButton>
         </View>
       )}
 
       {/* Loading State */}
       {isLoading && !refreshing && filteredTasks.length === 0 && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.brand.primary} />
-          <Spacing size={12} />
-          <Text variant="body" color="secondary">Loading tasks...</Text>
+        <View style={styles.centerContainer}>
+          <HActivityIndicator active label="Finding tasks..." />
         </View>
       )}
 
-      {/* Empty State */}
+      {/* Never show empty - show signals instead */}
       {!isLoading && filteredTasks.length === 0 && !error && (
-        <View style={styles.emptyContainer}>
-          <Text variant="title2" color="secondary" align="center">No tasks found</Text>
-          <Spacing size={8} />
-          <Text variant="body" color="tertiary" align="center">
-            Try adjusting your filters or check back later
-          </Text>
+        <View style={styles.signalContainer}>
+          <HSignalStream 
+            signals={ACTIVITY_SIGNALS}
+            interval={2500}
+            duration={2000}
+          />
+          <View style={styles.spacer20} />
+          <HText variant="body" color="secondary" center>
+            Waiting for the perfect task...
+          </HText>
+          <HText variant="footnote" color="tertiary" center>
+            New opportunities appear every few minutes
+          </HText>
         </View>
       )}
 
@@ -121,18 +157,29 @@ export function TaskFeedScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={theme.colors.brand.primary}
+            tintColor={hustleColors.purple.soft}
           />
         }
       >
+        {/* Floating activity signal at top when tasks exist */}
+        {filteredTasks.length > 0 && (
+          <View style={styles.floatingSignal}>
+            <HSignalStream 
+              signals={ACTIVITY_SIGNALS}
+              interval={4000}
+              duration={3000}
+            />
+          </View>
+        )}
+        
         {filteredTasks.map(task => (
-          <React.Fragment key={task.id}>
+          <View key={task.id} style={styles.taskCardWrapper}>
             <TaskCard task={task} onPress={() => handleTaskPress(task.id)} />
-            <Spacing size={12} />
-          </React.Fragment>
+          </View>
         ))}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
-    </View>
+    </HScreen>
   );
 }
 
@@ -142,111 +189,123 @@ interface TaskCardProps {
 }
 
 function TaskCard({ task, onPress }: TaskCardProps) {
-  const isUrgent = task.scheduledFor && new Date(task.scheduledFor).getTime() - Date.now() < 2 * 60 * 60 * 1000;
+  const isUrgent = task.scheduledFor && 
+    new Date(task.scheduledFor).getTime() - Date.now() < 2 * 60 * 60 * 1000;
   
   const formatDistance = (miles?: number) => {
-    if (!miles) return 'Unknown distance';
+    if (!miles) return 'Nearby';
     return miles < 1 ? `${(miles * 5280).toFixed(0)} ft` : `${miles.toFixed(1)} mi`;
   };
   
   const formatTime = (minutes: number) => {
-    if (minutes < 60) return `${minutes} min`;
+    if (minutes < 60) return `~${minutes} min`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours} hr${hours > 1 ? 's' : ''}`;
+    return mins > 0 ? `~${hours}h ${mins}m` : `~${hours} hr${hours > 1 ? 's' : ''}`;
   };
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-      <Card variant="default" padding="md">
-        <View style={styles.taskHeader}>
-          <View style={styles.categoryBadge}>
-            <Text variant="caption" color="secondary">{task.category}</Text>
-          </View>
-          {isUrgent && (
-            <View style={styles.urgentBadge}>
-              <Text variant="caption" color="inverse">⚡ Urgent</Text>
-            </View>
-          )}
-          {task.requiredTrustTier > 1 && (
-            <View style={styles.tierBadge}>
-              <Text variant="caption" color="primary">Tier {task.requiredTrustTier}+</Text>
-            </View>
+    <HCard variant="default" padding="lg" onPress={onPress}>
+      {/* Badges row */}
+      <View style={styles.taskHeader}>
+        <HBadge variant="default" size="sm">{task.category}</HBadge>
+        {isUrgent && (
+          <HBadge variant="warning" size="sm">⚡ Soon</HBadge>
+        )}
+        {task.requiredTrustTier > 1 && (
+          <HBadge variant="purple" size="sm">Tier {task.requiredTrustTier}+</HBadge>
+        )}
+      </View>
+      
+      <View style={styles.spacer8} />
+      
+      {/* Title */}
+      <HText variant="headline">{task.title}</HText>
+      
+      <View style={styles.spacer4} />
+      
+      {/* Meta - soft colors, not alarming */}
+      <HText variant="footnote" color="tertiary">
+        {formatDistance(task.distance)} away • {formatTime(task.estimatedMinutes)}
+      </HText>
+      
+      <View style={styles.spacer4} />
+      
+      {/* Description */}
+      <HText variant="footnote" color="muted" numberOfLines={2}>
+        {task.description}
+      </HText>
+      
+      <View style={styles.spacer12} />
+      
+      {/* Footer: Price + XP */}
+      <View style={styles.taskFooter}>
+        <View>
+          <HMoney amount={task.maxPay} size="md" />
+          {task.minPay !== task.maxPay && (
+            <HText variant="caption" color="muted">
+              ${task.minPay} – ${task.maxPay}
+            </HText>
           )}
         </View>
-        <Spacing size={8} />
-        <Text variant="headline" color="primary">{task.title}</Text>
-        <Spacing size={4} />
-        <Text variant="footnote" color="secondary">
-          {formatDistance(task.distance)} away • Est. {formatTime(task.estimatedMinutes)}
-        </Text>
-        <Spacing size={4} />
-        <Text variant="footnote" color="tertiary" numberOfLines={2}>
-          {task.description}
-        </Text>
-        <Spacing size={12} />
-        <View style={styles.taskFooter}>
-          <View>
-            <MoneyDisplay amount={task.maxPay} size="md" />
-            {task.minPay !== task.maxPay && (
-              <Text variant="caption" color="tertiary">
-                ${task.minPay} - ${task.maxPay}
-              </Text>
-            )}
-          </View>
-          <View style={styles.xpBadge}>
-            <Text variant="caption" color="success">+{task.baseXP} XP</Text>
-          </View>
-        </View>
-      </Card>
-    </TouchableOpacity>
+        <HBadge variant="success" size="sm">
+          +{task.baseXP} XP
+        </HBadge>
+      </View>
+    </HCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  header: { padding: theme.spacing[4] },
-  filters: { paddingHorizontal: theme.spacing[4], maxHeight: 50 },
+  filters: { 
+    maxHeight: 50,
+    marginBottom: hustleSpacing.md,
+  },
+  filtersContent: {
+    paddingHorizontal: hustleSpacing.lg,
+    gap: hustleSpacing.sm,
+  },
   filterChip: {
-    paddingHorizontal: theme.spacing[4],
-    paddingVertical: theme.spacing[2],
-    backgroundColor: theme.colors.surface.secondary,
-    borderRadius: theme.radii.full,
-    marginRight: theme.spacing[2],
+    marginRight: hustleSpacing.sm,
   },
-  filterChipActive: { backgroundColor: theme.colors.brand.primary },
-  taskList: { padding: theme.spacing[4] },
-  taskHeader: { flexDirection: 'row', gap: theme.spacing[2], flexWrap: 'wrap' },
-  categoryBadge: {
-    backgroundColor: theme.colors.surface.tertiary,
-    paddingHorizontal: theme.spacing[2],
-    paddingVertical: 2,
-    borderRadius: theme.radii.xs,
+  taskList: { 
+    paddingHorizontal: hustleSpacing.lg,
+    paddingTop: hustleSpacing.sm,
   },
-  urgentBadge: {
-    backgroundColor: theme.colors.semantic.warning,
-    paddingHorizontal: theme.spacing[2],
-    paddingVertical: 2,
-    borderRadius: theme.radii.xs,
+  taskCardWrapper: {
+    marginBottom: hustleSpacing.md,
   },
-  tierBadge: {
-    backgroundColor: theme.colors.surface.secondary,
-    paddingHorizontal: theme.spacing[2],
-    paddingVertical: 2,
-    borderRadius: theme.radii.xs,
-    borderWidth: 1,
-    borderColor: theme.colors.brand.primary,
+  taskHeader: { 
+    flexDirection: 'row', 
+    gap: hustleSpacing.sm, 
+    flexWrap: 'wrap',
   },
-  xpBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    paddingHorizontal: theme.spacing[2],
-    paddingVertical: theme.spacing[1],
-    borderRadius: theme.radii.xs,
+  taskFooter: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
   },
-  taskFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
-  errorContainer: { padding: theme.spacing[4], alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
+  centerContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingTop: 100,
+  },
+  signalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: hustleSpacing.xl,
+  },
+  floatingSignal: {
+    marginBottom: hustleSpacing.md,
+    alignItems: 'center',
+  },
+  spacer4: { height: 4 },
+  spacer8: { height: 8 },
+  spacer12: { height: 12 },
+  spacer20: { height: 20 },
+  bottomSpacer: { height: 100 },
 });
 
 export default TaskFeedScreen;

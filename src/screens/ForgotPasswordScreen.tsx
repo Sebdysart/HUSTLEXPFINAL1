@@ -1,21 +1,21 @@
 /**
- * ForgotPasswordScreen - Password recovery
+ * ForgotPasswordScreen - Chosen-State Edition
+ * 
+ * "No worries, we've got you" — supportive, not bureaucratic.
  */
 
 import React, { useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from './../navigation/types';
+import { HScreen, HText, HInput, HButton, HTextButton, HCard } from '../components/atoms';
+import { hustleSpacing } from '../theme/hustle-tokens';
+import { useAuth } from '../hooks';
+import type { RootStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Input, Spacing, Card } from '../components';
-import { theme } from '../theme';
-import { useAuth } from '../hooks';
 
 export function ForgotPasswordScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { forgotPassword, isLoading } = useAuth();
   
@@ -25,12 +25,12 @@ export function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (!email.trim()) {
-      setError('Email is required');
+      setError("We'll need your email for this");
       return;
     }
     
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Invalid email format');
+      setError("That doesn't look quite right");
       return;
     }
     
@@ -39,7 +39,7 @@ export function ForgotPasswordScreen() {
     if (success) {
       setSent(true);
     } else {
-      setError('Failed to send reset email. Please try again.');
+      setError("Something went wrong. Want to try again?");
     }
   };
 
@@ -47,125 +47,121 @@ export function ForgotPasswordScreen() {
     navigation.navigate('Login');
   };
 
+  // Success state
   if (sent) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <View style={styles.content}>
-          <Card variant="elevated" padding="lg">
+      <HScreen ambient scroll={false}>
+        <View style={styles.centerContent}>
+          <HCard variant="elevated" padding="xl">
             <View style={styles.successIcon}>
-              <Text variant="hero" align="center">✉️</Text>
+              <HText variant="hero" center>✉️</HText>
             </View>
             
-            <Spacing size={24} />
+            <View style={styles.spacerLg} />
             
-            <Text variant="title2" color="primary" align="center">
-              Check your email
-            </Text>
+            <HText variant="title2" color="primary" center>
+              Check your inbox
+            </HText>
             
-            <Spacing size={12} />
+            <View style={styles.spacerSm} />
             
-            <Text variant="body" color="secondary" align="center">
-              We've sent password reset instructions to {email}
-            </Text>
+            <HText variant="body" color="secondary" center>
+              We sent reset instructions to {email}
+            </HText>
             
-            <Spacing size={32} />
+            <View style={styles.spacerXl} />
             
-            <Button
+            <HButton
               variant="primary"
               size="lg"
               onPress={handleBackToLogin}
+              fullWidth
             >
               Back to Sign In
-            </Button>
+            </HButton>
             
-            <Spacing size={16} />
+            <View style={styles.spacerMd} />
             
-            <Button
-              variant="ghost"
-              size="sm"
-              onPress={() => setSent(false)}
-            >
-              Didn't receive email? Try again
-            </Button>
-          </Card>
+            <HTextButton onPress={() => setSent(false)}>
+              Didn't get it? Try again
+            </HTextButton>
+          </HCard>
         </View>
-      </View>
+      </HScreen>
     );
   }
 
+  // Form state
   return (
-    <KeyboardAvoidingView 
-      style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text variant="title1" color="primary" align="center">
-            Reset Password
-          </Text>
-          <Spacing size={8} />
-          <Text variant="body" color="secondary" align="center">
-            Enter your email and we'll send you instructions to reset your password
-          </Text>
+    <HScreen ambient scroll={false}>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.centerContent}>
+          {/* Header - Supportive, not bureaucratic */}
+          <View style={styles.header}>
+            <HText variant="title1" color="primary" center>
+              No worries
+            </HText>
+            <View style={styles.spacerSm} />
+            <HText variant="body" color="secondary" center>
+              We'll help you get back in
+            </HText>
+          </View>
+
+          <View style={styles.spacerLg} />
+
+          {/* Reset Form */}
+          <HCard variant="default" padding="lg">
+            <HInput
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setError('');
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={error}
+            />
+
+            <View style={styles.spacerLg} />
+
+            <HButton
+              variant="primary"
+              size="lg"
+              onPress={handleResetPassword}
+              loading={isLoading}
+              disabled={!email}
+              fullWidth
+            >
+              Send Reset Link
+            </HButton>
+          </HCard>
+
+          <View style={styles.spacerLg} />
+
+          {/* Back to Login */}
+          <View style={styles.footer}>
+            <HTextButton onPress={handleBackToLogin}>
+              ← Back to Sign In
+            </HTextButton>
+          </View>
         </View>
-
-        <Spacing size={32} />
-
-        {/* Reset Form */}
-        <Card variant="default" padding="lg">
-          <Input
-            label="Email"
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setError('');
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            error={error}
-          />
-
-          <Spacing size={24} />
-
-          <Button
-            variant="primary"
-            size="lg"
-            onPress={handleResetPassword}
-            loading={isLoading}
-            disabled={!email}
-          >
-            Send Reset Link
-          </Button>
-        </Card>
-
-        <Spacing size={24} />
-
-        {/* Back to Login */}
-        <View style={styles.footer}>
-          <Button
-            variant="ghost"
-            size="md"
-            onPress={handleBackToLogin}
-          >
-            ← Back to Sign In
-          </Button>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </HScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.surface.primary,
   },
-  content: {
+  centerContent: {
     flex: 1,
-    paddingHorizontal: theme.spacing[4],
     justifyContent: 'center',
   },
   header: {
@@ -176,6 +172,18 @@ const styles = StyleSheet.create({
   },
   successIcon: {
     alignItems: 'center',
+  },
+  spacerSm: {
+    height: hustleSpacing.sm,
+  },
+  spacerMd: {
+    height: hustleSpacing.lg,
+  },
+  spacerLg: {
+    height: hustleSpacing['2xl'],
+  },
+  spacerXl: {
+    height: hustleSpacing['4xl'],
   },
 });
 

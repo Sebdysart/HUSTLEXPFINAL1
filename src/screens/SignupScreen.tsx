@@ -1,21 +1,21 @@
 /**
- * SignupScreen - Create new account
+ * SignupScreen - Chosen-State Edition
+ * 
+ * "Let's get you set up" — an invitation, not a form.
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from './../navigation/types';
+import { HScreen, HText, HInput, HButton, HTextButton, HCard } from '../components/atoms';
+import { hustleSpacing } from '../theme/hustle-tokens';
+import { useAuth } from '../hooks';
+import type { RootStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Input, Spacing, Card } from '../components';
-import { theme } from '../theme';
-import { useAuth } from '../hooks';
 
 export function SignupScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { signup, isLoading, error: authError } = useAuth();
   
@@ -25,27 +25,35 @@ export function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
     
     if (!name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = "What should we call you?";
     }
     
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "We'll need your email";
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = "That doesn't look quite right";
     }
     
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Pick something secure";
     } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = "A bit longer — 8 characters minimum";
     }
     
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = "These don't match yet";
     }
     
     setErrors(newErrors);
@@ -57,7 +65,6 @@ export function SignupScreen() {
     
     const success = await signup(email, password, name);
     if (success) {
-      // New users go through onboarding
       navigation.reset({
         index: 0,
         routes: [{ name: 'Framing' }],
@@ -70,128 +77,131 @@ export function SignupScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <HScreen ambient>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={20}
       >
-        {/* Header */}
+        {/* Header - Inviting, personal */}
         <View style={styles.header}>
-          <Text variant="title1" color="primary" align="center">
-            Create Account
-          </Text>
-          <Spacing size={8} />
-          <Text variant="body" color="secondary" align="center">
-            Join HustleXP and start earning
-          </Text>
+          <HText variant="title1" color="primary" center>
+            Let's get you set up
+          </HText>
+          <View style={styles.spacerSm} />
+          <HText variant="body" color="secondary" center>
+            This only takes a minute
+          </HText>
         </View>
 
-        <Spacing size={32} />
+        <View style={styles.spacerLg} />
 
         {/* Signup Form */}
-        <Card variant="default" padding="lg">
-          <Input
-            label="Full Name"
-            placeholder="John Doe"
+        <HCard variant="default" padding="lg">
+          <HInput
+            label="Your name"
+            placeholder="What should we call you?"
             value={name}
-            onChangeText={setName}
+            onChangeText={(text) => {
+              setName(text);
+              clearError('name');
+            }}
             autoCapitalize="words"
             error={errors.name}
           />
           
-          <Spacing size={16} />
+          <View style={styles.spacerMd} />
           
-          <Input
+          <HInput
             label="Email"
             placeholder="you@example.com"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              clearError('email');
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             error={errors.email}
           />
           
-          <Spacing size={16} />
+          <View style={styles.spacerMd} />
           
-          <Input
+          <HInput
             label="Password"
-            placeholder="At least 8 characters"
+            placeholder="Something secure"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              clearError('password');
+            }}
             secureTextEntry
             error={errors.password}
           />
           
-          <Spacing size={16} />
+          <View style={styles.spacerMd} />
           
-          <Input
-            label="Confirm Password"
-            placeholder="Re-enter your password"
+          <HInput
+            label="Confirm password"
+            placeholder="One more time"
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(text);
+              clearError('confirmPassword');
+            }}
             secureTextEntry
             error={errors.confirmPassword}
           />
 
-          <Spacing size={24} />
+          <View style={styles.spacerLg} />
 
-          <Button
+          <HButton
             variant="primary"
             size="lg"
             onPress={handleSignup}
             loading={isLoading}
+            fullWidth
           >
-            Create Account
-          </Button>
+            Get Started
+          </HButton>
           
           {authError && (
             <>
-              <Spacing size={12} />
-              <Text variant="caption" color="error" align="center">{authError}</Text>
+              <View style={styles.spacerSm} />
+              <HText variant="caption" color="error" center>
+                {authError}
+              </HText>
             </>
           )}
           
-          <Spacing size={16} />
+          <View style={styles.spacerMd} />
           
-          <Text variant="footnote" color="tertiary" align="center">
-            By signing up, you agree to our Terms of Service and Privacy Policy
-          </Text>
-        </Card>
+          <HText variant="footnote" color="tertiary" center>
+            By continuing, you agree to our Terms and Privacy Policy
+          </HText>
+        </HCard>
 
-        <Spacing size={24} />
+        <View style={styles.spacerLg} />
 
         {/* Login Link */}
         <View style={styles.footer}>
-          <Text variant="body" color="secondary">
+          <HText variant="body" color="secondary" center>
             Already have an account?
-          </Text>
-          <Spacing size={8} />
-          <Button
-            variant="ghost"
-            size="md"
-            onPress={handleLogin}
-          >
-            Sign In
-          </Button>
+          </HText>
+          <View style={styles.spacerSm} />
+          <HTextButton onPress={handleLogin}>
+            Sign in
+          </HTextButton>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </HScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.surface.primary,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: theme.spacing[4],
-    paddingVertical: theme.spacing[6],
     justifyContent: 'center',
   },
   header: {
@@ -199,6 +209,15 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
+  },
+  spacerSm: {
+    height: hustleSpacing.sm,
+  },
+  spacerMd: {
+    height: hustleSpacing.lg,
+  },
+  spacerLg: {
+    height: hustleSpacing['2xl'],
   },
 });
 

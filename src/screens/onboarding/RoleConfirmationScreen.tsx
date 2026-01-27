@@ -1,107 +1,110 @@
 /**
- * RoleConfirmationScreen - Hustler vs Poster role selection
+ * RoleConfirmationScreen - App adjusts to you
+ * 
+ * CHOSEN-STATE: Not "tell us about you" - "we're tuning to you"
+ * One decision: How should the app orient?
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Text, Spacing } from '../../components';
-import { theme } from '../../theme';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard } from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type Role = 'hustler' | 'poster' | 'both';
 
 export function RoleConfirmationScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
   const handleContinue = () => {
     if (!selectedRole) return;
     
-    // If hustler or both, go through capability screens
     if (selectedRole === 'hustler' || selectedRole === 'both') {
       navigation.navigate('CapabilityLocation');
     } else {
-      // Posters skip most onboarding
       navigation.navigate('OnboardingComplete');
     }
   };
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-        <Text variant="body" color="primary">← Back</Text>
-      </TouchableOpacity>
-
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text variant="title1" color="primary" align="center">
-            How will you use HustleXP?
-          </Text>
-          <Spacing size={8} />
-          <Text variant="body" color="secondary" align="center">
-            You can always do both later
-          </Text>
-        </View>
-
-        <Spacing size={40} />
-
-        {/* Role Options */}
-        <RoleCard
-          emoji="💪"
-          title="I want to earn"
-          subtitle="Complete tasks posted by others and get paid"
-          selected={selectedRole === 'hustler'}
-          onPress={() => setSelectedRole('hustler')}
-        />
-        
-        <Spacing size={16} />
-        
-        <RoleCard
-          emoji="📋"
-          title="I need help"
-          subtitle="Post tasks and find people to help you"
-          selected={selectedRole === 'poster'}
-          onPress={() => setSelectedRole('poster')}
-        />
-        
-        <Spacing size={16} />
-        
-        <RoleCard
-          emoji="🔄"
-          title="Both"
-          subtitle="Earn money and post tasks when you need help"
-          selected={selectedRole === 'both'}
-          onPress={() => setSelectedRole('both')}
-        />
-      </View>
-
-      {/* CTA */}
-      <View style={styles.footer}>
-        <Button
-          variant="primary"
-          size="lg"
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <HButton 
+          variant="primary" 
+          size="lg" 
+          fullWidth 
           onPress={handleContinue}
           disabled={!selectedRole}
         >
           Continue
-        </Button>
+        </HButton>
+      }
+    >
+      <View style={styles.content}>
+        {/* Header - app adjusting, not asking */}
+        <View style={styles.header}>
+          <HText variant="title1" center>
+            What brings you here?
+          </HText>
+          <View style={styles.headerSpacer} />
+          <HText variant="body" color="secondary" center>
+            We'll tune your experience
+          </HText>
+        </View>
+
+        <View style={styles.spacer} />
+
+        {/* Role choices */}
+        <RoleOption
+          emoji="💪"
+          title="Ready to earn"
+          subtitle="Tasks are waiting"
+          selected={selectedRole === 'hustler'}
+          onPress={() => setSelectedRole('hustler')}
+        />
+        
+        <View style={styles.optionGap} />
+        
+        <RoleOption
+          emoji="📋"
+          title="Need something done"
+          subtitle="Post and relax"
+          selected={selectedRole === 'poster'}
+          onPress={() => setSelectedRole('poster')}
+        />
+        
+        <View style={styles.optionGap} />
+        
+        <RoleOption
+          emoji="🔄"
+          title="A bit of both"
+          subtitle="Earn and delegate"
+          selected={selectedRole === 'both'}
+          onPress={() => setSelectedRole('both')}
+        />
+
+        <View style={styles.hint}>
+          <HText variant="caption" color="tertiary" center>
+            You can always switch later
+          </HText>
+        </View>
       </View>
-    </View>
+    </HScreen>
   );
 }
 
-function RoleCard({ 
+function RoleOption({ 
   emoji, 
   title, 
   subtitle, 
@@ -114,87 +117,102 @@ function RoleCard({
   selected: boolean; 
   onPress: () => void;
 }) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, { damping: 20, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <TouchableOpacity
-      style={[styles.roleCard, selected && styles.roleCardSelected]}
+    <Pressable
       onPress={onPress}
-      activeOpacity={0.7}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
     >
-      <View style={styles.roleEmoji}>
-        <Text variant="hero">{emoji}</Text>
-      </View>
-      <View style={styles.roleText}>
-        <Text variant="headline" color="primary">{title}</Text>
-        <Text variant="footnote" color="secondary">{subtitle}</Text>
-      </View>
-      <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
-        {selected && <View style={styles.radioInner} />}
-      </View>
-    </TouchableOpacity>
+      <Animated.View style={animatedStyle}>
+        <HCard 
+          variant={selected ? 'outlined' : 'default'} 
+          padding="lg"
+        >
+          <View style={styles.roleContent}>
+            <View style={styles.roleEmoji}>
+              <HText variant="hero">{emoji}</HText>
+            </View>
+            <View style={styles.roleText}>
+              <HText variant="headline">{title}</HText>
+              <HText variant="caption" color="tertiary">{subtitle}</HText>
+            </View>
+            <View style={[styles.indicator, selected && styles.indicatorSelected]}>
+              {selected && <View style={styles.indicatorDot} />}
+            </View>
+          </View>
+        </HCard>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.surface.primary,
-  },
-  backButton: {
-    padding: theme.spacing[4],
-    paddingBottom: 0,
-  },
   content: {
     flex: 1,
-    paddingHorizontal: theme.spacing[4],
+    justifyContent: 'center',
   },
   header: {
-    marginTop: theme.spacing[4],
+    alignItems: 'center',
   },
-  roleCard: {
+  headerSpacer: {
+    height: hustleSpacing.sm,
+  },
+  spacer: {
+    height: hustleSpacing['2xl'],
+  },
+  optionGap: {
+    height: hustleSpacing.md,
+  },
+  roleContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface.secondary,
-    padding: theme.spacing[4],
-    borderRadius: theme.radii.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  roleCardSelected: {
-    borderColor: theme.colors.brand.primary,
   },
   roleEmoji: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: theme.colors.surface.tertiary,
+    backgroundColor: hustleColors.dark.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   roleText: {
     flex: 1,
-    marginLeft: theme.spacing[4],
+    marginLeft: hustleSpacing.md,
   },
-  radioOuter: {
+  indicator: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: theme.colors.text.tertiary,
+    borderColor: hustleColors.text.muted,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  radioOuterSelected: {
-    borderColor: theme.colors.brand.primary,
+  indicatorSelected: {
+    borderColor: hustleColors.purple.soft,
   },
-  radioInner: {
+  indicatorDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: theme.colors.brand.primary,
+    backgroundColor: hustleColors.purple.soft,
   },
-  footer: {
-    paddingHorizontal: theme.spacing[4],
-    paddingBottom: theme.spacing[4],
+  hint: {
+    marginTop: hustleSpacing.xl,
   },
 });
 

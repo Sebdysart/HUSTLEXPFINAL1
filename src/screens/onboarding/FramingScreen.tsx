@@ -1,21 +1,21 @@
 /**
- * FramingScreen - Welcome/value prop framing
- * First screen users see after signup
+ * FramingScreen - The system is ready for you
+ * 
+ * CHOSEN-STATE: "Things are happening. You're next."
+ * One decision: Acknowledge you're in.
  */
 
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Text, Spacing } from '../../components';
-import { theme } from '../../theme';
+import { HScreen, HText, HButton, HCard, HSignal } from '../../components/atoms';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function FramingScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
 
   const handleContinue = () => {
@@ -23,115 +23,107 @@ export function FramingScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <HButton variant="primary" size="lg" fullWidth onPress={handleContinue}>
+          Let's go
+        </HButton>
+      }
+    >
       <View style={styles.content}>
-        {/* Hero illustration placeholder */}
-        <View style={styles.heroSection}>
-          <View style={styles.illustration}>
-            <Text variant="hero" align="center">💼</Text>
-          </View>
-          
-          <Spacing size={32} />
-          
-          <Text variant="hero" color="primary" align="center">
+        {/* Activity signals - system is alive */}
+        <View style={styles.signalRow}>
+          <HSignal text="Task claimed" icon="✓" delay={0} />
+          <HSignal text="$45 earned" icon="💰" delay={400} />
+          <HSignal text="New match" icon="🔗" delay={800} />
+        </View>
+
+        {/* Hero */}
+        <View style={styles.hero}>
+          <HText variant="hero" center>
             Your hustle,{'\n'}your way
-          </Text>
+          </HText>
           
-          <Spacing size={16} />
+          <View style={styles.spacer} />
           
-          <Text variant="body" color="secondary" align="center">
-            Connect with people who need help.{'\n'}
-            Build trust. Earn money.
-          </Text>
+          <HText variant="body" color="secondary" center>
+            People are getting things done right now.{'\n'}
+            You're next.
+          </HText>
         </View>
 
-        {/* Value props */}
-        <View style={styles.valueProps}>
-          <ValueProp 
+        {/* Value signals - what's already working */}
+        <View style={styles.values}>
+          <ValueCard 
             emoji="🛡️" 
-            title="Protected payments" 
-            subtitle="Money held in escrow until task complete"
+            title="Payments protected" 
+            subtitle="Funds held until you're satisfied"
           />
-          <Spacing size={16} />
-          <ValueProp 
+          <View style={styles.valueGap} />
+          <ValueCard 
             emoji="⭐" 
-            title="Build your reputation" 
-            subtitle="Level up with every successful task"
+            title="Trust built in" 
+            subtitle="Your reputation grows with each task"
           />
-          <Spacing size={16} />
-          <ValueProp 
+          <View style={styles.valueGap} />
+          <ValueCard 
             emoji="💰" 
-            title="Fair pricing" 
-            subtitle="Set your own rates, keep what you earn"
+            title="Your rates, your earnings" 
+            subtitle="Keep what you make"
           />
         </View>
       </View>
-
-      {/* CTA */}
-      <View style={styles.footer}>
-        <Button
-          variant="primary"
-          size="lg"
-          onPress={handleContinue}
-        >
-          Get Started
-        </Button>
-      </View>
-    </View>
+    </HScreen>
   );
 }
 
-function ValueProp({ emoji, title, subtitle }: { emoji: string; title: string; subtitle: string }) {
+function ValueCard({ emoji, title, subtitle }: { emoji: string; title: string; subtitle: string }) {
   return (
-    <View style={styles.valueProp}>
-      <Text variant="title2">{emoji}</Text>
-      <View style={styles.valuePropText}>
-        <Text variant="headline" color="primary">{title}</Text>
-        <Text variant="footnote" color="secondary">{subtitle}</Text>
+    <HCard variant="default" padding="md">
+      <View style={styles.valueContent}>
+        <HText variant="title2">{emoji}</HText>
+        <View style={styles.valueText}>
+          <HText variant="headline">{title}</HText>
+          <HText variant="caption" color="tertiary">{subtitle}</HText>
+        </View>
       </View>
-    </View>
+    </HCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.surface.primary,
-  },
   content: {
     flex: 1,
-    paddingHorizontal: theme.spacing[4],
     justifyContent: 'center',
   },
-  heroSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing[8],
-  },
-  illustration: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: theme.colors.surface.secondary,
+  signalRow: {
+    flexDirection: 'row',
     justifyContent: 'center',
+    gap: 8,
+    marginBottom: hustleSpacing.xl,
+  },
+  hero: {
     alignItems: 'center',
+    marginBottom: hustleSpacing['2xl'],
   },
-  valueProps: {
-    paddingHorizontal: theme.spacing[2],
+  spacer: {
+    height: hustleSpacing.md,
   },
-  valueProp: {
+  values: {
+    marginTop: hustleSpacing.lg,
+  },
+  valueGap: {
+    height: hustleSpacing.md,
+  },
+  valueContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface.secondary,
-    padding: theme.spacing[4],
-    borderRadius: theme.radii.md,
   },
-  valuePropText: {
-    marginLeft: theme.spacing[4],
+  valueText: {
+    marginLeft: hustleSpacing.md,
     flex: 1,
-  },
-  footer: {
-    paddingHorizontal: theme.spacing[4],
-    paddingBottom: theme.spacing[4],
   },
 });
 

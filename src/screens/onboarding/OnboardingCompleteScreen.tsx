@@ -1,29 +1,33 @@
 /**
- * OnboardingCompleteScreen - Welcome to HustleXP!
+ * OnboardingCompleteScreen - You're in. Micro-win.
+ * 
+ * CHOSEN-STATE: "The system has accepted you. Now let's move."
+ * One decision: Step into your new reality.
  */
 
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Text, Spacing, TrustBadge } from '../../components';
-import { theme } from '../../theme';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+} from 'react-native-reanimated';
+import { HScreen, HText, HButton, HCard, HSignal } from '../../components/atoms';
+import { TrustBadge } from '../../components';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 import { useAuthStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function OnboardingCompleteScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { user, updateOnboarding } = useAuthStore();
 
   const handleStart = () => {
-    // Mark onboarding as complete
     updateOnboarding(true);
     
-    // Navigate to main app
     navigation.reset({
       index: 0,
       routes: [{ name: 'MainTabs' }],
@@ -31,73 +35,146 @@ export function OnboardingCompleteScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <HScreen
+      ambient
+      scroll={false}
+      footer={
+        <HButton variant="primary" size="lg" fullWidth onPress={handleStart}>
+          Let's go
+        </HButton>
+      }
+    >
       <View style={styles.content}>
-        <View style={styles.celebration}>
-          <Text variant="hero" align="center">🎉</Text>
-          <Spacing size={24} />
-          <Text variant="hero" color="primary" align="center">
-            You're all set!
-          </Text>
-          <Spacing size={12} />
-          <Text variant="body" color="secondary" align="center">
-            Welcome to HustleXP. Your journey starts now.
-          </Text>
-        </View>
+        {/* Activity signals - world is moving */}
+        <Animated.View 
+          entering={FadeIn.delay(200).duration(600)}
+          style={styles.signalRow}
+        >
+          <HSignal text="Task posted" icon="📋" delay={0} />
+          <HSignal text="$28 earned" icon="💵" delay={300} />
+          <HSignal text="5★ review" icon="⭐" delay={600} />
+        </Animated.View>
 
-        <Spacing size={40} />
+        {/* Celebration - understated */}
+        <Animated.View 
+          entering={FadeInDown.delay(100).duration(500)}
+          style={styles.celebration}
+        >
+          <HText variant="hero" center>✨</HText>
+          <View style={styles.spacerMd} />
+          <HText variant="hero" center>
+            You're in
+          </HText>
+          <View style={styles.spacerSm} />
+          <HText variant="body" color="secondary" center>
+            Your profile is live. Tasks are waiting.
+          </HText>
+        </Animated.View>
 
-        <View style={styles.badgeContainer}>
+        <View style={styles.spacerXl} />
+
+        {/* Trust badge - you already have status */}
+        <Animated.View 
+          entering={FadeInDown.delay(300).duration(500)}
+          style={styles.badgeSection}
+        >
           <TrustBadge level={user?.trustTier || 1} xp={user?.xp || 0} size="lg" />
-        </View>
+        </Animated.View>
 
-        <Spacing size={24} />
+        <View style={styles.spacerLg} />
 
-        <View style={styles.stats}>
-          <StatItem label="Starting Level" value="1" />
-          <StatItem label="Starting XP" value="0" />
-          <StatItem label="Trust Status" value="New" />
-        </View>
+        {/* Stats card - implies trajectory */}
+        <Animated.View entering={FadeInDown.delay(400).duration(500)}>
+          <HCard variant="default" padding="lg">
+            <View style={styles.statsRow}>
+              <StatItem value="1" label="Level" />
+              <View style={styles.statDivider} />
+              <StatItem value="0" label="XP" />
+              <View style={styles.statDivider} />
+              <StatItem value="New" label="Status" highlight />
+            </View>
+          </HCard>
+        </Animated.View>
 
-        <Spacing size={32} />
+        <View style={styles.spacerLg} />
 
-        <Text variant="callout" color="secondary" align="center">
-          Complete your first task to start earning XP and building your reputation!
-        </Text>
+        {/* Forward momentum hint */}
+        <Animated.View entering={FadeIn.delay(600).duration(400)}>
+          <HText variant="callout" color="tertiary" center>
+            First task = first XP. Simple as that.
+          </HText>
+        </Animated.View>
       </View>
-
-      <View style={styles.footer}>
-        <Button variant="primary" size="lg" onPress={handleStart}>
-          Start Exploring
-        </Button>
-      </View>
-    </View>
+    </HScreen>
   );
 }
 
-function StatItem({ label, value }: { label: string; value: string }) {
+function StatItem({ 
+  value, 
+  label, 
+  highlight 
+}: { 
+  value: string; 
+  label: string; 
+  highlight?: boolean;
+}) {
   return (
     <View style={styles.statItem}>
-      <Text variant="title2" color="primary">{value}</Text>
-      <Text variant="caption" color="secondary">{label}</Text>
+      <HText 
+        variant="title2" 
+        color={highlight ? 'purple' : 'primary'}
+        bold
+      >
+        {value}
+      </HText>
+      <HText variant="caption" color="tertiary">{label}</HText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface.primary },
-  content: { flex: 1, paddingHorizontal: theme.spacing[4], justifyContent: 'center' },
-  celebration: { alignItems: 'center' },
-  badgeContainer: { alignItems: 'center' },
-  stats: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-around',
-    backgroundColor: theme.colors.surface.secondary,
-    padding: theme.spacing[4],
-    borderRadius: theme.radii.md,
+  content: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  statItem: { alignItems: 'center' },
-  footer: { paddingHorizontal: theme.spacing[4], paddingBottom: theme.spacing[4] },
+  signalRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: hustleSpacing.xl,
+  },
+  celebration: {
+    alignItems: 'center',
+  },
+  spacerSm: {
+    height: hustleSpacing.sm,
+  },
+  spacerMd: {
+    height: hustleSpacing.md,
+  },
+  spacerLg: {
+    height: hustleSpacing.lg,
+  },
+  spacerXl: {
+    height: hustleSpacing.xl,
+  },
+  badgeSection: {
+    alignItems: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: hustleColors.glass.border,
+  },
 });
 
 export default OnboardingCompleteScreen;
