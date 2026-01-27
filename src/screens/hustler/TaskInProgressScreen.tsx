@@ -40,7 +40,7 @@ export function TaskInProgressScreen() {
         updateTask(taskId, { status: 'in_progress', startedAt: new Date().toISOString() });
       }
     }
-  }, [task, taskId]);
+  }, [task, taskId, setActiveTask, updateTask]);
 
   // Timer
   useEffect(() => {

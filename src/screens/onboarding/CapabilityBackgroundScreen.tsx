@@ -2,7 +2,7 @@
  * CapabilityBackgroundScreen - Background check consent
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -15,8 +15,7 @@ import { theme } from '../../theme';
 
 export function CapabilityBackgroundScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
-  const [consent, setConsent] = useState(false);
+  // Navigation available via useNavigation<NavigationProp>() when needed
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>

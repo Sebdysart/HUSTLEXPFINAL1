@@ -7,7 +7,6 @@ import React from 'react';
 import {
   View,
   ViewProps,
-  StyleSheet,
   ViewStyle,
   StyleProp,
 } from 'react-native';
@@ -16,7 +15,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { colors, radii, spacing, shadows, SpacingKey } from '../theme';
+import { colors, radii, spacing, shadows } from '../theme';
 
 export type CardVariant = 'default' | 'elevated';
 export type CardPadding = 'none' | 'sm' | 'md' | 'lg';

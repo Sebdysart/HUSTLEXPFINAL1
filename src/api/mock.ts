@@ -149,7 +149,8 @@ export const mockApi = {
       throw new Error('Invalid email or password');
     }
     
-    const { password: _, ...safeUser } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _pw, ...safeUser } = user;
     return {
       user: safeUser,
       tokens: {
@@ -180,7 +181,8 @@ export const mockApi = {
     };
     
     mockUsers.set(email, newUser);
-    const { password: _, ...safeUser } = newUser;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _pwd, ...safeUser } = newUser;
     
     return {
       user: safeUser,

@@ -26,7 +26,7 @@ const TRADES = [
 
 export function CapabilityTradesScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
   const [selected, setSelected] = useState<string[]>([]);
 
   const toggle = (id: string) => {

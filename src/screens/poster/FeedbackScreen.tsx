@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, Button, Input } from '../../components';
+import { Text, Spacing, Button, Input } from '../../components';
 import { theme } from '../../theme';
 
 const FEEDBACK_TYPES = [
@@ -22,7 +22,7 @@ const FEEDBACK_TYPES = [
 
 export function FeedbackScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
   const [type, setType] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);

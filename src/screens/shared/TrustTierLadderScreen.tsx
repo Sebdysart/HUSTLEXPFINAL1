@@ -87,7 +87,7 @@ export function TrustTierLadderScreen() {
           <Text variant="body" color="primary">← Back</Text>
         </TouchableOpacity>
         <Text variant="title2" color="primary">Trust Tiers</Text>
-        <View style={{ width: 50 }} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -135,7 +135,6 @@ export function TrustTierLadderScreen() {
               tier={tier}
               isCurrent={tier.tier === currentTier}
               isUnlocked={tier.tier <= currentTier}
-              currentXP={currentXP}
             />
             {idx < TIERS.length - 1 && (
               <View style={styles.connectorContainer}>
@@ -171,17 +170,14 @@ interface TierCardProps {
   tier: TierInfo;
   isCurrent: boolean;
   isUnlocked: boolean;
-  currentXP: number;
 }
 
-function TierCard({ tier, isCurrent, isUnlocked, currentXP }: TierCardProps) {
-  const progress = tier.tier > 1 ? Math.min((currentXP / tier.xpRequired) * 100, 100) : 100;
-  
+function TierCard({ tier, isCurrent, isUnlocked }: TierCardProps) {
   return (
     <Card 
       variant={isCurrent ? 'elevated' : 'default'} 
       padding="md" 
-      style={[!isUnlocked && styles.locked, isCurrent && { borderLeftWidth: 4, borderLeftColor: tier.color }]}
+      style={[!isUnlocked && styles.locked, isCurrent && styles.currentTierCard]}
     >
       <View style={styles.tierHeader}>
         <View style={[styles.tierBadge, { backgroundColor: isUnlocked ? tier.color : theme.colors.surface.tertiary }]}>
@@ -263,6 +259,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.brand.primary,
   },
   locked: { opacity: 0.6 },
+  headerSpacer: { width: 50 },
+  currentTierCard: { borderLeftWidth: 4, borderLeftColor: theme.colors.brand.primary },
 });
 
 export default TrustTierLadderScreen;

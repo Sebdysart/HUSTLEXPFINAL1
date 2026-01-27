@@ -15,7 +15,7 @@ import { theme } from '../../theme';
 
 export function NoTasksAvailableScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>

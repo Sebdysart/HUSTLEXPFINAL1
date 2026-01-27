@@ -12,7 +12,6 @@ import type { RootStackParamList } from '../../navigation/types';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { Text, Spacing, Card, MoneyDisplay, Button } from '../../components';
 import { theme } from '../../theme';
-import { useAuthStore, useTaskStore } from '../../store';
 
 const PERIODS = ['Week', 'Month', 'Year', 'All'];
 
@@ -27,12 +26,9 @@ const EARNINGS_DATA: Record<string, { total: number; tasks: number; hours: numbe
 export function EarningsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
-  const { user } = useAuthStore();
-  const { tasks } = useTaskStore();
   const [period, setPeriod] = useState('Week');
   
   const data = EARNINGS_DATA[period];
-  const completedTasks = tasks.filter(t => t.status === 'completed');
 
   const handleWithdraw = () => {
     navigation.navigate('Wallet');

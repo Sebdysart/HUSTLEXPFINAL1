@@ -100,7 +100,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     if (autoFetch) {
       fetchTasks(1);
     }
-  }, [autoFetch]);
+  }, [autoFetch, fetchTasks]);
 
   return {
     tasks,

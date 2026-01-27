@@ -38,7 +38,7 @@ export function XPBreakdownScreen() {
           <Text variant="body" color="primary">← Back</Text>
         </TouchableOpacity>
         <Text variant="title2" color="primary">XP & Levels</Text>
-        <View style={{ width: 50 }} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -201,6 +201,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.brand.primary,
   },
   benefitText: { flex: 1, marginLeft: theme.spacing[3] },
+  headerSpacer: { width: 50 },
 });
 
 export default XPBreakdownScreen;

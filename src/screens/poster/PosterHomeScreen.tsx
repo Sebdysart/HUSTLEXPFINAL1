@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,7 +23,6 @@ export function PosterHomeScreen() {
   
   // Filter tasks posted by current user
   const myTasks = tasks.filter(t => t.posterId === user?.id || t.posterName === user?.name);
-  const activeTasks = myTasks.filter(t => ['open', 'claimed', 'in_progress'].includes(t.status));
   const completedTasks = myTasks.filter(t => t.status === 'completed');
   const totalSpent = completedTasks.reduce((sum, t) => sum + (t.finalPay || t.maxPay), 0);
   

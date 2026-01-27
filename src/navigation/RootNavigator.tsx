@@ -78,6 +78,12 @@ const TabIcon: React.FC<{ name: string; focused: boolean }> = ({ name, focused }
   </View>
 );
 
+// Tab icon render functions (defined outside component to avoid recreation)
+const renderHustleIcon = ({ focused }: { focused: boolean }) => <TabIcon name="Hustle" focused={focused} />;
+const renderPostIcon = ({ focused }: { focused: boolean }) => <TabIcon name="Post" focused={focused} />;
+const renderEarningsIcon = ({ focused }: { focused: boolean }) => <TabIcon name="Earnings" focused={focused} />;
+const renderProfileIcon = ({ focused }: { focused: boolean }) => <TabIcon name="Profile" focused={focused} />;
+
 // Main tab navigator
 function MainTabs() {
   return (
@@ -95,7 +101,7 @@ function MainTabs() {
         component={HustlerHomeScreen}
         options={{
           tabBarLabel: 'Hustle',
-          tabBarIcon: ({ focused }) => <TabIcon name="Hustle" focused={focused} />,
+          tabBarIcon: renderHustleIcon,
         }}
       />
       <Tab.Screen
@@ -103,7 +109,7 @@ function MainTabs() {
         component={PosterHomeScreen}
         options={{
           tabBarLabel: 'Post',
-          tabBarIcon: ({ focused }) => <TabIcon name="Post" focused={focused} />,
+          tabBarIcon: renderPostIcon,
         }}
       />
       <Tab.Screen
@@ -111,7 +117,7 @@ function MainTabs() {
         component={EarningsScreen}
         options={{
           tabBarLabel: 'Earnings',
-          tabBarIcon: ({ focused }) => <TabIcon name="Earnings" focused={focused} />,
+          tabBarIcon: renderEarningsIcon,
         }}
       />
       <Tab.Screen
@@ -119,7 +125,7 @@ function MainTabs() {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profile',
-          tabBarIcon: ({ focused }) => <TabIcon name="Profile" focused={focused} />,
+          tabBarIcon: renderProfileIcon,
         }}
       />
     </Tab.Navigator>

@@ -45,7 +45,7 @@ export function LoginScreen() {
           });
         }
       }
-    } catch (e) {
+    } catch {
       setError('Login failed. Please try again.');
     } finally {
       setLoading(false);

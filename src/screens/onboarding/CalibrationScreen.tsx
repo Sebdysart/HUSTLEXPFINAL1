@@ -11,7 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Button, Text, Spacing, Card } from '../../components';
+import { Button, Text, Spacing } from '../../components';
 import { theme } from '../../theme';
 
 type InterestOption = {
@@ -33,7 +33,7 @@ const INTERESTS: InterestOption[] = [
 
 export function CalibrationScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
   const [selected, setSelected] = useState<string[]>([]);
 
   const toggleInterest = (id: string) => {

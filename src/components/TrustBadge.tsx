@@ -15,7 +15,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
-import { colors, radii, spacing, shadows, typography } from '../theme';
+import { colors, radii, spacing, shadows } from '../theme';
 import { Text } from './Text';
 
 export type BadgeSize = 'sm' | 'md' | 'lg';
@@ -119,7 +119,7 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
         false
       );
     }
-  }, [disableGlow]);
+  }, [disableGlow, glowAnimation, pulseAnimation]);
 
   const glowStyle = useAnimatedStyle(() => {
     const glowOpacity = interpolate(glowAnimation.value, [0, 1], [0.4, 0.8]);
@@ -240,7 +240,7 @@ export const TrustBadgeInline: React.FC<TrustBadgeInlineProps> = ({
           },
         ]}
       >
-        <Text style={{ fontSize, fontWeight: '700', color: colors.white }}>
+        <Text style={[styles.inlineLevelText, { fontSize }]}>
           {level}
         </Text>
       </LinearGradient>
@@ -299,6 +299,10 @@ const styles = StyleSheet.create({
   inlineBadge: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  inlineLevelText: {
+    fontWeight: '700',
+    color: colors.white,
   },
 });
 

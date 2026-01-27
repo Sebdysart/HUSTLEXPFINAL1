@@ -7,9 +7,9 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Aler
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Spacing, Card, MoneyDisplay, Button, TrustBadge } from '../../components';
+import { Text, Spacing, Card, MoneyDisplay, Button } from '../../components';
 import { theme } from '../../theme';
-import { useTaskStore, useAuthStore, Task } from '../../store';
+import { useTaskStore, useAuthStore } from '../../store';
 import { useTasks } from '../../hooks';
 import type { RootStackParamList } from '../../navigation/types';
 

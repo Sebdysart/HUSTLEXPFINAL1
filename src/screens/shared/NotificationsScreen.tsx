@@ -7,7 +7,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Spacing, Button } from '../../components';
+import { Text, Spacing } from '../../components';
 import { theme } from '../../theme';
 import type { RootStackParamList } from '../../navigation/types';
 

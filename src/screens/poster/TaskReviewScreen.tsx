@@ -15,7 +15,7 @@ import { theme } from '../../theme';
 
 export function TaskReviewScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
 

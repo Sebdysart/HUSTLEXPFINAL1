@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card } from '../../components';
+import { Text } from '../../components';
 import { theme } from '../../theme';
 
 const MOCK_MESSAGES = [
@@ -23,7 +23,7 @@ const MOCK_MESSAGES = [
 
 export function ChatScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
   const [message, setMessage] = useState('');
 
   const handleSend = () => {

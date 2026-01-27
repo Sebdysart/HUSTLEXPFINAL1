@@ -10,12 +10,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-import { Text, Spacing, Card, MoneyDisplay } from '../../components';
+import { Text, Spacing, MoneyDisplay } from '../../components';
 import { theme } from '../../theme';
 
 export function TaskConversationScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
   const [message, setMessage] = useState('');
 
   return (

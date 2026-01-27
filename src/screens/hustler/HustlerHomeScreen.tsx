@@ -9,7 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, Spacing, Card, TrustBadge, MoneyDisplay, Button } from '../../components';
 import { theme } from '../../theme';
-import { useAuthStore, useTaskStore, Task } from '../../store';
+import { useAuthStore, Task } from '../../store';
 import { useTasks } from '../../hooks';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -19,7 +19,7 @@ export function HustlerHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuthStore();
-  const { tasks, isLoading, refresh } = useTasks();
+  const { tasks, refresh } = useTasks();
   
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -41,7 +41,6 @@ export function HustlerHomeScreen() {
   const handleProfile = () => navigation.navigate('Profile');
   const handleTaskPress = (taskId: string) => navigation.navigate('TaskDetail', { taskId });
   const handleSeeAllTasks = () => navigation.navigate('TaskFeed');
-  const handleNotifications = () => navigation.navigate('Notifications');
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

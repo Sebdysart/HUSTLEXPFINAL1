@@ -64,7 +64,7 @@ export function TaskHistoryScreen() {
           <Text variant="body" color="primary">← Back</Text>
         </TouchableOpacity>
         <Text variant="title2" color="primary">Task History</Text>
-        <View style={{ width: 50 }} />
+        <View style={styles.headerSpacer} />
       </View>
 
       {/* Summary */}
@@ -152,13 +152,6 @@ interface HistoryCardProps {
 }
 
 function HistoryCard({ task, onPress }: HistoryCardProps) {
-  const statusColors: Record<string, string> = {
-    completed: theme.colors.semantic.success,
-    cancelled: theme.colors.semantic.error,
-    in_progress: theme.colors.brand.primary,
-    claimed: theme.colors.semantic.info,
-  };
-
   return (
     <TouchableOpacity onPress={onPress}>
       <Card variant="default" padding="md">
@@ -238,6 +231,7 @@ const styles = StyleSheet.create({
   cardInfo: { flex: 1 },
   cardRight: { alignItems: 'flex-end' },
   mockCard: { opacity: 0.7 },
+  headerSpacer: { width: 50 },
 });
 
 export default TaskHistoryScreen;

@@ -3,17 +3,15 @@
  * Formats and displays currency with HustleXP styling
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withSequence,
-  withTiming,
-  runOnJS,
 } from 'react-native-reanimated';
-import { colors, typography, spacing } from '../theme';
+import { colors, spacing } from '../theme';
 import { Text } from './Text';
 
 export type MoneySize = 'sm' | 'md' | 'lg' | 'hero';
@@ -85,7 +83,7 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   align = 'left',
 }) => {
   const scale = useSharedValue(1);
-  const previousAmount = useSharedValue(amount);
+  const previousAmountRef = useRef(amount);
 
   // Determine if we should show cents
   const shouldShowCents = showCents ?? Math.abs(amount) < 100;
@@ -100,14 +98,14 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
 
   // Animate on value change
   useEffect(() => {
-    if (animated && amount !== previousAmount.value) {
+    if (animated && amount !== previousAmountRef.current) {
       scale.value = withSequence(
         withSpring(1.1, { damping: 10, stiffness: 400 }),
         withSpring(1, { damping: 15, stiffness: 300 })
       );
-      previousAmount.value = amount;
+      previousAmountRef.current = amount;
     }
-  }, [amount, animated]);
+  }, [amount, animated, scale]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

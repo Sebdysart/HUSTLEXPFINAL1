@@ -15,7 +15,7 @@ import { theme } from '../../theme';
 
 export function CapabilityInsuranceScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
   const [hasInsurance, setHasInsurance] = useState<boolean | null>(null);
 
   return (

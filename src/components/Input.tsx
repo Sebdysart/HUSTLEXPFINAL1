@@ -3,7 +3,7 @@
  * Styled text input with label, error, and helper text
  */
 
-import React, { useState, useRef, forwardRef } from 'react';
+import React, { useState, forwardRef } from 'react';
 import {
   View,
   TextInput,
@@ -55,7 +55,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
   onBlur,
   ...props
 }, ref) => {
-  const [isFocused, setIsFocused] = useState(false);
+  const [_isFocused, setIsFocused] = useState(false);
   const focusAnimation = useSharedValue(0);
 
   const handleFocus = (e: any) => {
@@ -151,8 +151,8 @@ export interface PasswordInputProps extends Omit<InputProps, 'secureTextEntry' |
 }
 
 export const PasswordInput = forwardRef<TextInput, PasswordInputProps>(({
-  showPasswordIcon,
-  hidePasswordIcon,
+  showPasswordIcon: _showPasswordIcon,
+  hidePasswordIcon: _hidePasswordIcon,
   ...props
 }, ref) => {
   const [visible, setVisible] = useState(false);

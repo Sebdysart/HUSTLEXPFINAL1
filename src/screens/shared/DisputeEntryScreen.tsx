@@ -24,7 +24,7 @@ const REASONS = [
 
 export function DisputeEntryScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
   const [reason, setReason] = useState<string | null>(null);
   const [details, setDetails] = useState('');
 

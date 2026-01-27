@@ -35,7 +35,7 @@ export function TaskCompletionHustlerScreen() {
       // Clear active task
       setActiveTask(null);
     }
-  }, []);
+  }, [task, taskId, completeTask, addXP, setActiveTask]);
 
   const handleFindMore = () => {
     navigation.reset({

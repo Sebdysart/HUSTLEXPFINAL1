@@ -10,18 +10,15 @@ import {
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
-  TextStyle,
-  View,
 } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
-  interpolate,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
-import { colors, radii, spacing, touchTargets, typography, durations } from '../theme';
+import { colors, radii, spacing, touchTargets, durations } from '../theme';
 import { Text } from './Text';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

@@ -7,7 +7,6 @@ import React from 'react';
 import {
   Text as RNText,
   TextProps as RNTextProps,
-  StyleSheet,
   TextStyle,
 } from 'react-native';
 import { colors, typography, TypographyKey } from '../theme';

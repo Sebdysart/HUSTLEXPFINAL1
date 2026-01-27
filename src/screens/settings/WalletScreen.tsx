@@ -48,7 +48,7 @@ export function WalletScreen() {
           <Text variant="body" color="primary">← Back</Text>
         </TouchableOpacity>
         <Text variant="title2" color="primary">Wallet</Text>
-        <View style={{ width: 50 }} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>

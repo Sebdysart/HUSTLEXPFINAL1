@@ -18,7 +18,7 @@ const TIMES = ['Morning', 'Afternoon', 'Evening'];
 
 export function CapabilityAvailabilityScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NavigationProp>();
+  // Navigation available via useNavigation<NavigationProp>() when needed
   const [availability, setAvailability] = useState<Record<string, string[]>>({});
 
   const toggle = (day: string, time: string) => {
