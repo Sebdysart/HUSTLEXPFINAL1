@@ -73,5 +73,11 @@ export type {
 // Error Boundary
 export { ErrorBoundary } from './ErrorBoundary';
 
+// Map
+export { TaskMap } from './TaskMap';
+
+// Image Picker
+export { ImagePicker } from './ImagePicker';
+
 // Re-export theme for convenience
 export { theme, colors, spacing, radii, typography, shadows } from '../theme';
