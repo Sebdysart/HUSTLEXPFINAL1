@@ -69,9 +69,10 @@
 ## Phase 4: Production Ready
 - [ ] Real backend API integration
 - [ ] Stripe payments
-- [ ] Maps (react-native-maps)
+- [x] Maps (react-native-maps) ✅
 - [ ] Push notifications
-- [ ] Image upload
+- [x] Image upload ✅
+- [x] Push notifications (infrastructure) ✅
 
 ## Phase 5: Launch
 - [ ] App Store submission
