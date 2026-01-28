@@ -22,6 +22,7 @@ import {
   HSignal,
   HActivityIndicator,
 } from '../../components/atoms';
+import { TaskMap } from '../../components';
 import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 import { useTaskStore, useAuthStore } from '../../store';
 import { useTasks } from '../../hooks';
@@ -229,6 +230,24 @@ export function TaskDetailScreen() {
       </HCard>
 
       <View style={styles.spacer24} />
+
+      {/* Location Map */}
+      {task.latitude && task.longitude && (
+        <>
+          <HText variant="headline">Location</HText>
+          <View style={styles.spacer12} />
+          <TaskMap
+            location={{
+              latitude: task.latitude,
+              longitude: task.longitude,
+              title: task.title,
+              description: task.address,
+            }}
+            height={180}
+          />
+          <View style={styles.spacer24} />
+        </>
+      )}
 
       {/* Poster Info */}
       <HText variant="headline">Posted by</HText>
