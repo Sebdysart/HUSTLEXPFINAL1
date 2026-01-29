@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
-import { HScreen, HCard, HText, HButton, HInput } from '../../components/atoms';
+import { HScreen, HText, HButton, HInput } from '../../components/atoms';
 import { hustleColors, hustleSpacing, hustleRadii } from '../../theme/hustle-tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -46,7 +46,7 @@ export function BootstrapScreen() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [navigation, logoOpacity, logoScale]);
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,

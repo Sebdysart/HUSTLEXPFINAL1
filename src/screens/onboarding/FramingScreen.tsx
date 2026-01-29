@@ -10,7 +10,7 @@ import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HScreen, HText, HButton, HCard, HSignal } from '../../components/atoms';
-import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

@@ -50,7 +50,7 @@ class ApiClient {
       };
 
       if (this.authToken) {
-        requestHeaders['Authorization'] = `Bearer ${this.authToken}`;
+        requestHeaders.Authorization = `Bearer ${this.authToken}`;
       }
 
       const response = await fetch(url, {

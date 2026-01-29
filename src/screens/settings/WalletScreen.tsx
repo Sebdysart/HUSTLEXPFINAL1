@@ -19,7 +19,7 @@ import type { RootStackParamList } from '../../navigation/types';
 
 import { HScreen, HCard, HText, HButton } from '../../components/atoms';
 import { MoneyDisplay } from '../../components';
-import { hustleColors, hustleSpacing, hustleRadii } from '../../theme/hustle-tokens';
+import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

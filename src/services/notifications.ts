@@ -190,7 +190,7 @@ class NotificationService {
     title: string,
     body: string,
     triggerDate: Date,
-    data?: Record<string, unknown>
+    _data?: Record<string, unknown>
   ): Promise<string> {
     // TODO: Use @notifee/react-native for scheduling
     const id = `scheduled-${Date.now()}`;
@@ -256,7 +256,7 @@ class NotificationService {
 export const notificationService = new NotificationService();
 
 // Helper to get notification display config by type
-export function getNotificationConfig(type: NotificationType) {
+export function getNotificationConfig(type: NotificationType): { icon: string; color: string } {
   const configs: Record<NotificationType, { icon: string; color: string }> = {
     task_nearby: { icon: '📍', color: '#FF9500' },
     task_claimed: { icon: '✅', color: '#34C759' },

@@ -50,7 +50,7 @@ export const HInput: React.FC<HInputProps> = ({
   style,
   ...props
 }) => {
-  const [isFocused, setIsFocused] = useState(false);
+  const [_isFocused, setIsFocused] = useState(false);
   const borderColor = useSharedValue<string>(hustleColors.glass.border);
 
   const handleFocus = (e: any) => {

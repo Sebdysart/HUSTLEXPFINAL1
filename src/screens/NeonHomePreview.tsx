@@ -147,7 +147,7 @@ const StatPill: React.FC<{ label: string; value: string; color: string }> = ({ l
   </View>
 );
 
-const ActionTile: React.FC<{ emoji: string; label: string; color: string }> = ({ emoji, label, color }) => (
+const ActionTile: React.FC<{ emoji: string; label: string; color: string }> = ({ emoji, label, color: _color }) => (
   <GlassCard 
     variant="default" 
     padding="md" 

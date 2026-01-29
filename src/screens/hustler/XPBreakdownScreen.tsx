@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
 
-import { HScreen, HText, HCard, HTrustBadge, HBadge, HStatCard } from '../../components/atoms';
+import { HScreen, HText, HCard, HTrustBadge } from '../../components/atoms';
 import { hustleColors, hustleSpacing, hustleRadii } from '../../theme/hustle-tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

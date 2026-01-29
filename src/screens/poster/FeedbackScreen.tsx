@@ -7,19 +7,18 @@
 
 import React, { useState } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withSequence,
-  withTiming,
   FadeIn,
   ZoomIn,
 } from 'react-native-reanimated';
-import { HScreen, HText, HButton, HCard, HInput } from '../../components/atoms';
-import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
+import { HScreen, HText, HButton, HInput } from '../../components/atoms';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

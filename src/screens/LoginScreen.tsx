@@ -9,7 +9,7 @@ import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HScreen, HText, HInput, HButton, HTextButton, HCard } from '../components/atoms';
-import { hustleSpacing, hustleColors } from '../theme/hustle-tokens';
+import { hustleSpacing } from '../theme/hustle-tokens';
 import { useAuthStore } from '../store';
 import type { RootStackParamList } from '../navigation/types';
 

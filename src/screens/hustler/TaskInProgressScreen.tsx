@@ -21,7 +21,7 @@ import {
   HButton,
   HActivityIndicator,
 } from '../../components/atoms';
-import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import { useTaskStore } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
 

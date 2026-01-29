@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Text as RNText, TextProps as RNTextProps, StyleSheet } from 'react-native';
+import { Text as RNText, TextProps as RNTextProps } from 'react-native';
 import { hustleColors, hustleTypography } from '../../theme/hustle-tokens';
 
 type TypographyVariant = keyof typeof hustleTypography;

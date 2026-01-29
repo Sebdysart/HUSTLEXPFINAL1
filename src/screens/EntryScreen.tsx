@@ -30,7 +30,6 @@ import Animated, {
   FadeIn,
   FadeInUp,
   interpolate,
-  runOnJS,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
 import { Text } from '../components/Text';
@@ -39,14 +38,6 @@ import { hustleColors, hustleGradients, hustleShadows, hustleRadii, hustleSpacin
 const { width, height } = Dimensions.get('window');
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-// Simulated activity signals - implies "requests resolving themselves"
-const ACTIVITY_SIGNALS = [
-  { label: 'Task completed nearby', icon: '✓' },
-  { label: 'Someone earned $45', icon: '↑' },
-  { label: '3 tasks available', icon: '●' },
-  { label: 'New request posted', icon: '+' },
-];
 
 export function EntryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -109,7 +100,7 @@ export function EntryScreen({ navigation }: any) {
     animateSignals();
     const interval = setInterval(animateSignals, 9000);
     return () => clearInterval(interval);
-  }, []);
+  }, [orbScale, orbY, signal1Opacity, signal2Opacity, signal3Opacity]);
 
   const orbAnimatedStyle = useAnimatedStyle(() => ({
     transform: [

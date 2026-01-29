@@ -6,14 +6,9 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import { HScreen, HText, HButton, HCard, HBadge, HTextButton } from '../../components/atoms';
 import { hustleSpacing, hustleColors } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';

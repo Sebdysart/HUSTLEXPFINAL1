@@ -62,7 +62,7 @@ export const HAmbientOrb: React.FC<HAmbientOrbProps> = ({
       -1,
       true
     );
-  }, []);
+  }, [scale, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -139,7 +139,7 @@ const AmbientDot: React.FC<{ x: number; y: number; delay: number }> = ({ x, y, d
     }, delay);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [delay, opacity, translateY]);
 
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,

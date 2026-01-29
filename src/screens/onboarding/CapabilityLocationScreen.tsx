@@ -14,7 +14,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { HScreen, HText, HButton, HCard, HTextButton } from '../../components/atoms';
+import { HScreen, HText, HButton, HCard } from '../../components/atoms';
 import { hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 

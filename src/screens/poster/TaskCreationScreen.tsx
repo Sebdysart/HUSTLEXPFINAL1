@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, {
@@ -14,10 +14,9 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   FadeIn,
-  FadeOut,
 } from 'react-native-reanimated';
 import { HScreen, HText, HButton, HCard, HInput } from '../../components/atoms';
-import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import { useTaskStore, useAuthStore, Task, TaskCategory } from '../../store';
 import type { RootStackParamList } from '../../navigation/types';
 

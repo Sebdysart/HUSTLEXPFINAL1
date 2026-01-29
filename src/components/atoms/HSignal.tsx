@@ -16,7 +16,6 @@ import Animated, {
   withTiming,
   withDelay,
   Easing,
-  interpolate,
 } from 'react-native-reanimated';
 import { HText } from './HText';
 import { hustleColors, hustleRadii, hustleSpacing } from '../../theme/hustle-tokens';
@@ -59,7 +58,7 @@ export const HSignal: React.FC<HSignalProps> = ({
         withDelay(duration, withTiming(-10, { duration: 500, easing: Easing.in(Easing.ease) }))
       )
     );
-  }, [delay, duration]);
+  }, [delay, duration, opacity, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -154,7 +153,7 @@ export const HActivityIndicator: React.FC<HActivityIndicatorProps> = ({
 
       return () => clearInterval(interval);
     }
-  }, [active]);
+  }, [active, dotOpacity]);
 
   const dotStyle = useAnimatedStyle(() => ({
     opacity: dotOpacity.value,

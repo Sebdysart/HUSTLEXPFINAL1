@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -42,16 +42,8 @@ const ACTIVITY_SIGNALS = [
 export function HustlerHomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuthStore();
-  const { tasks, refresh } = useTasks();
+  const { tasks } = useTasks();
   
-  const [refreshing, setRefreshing] = React.useState(false);
-
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    await refresh();
-    setRefreshing(false);
-  }, [refresh]);
-
   // Get 3 nearest tasks
   const nearbyTasks = [...tasks]
     .filter(t => t.status === 'open')

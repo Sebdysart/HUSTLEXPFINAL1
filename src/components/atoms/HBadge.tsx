@@ -18,7 +18,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { HText } from './HText';
-import { hustleColors, hustleRadii, hustleSpacing, hustleShadows } from '../../theme/hustle-tokens';
+import { hustleColors, hustleRadii, hustleShadows } from '../../theme/hustle-tokens';
 
 export type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'purple' | 'outline' | 'info';
 export type BadgeSize = 'sm' | 'md' | 'lg';
@@ -101,7 +101,7 @@ export const HBadge: React.FC<HBadgeProps> = ({
         false
       );
     }
-  }, [pulsing]);
+  }, [pulsing, pulse]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],

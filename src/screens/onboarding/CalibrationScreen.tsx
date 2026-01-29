@@ -15,7 +15,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { HScreen, HText, HButton, HCard } from '../../components/atoms';
-import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
+import { hustleSpacing } from '../../theme/hustle-tokens';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

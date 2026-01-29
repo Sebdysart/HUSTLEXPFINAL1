@@ -45,7 +45,7 @@ export function TaskFeedScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { tasks, isLoading, error, refresh } = useTasks();
   
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [activeFilter, _setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 

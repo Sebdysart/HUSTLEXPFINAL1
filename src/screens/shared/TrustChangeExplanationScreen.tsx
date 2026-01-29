@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
-import { HScreen, HText, HCard, HButton, HTrustBadge, HBadge } from '../../components/atoms';
+import { HScreen, HText, HCard, HButton, HTrustBadge } from '../../components/atoms';
 import { hustleColors, hustleSpacing } from '../../theme/hustle-tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

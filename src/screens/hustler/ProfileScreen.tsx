@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 
-import { HScreen, HText, HCard, HButton, HTrustBadge, HMoney, HStatCard, HBadge } from '../../components/atoms';
+import { HScreen, HText, HCard, HButton, HTrustBadge, HMoney, HStatCard } from '../../components/atoms';
 import { hustleColors, hustleSpacing, hustleRadii } from '../../theme/hustle-tokens';
 import { useAuthStore, useTaskStore } from '../../store';
 

@@ -9,7 +9,7 @@
  */
 
 import React, { ReactNode } from 'react';
-import { View, ScrollView, StyleSheet, StatusBar, ViewStyle, RefreshControl, RefreshControlProps } from 'react-native';
+import { View, ScrollView, StyleSheet, StatusBar, ViewStyle, RefreshControlProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { hustleColors, hustleGradients } from '../../theme/hustle-tokens';
