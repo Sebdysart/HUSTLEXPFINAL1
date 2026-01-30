@@ -1,0 +1,351 @@
+# CURSOR ENFORCEMENT POLICY — HUSTLEXP FRONTEND
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 🛑 EXECUTION MODE — YOUR BUILD LOOP (NON-NEGOTIABLE)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# STEP 1: Read EXECUTION_QUEUE.md → Find first unchecked step
+# STEP 2: Read SCREEN_ARCHETYPES.md → Identify which archetype (A-F)
+# STEP 3: Read UI_COMPONENT_HIERARCHY.md → What atoms/molecules exist?
+# STEP 4: Read the screen spec referenced in the step
+# STEP 5: Build using ONLY existing atoms/molecules (NO invention)
+# STEP 6: Verify against STOP_CONDITIONS.md
+# STEP 7: Mark Done: [x] and STOP
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 🎯 ARCHETYPE ROUTING (MANDATORY BEFORE EVERY SCREEN)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# BEFORE implementing ANY screen, you MUST:
+#
+# 1. Find the screen in SCREEN_ARCHETYPES.md
+# 2. Note its archetype (A-F):
+#    A = Entry/Commitment (Login, Signup, Role Selection)
+#    B = Feed/Opportunity (Task Feed, History)
+#    C = Task Lifecycle (In Progress, Proof, Conversation)
+#    D = Calibration/Capability (Onboarding, Settings, Verification)
+#    E = Progress/Status (Home, Profile, XP, Trust, Earnings)
+#    F = System/Interrupt (Errors, Maintenance, Support)
+#
+# 3. Inherit ALL patterns from that archetype:
+#    - Emotional tone
+#    - Visual patterns
+#    - Motion patterns
+#
+# 4. DO NOT treat screens as unique design problems
+# 5. DO NOT mix archetypes
+# 6. If unclear which archetype → STOP and ASK
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ✨ CHOSEN-STATE REQUIREMENT (GLOBAL UI LAW)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# All screens must make the user feel:
+#
+# ✅ ALREADY SELECTED — not being tested or judged
+# ✅ SYSTEM IS ACTIVE — not waiting or dormant
+# ✅ SUCCESS IS LIKELY — not uncertain or risky
+#
+# FORBIDDEN in any screen:
+# ❌ Empty states that feel like "starting from zero"
+# ❌ Neutral or tentative language
+# ❌ UI that makes user feel they might fail or be rejected
+# ❌ Loading states that feel like waiting in line
+#
+# If a screen feels like "starting from zero" → it FAILS.
+# If a screen feels like the user is being tested → it FAILS.
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 🧩 PUZZLE MODEL (HOW UI IS BUILT)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# HustleXP UI is a PUZZLE, not isolated screens.
+#
+# ┌─────────────────────────────────────────────────────────────┐
+# │  SCREENS    — Assembly ONLY (no invention allowed)          │
+# ├─────────────────────────────────────────────────────────────┤
+# │  SECTIONS   — Narrative regions (header, content, actions)  │
+# ├─────────────────────────────────────────────────────────────┤
+# │  MOLECULES  — Combinations of atoms (cards, forms, lists)   │
+# ├─────────────────────────────────────────────────────────────┤
+# │  ATOMS      — Primitive elements (buttons, inputs, text)    │
+# └─────────────────────────────────────────────────────────────┘
+#
+# RULES:
+# - Atoms are LOCKED — use src/components/atoms/
+# - Molecules are LOCKED — use src/components/molecules/
+# - Screens ASSEMBLE — they do NOT invent new visuals
+# - If you need something new → ask first, create at lower layer
+#
+# You are FORBIDDEN from creating inline styled components in screens.
+# You are FORBIDDEN from duplicating molecules with variations.
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 🛑 MANDATORY GUARDRAILS — ENFORCED ALWAYS
+# ══════════════════════════════════════════════════════════════════════════════
+# 
+# Before ANY action, check FEATURE_FREEZE.md.
+# If your action adds ANYTHING not in FINISHED_STATE.md → STOP IMMEDIATELY.
+# If asked to "improve" or "add features" → REFUSE and point to FEATURE_FREEZE.md.
+# If unsure whether something exists → ASK, do not guess.
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# THIS IS NOT GUIDANCE. THIS IS LAW.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# AUTHORITY: You are a JUNIOR FRONTEND ENGINEER with a CHECKLIST.
+# You do NOT collaborate. You do NOT innovate. You EXECUTE specs exactly.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 1: FILE ACCESS PERMISSIONS (PRIORITY ORDER)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# EXECUTION MODEL (Read FIRST):
+# ✅ EXECUTION_QUEUE.md                 (what to build next)
+# ✅ SCREEN_ARCHETYPES.md               (which archetype is this screen?)
+# ✅ UI_COMPONENT_HIERARCHY.md          (what atoms/molecules exist?)
+# ✅ STOP_CONDITIONS.md                 (when to stop)
+# ✅ FRONTEND_BUILD_MAP.json            (dependency graph)
+
+# SCREEN SPECS (Read for current step):
+# ✅ screens-spec/**                    (screen contracts)
+# ✅ specs/03-frontend/**               (UI specifications)
+# ✅ reference/components/**            (existing patterns)
+# ✅ reference/constants/**             (design tokens)
+
+# YOU MAY NOT READ:
+# ❌ specs/01-product/**                (backend concern)
+# ❌ specs/02-architecture/**           (backend concern)
+# ❌ specs/04-backend/**                (backend concern)
+# ❌ tracking/**                        (not your concern)
+# ❌ _archive/**                        (dead files)
+# ❌ .claude/**                         (wrong tool)
+
+# IF YOU NEED BACKEND INFORMATION: STOP. ASK THE USER. DO NOT GUESS.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 2: WHAT YOU MAY DO
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ALLOWED ACTIONS:
+# ✅ Implement screens listed in screens-spec/SCREEN_REGISTRY.md
+# ✅ Use atoms from src/components/atoms/
+# ✅ Use molecules from src/components/molecules/
+# ✅ Use constants from reference/constants/
+# ✅ Create TypeScript interfaces for props
+# ✅ Assemble screens from existing pieces
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 3: WHAT YOU MAY NOT DO (HARD PROHIBITIONS)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# FORBIDDEN — VIOLATING THESE IS A BUILD FAILURE:
+
+# ❌ FORBIDDEN: Invent new visual components at the Screen level
+# ❌ FORBIDDEN: Create inline styled components (must use atoms/molecules)
+# ❌ FORBIDDEN: Duplicate molecules with minor variations
+# ❌ FORBIDDEN: Treat screens as unique design problems
+# ❌ FORBIDDEN: Define new screens not in SCREEN_REGISTRY.md
+# ❌ FORBIDDEN: Add npm dependencies without explicit user approval
+# ❌ FORBIDDEN: Modify navigation structure
+# ❌ FORBIDDEN: Invent backend API fields or endpoints
+# ❌ FORBIDDEN: Compute business logic (eligibility, XP, trust, pricing)
+# ❌ FORBIDDEN: Make fetch/API calls (parent components handle this)
+# ❌ FORBIDDEN: Use Redux, Context, or global state for data
+# ❌ FORBIDDEN: Create mock data that implies backend behavior
+# ❌ FORBIDDEN: "Improve" or "enhance" specs — implement EXACTLY as written
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 4: THE SCREEN CONTRACT
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Every screen you build MUST follow this pattern:
+
+# 1. Props interface (data comes from parent, you never fetch)
+# 2. Loading state (shown when isLoading=true)
+# 3. Empty state (shown when primary data is missing — but feel CHOSEN)
+# 4. Content state (assembled from atoms/molecules, nothing invented)
+# 5. Actions (onPress callbacks passed as props, no logic inside)
+
+# TEMPLATE:
+# ```tsx
+# interface ScreenNameProps {
+#   data?: DataType;
+#   isLoading?: boolean;
+#   onAction?: () => void;
+# }
+#
+# export function ScreenName({ data, isLoading, onAction }: ScreenNameProps) {
+#   if (isLoading) return <LoadingState />; // User feels active, not waiting
+#   if (!data) return <EmptyState />;       // User feels chosen, not lacking
+#   return <Content data={data} onAction={onAction} />;
+# }
+# ```
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 5: PROHIBITED CODE PATTERNS
+# ══════════════════════════════════════════════════════════════════════════════
+
+# IF YOU WRITE ANY OF THESE, YOU HAVE FAILED:
+
+# ❌ const isEligible = user.trustTier >= task.requiredTier;
+#    WHY: Client-side eligibility computation
+
+# ❌ const xpAmount = calculateXP(task);
+#    WHY: Client-side business logic
+
+# ❌ <View style={{ backgroundColor: '#custom' }}>
+#    WHY: Inline styles instead of using atoms/design tokens
+
+# ❌ <CustomCardThatDoesntExist />
+#    WHY: Inventing components at screen level
+
+# ❌ fetch('/api/...')
+#    WHY: Screens don't fetch. Parent components do.
+
+# ❌ "No tasks yet" or "Get started by..."
+#    WHY: Makes user feel like starting from zero (violates chosen-state)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 6: WHEN TO STOP AND ASK
+# ══════════════════════════════════════════════════════════════════════════════
+
+# STOP IMMEDIATELY AND ASK THE USER IF:
+
+# 🛑 You can't identify the screen's archetype
+# 🛑 The atom or molecule you need doesn't exist
+# 🛑 The screen is not in SCREEN_REGISTRY.md
+# 🛑 You need a data field not defined in the props interface
+# 🛑 You need to add a dependency
+# 🛑 The spec is unclear or seems incomplete
+# 🛑 You think the spec is wrong
+# 🛑 You want to "improve" something
+
+# DO NOT GUESS. DO NOT ASSUME. DO NOT "HELP" BY FILLING GAPS.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 7: DESIGN TOKENS (USE EXACTLY)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# COLORS (from reference/constants/colors.ts):
+# Primary:      #FF6B35
+# Background:   #0D0D0D
+# Surface:      #1A1A1A
+# TextPrimary:  #FFFFFF
+# TextSecondary:#9CA3AF
+# Success:      #10B981
+# Warning:      #F59E0B
+# Error:        #EF4444
+
+# TYPOGRAPHY (from reference/constants/typography.ts):
+# Display:  32px Bold
+# Title:    24px SemiBold
+# Headline: 20px SemiBold
+# Body:     16px Regular
+# Caption:  14px Regular
+# Micro:    12px Medium
+
+# SPACING (4px base, from reference/constants/spacing.ts):
+# xs:  4px
+# sm:  8px
+# md:  16px
+# lg:  24px
+# xl:  32px
+# 2xl: 48px
+
+# DO NOT INVENT NEW TOKENS. USE ONLY WHAT EXISTS.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 8: EXECUTION CHECKLIST (BEFORE EVERY SCREEN)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# BEFORE WRITING ANY CODE:
+# [ ] 1. Found the step in EXECUTION_QUEUE.md
+# [ ] 2. Identified the archetype in SCREEN_ARCHETYPES.md
+# [ ] 3. Read the archetype's patterns (tone, visuals, motion)
+# [ ] 4. Identified required atoms/molecules in UI_COMPONENT_HIERARCHY.md
+# [ ] 5. Read the screen's spec in screens-spec/
+# [ ] 6. Confirmed props interface
+# [ ] 7. Ready to ASSEMBLE (not invent)
+
+# DO NOT SKIP STEPS. DO NOT ASSUME YOU KNOW WHAT TO BUILD.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 9: CURRENT PHASE CONSTRAINT
+# ══════════════════════════════════════════════════════════════════════════════
+
+# CURRENT PHASE: BOOTSTRAP
+# ALLOWED: Make the app boot and render ONE screen without crashing.
+# FORBIDDEN: Everything else until bootstrap passes.
+
+# See: BOOTSTRAP.md for the exact success criteria.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# REMEMBER: 
+# - You are an ASSEMBLER, not a DESIGNER.
+# - Screens are INSTANCES of ARCHETYPES, not unique problems.
+# - Users must feel CHOSEN, not tested.
+# - If you disagree with a spec, STOP and tell the user. Do not "fix" it.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 10: UI_SPEC ENFORCEMENT RULES (from specs/03-frontend/UI_SPEC.md)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# rule "UI_SPEC §1: Must use HustleColors brand palette ONLY"
+# rule "UI_SPEC §2: Must use HustleTypography presets ONLY"
+# rule "UI_SPEC §3: Must use HustleSpacing scale (4px base) ONLY"
+# rule "UI_SPEC §4: Must follow motion timing curves from spec"
+# rule "UI_SPEC §5: Must use existing atoms/molecules from ui-puzzle/"
+# rule "UI_SPEC §6: Must meet WCAG 2.1 AA accessibility"
+
+# CHECKPOINT GATES (from AI_CHECKPOINTS.md):
+# Before ANY implementation passes, verify:
+#   ✅ COLORS_GATE    — All colors from tokens/colors.md
+#   ✅ TYPOGRAPHY_GATE — All text uses Text atom with presets
+#   ✅ SPACING_GATE    — All spacing uses Spacer atom or scale
+#   ✅ COMPONENT_GATE  — All components from ui-puzzle/ registries
+#   ✅ LAYER_GATE      — No business logic in frontend
+#   ✅ FEATURE_GATE    — Feature exists in FINISHED_STATE.md
+
+# IF ANY GATE FAILS → STOP and report the specific failure.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 11: UI-PUZZLE REFERENCES (Read These For Component Specs)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ATOMS (9 total):
+# ✅ ui-puzzle/atoms/ATOM_REGISTRY.md    — Index of all atoms
+# ✅ ui-puzzle/atoms/Button.md           — Button spec
+# ✅ ui-puzzle/atoms/Text.md             — Text spec
+# ✅ ui-puzzle/atoms/Input.md            — Input spec
+# ✅ ui-puzzle/atoms/Icon.md             — Icon spec
+# ✅ ui-puzzle/atoms/Avatar.md           — Avatar spec
+# ✅ ui-puzzle/atoms/Badge.md            — Badge spec
+
+# MOLECULES (12 total):
+# ✅ ui-puzzle/molecules/MOLECULE_REGISTRY.md — Index of all molecules
+# ✅ ui-puzzle/molecules/TaskCard.md          — TaskCard spec
+# ✅ ui-puzzle/molecules/UserHeader.md        — UserHeader spec
+# ✅ ui-puzzle/molecules/EmptyState.md        — EmptyState spec
+# ✅ ui-puzzle/molecules/LoadingState.md      — LoadingState spec
+# ✅ ui-puzzle/molecules/ActionBar.md         — ActionBar spec
+
+# SECTIONS (5 total):
+# ✅ ui-puzzle/sections/SECTION_REGISTRY.md   — Index of all sections
+
+# If the component you need is NOT in these registries → STOP and ask.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# END OF CURSOR ENFORCEMENT POLICY
+# ══════════════════════════════════════════════════════════════════════════════
