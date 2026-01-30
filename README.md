@@ -1,233 +1,202 @@
 # HustleXP Frontend Runtime
 
-⚠️ **EXECUTION AUTHORITY NOTICE**
-
-This repository is **NOT** a standalone React Native project.
-
-It is a **runtime implementation surface** governed by the HustleXP Product Execution Repository (PER).
-
-**Any work done without following the PER authority hierarchy is INVALID.**
+⚠️ **This repo optimizes for forward progress, not aesthetic iteration.**
+**A session that completes its defined step MUST stop immediately.**
 
 ---
 
-## 🔒 Governing Authority (Non-Negotiable)
+## 🚨 READ FIRST
 
-All frontend work in this repo is governed by:
+```
+FRONTEND_ENTRYPOINT.md ← What to do NOW
+```
 
-| Document | Purpose | Priority |
-|----------|---------|----------|
-| **[HUSTLEXP-DOCS](https://github.com/Sebdysart/HUSTLEXP-DOCS)** | Root authority | HIGHEST |
-| `EXECUTION_QUEUE.md` | What to build next | Required |
-| `SCREEN_ARCHETYPES.md` | Which archetype (A-F) | Required |
-| `UI_COMPONENT_HIERARCHY.md` | What components exist | Required |
-| `STOP_CONDITIONS.md` | When to stop | Required |
-| `AI_CHECKPOINTS.md` | Enforcement gates | Required |
-| `.cursorrules` | Hard constraints | Enforced |
-
-**If any instruction in this repository conflicts with HUSTLEXP-DOCS, HUSTLEXP-DOCS always wins.**
+**Every session starts by reading `FRONTEND_ENTRYPOINT.md`. No exceptions.**
 
 ---
 
-## 🚀 Canonical Start Sequence (Required)
+## ⚠️ EXECUTION AUTHORITY
 
-Before making **ANY change**, you MUST:
+This repository is **NOT** a standalone project.
+It is a **runtime surface** governed by [HUSTLEXP-DOCS](https://github.com/Sebdysart/HUSTLEXP-DOCS).
 
-```
-1. Read HUSTLEXP-DOCS/EXECUTION_QUEUE.md
-2. Find the FIRST step where Done: [ ]
-3. Identify the screen's ARCHETYPE from SCREEN_ARCHETYPES.md
-4. Read UI_COMPONENT_HIERARCHY.md to know what components exist
-5. Read the spec file for the current step
-6. Build using ONLY existing atoms/molecules
-7. Verify against STOP_CONDITIONS.md
-8. Mark Done: [x] and STOP
-```
-
-**Any work done without following this sequence is INVALID.**
+**If conflict → HUSTLEXP-DOCS wins.**
 
 ---
 
-## 🛑 Frontend Rules (Hard Constraints)
+## 🔒 AUTHORITY HIERARCHY
 
-```
-✅ UI renders PROPS ONLY
-✅ Use atoms/molecules from ui-puzzle/
-✅ Follow archetype patterns
-✅ Stop when spec says stop
-
-❌ NO data fetching in screens
-❌ NO business logic (eligibility, XP, trust)
-❌ NO feature invention
-❌ NO visual invention outside ui-puzzle/
-❌ NO treating screens as unique design problems
-```
-
-**If unclear: STOP AND ASK. Do not guess.**
+| Priority | Document |
+|----------|----------|
+| 1 | `FRONTEND_ENTRYPOINT.md` (this repo) |
+| 2 | `HUSTLEXP-DOCS/EXECUTION_QUEUE.md` |
+| 3 | `HUSTLEXP-DOCS/SCREEN_ARCHETYPES.md` |
+| 4 | `HUSTLEXP-DOCS/STOP_CONDITIONS.md` |
+| 5 | `.cursorrules` |
 
 ---
 
-## 🧩 Execution Model (Puzzle Assembly)
-
-HustleXP UI is built as a **PUZZLE**, not as isolated screens:
+## 🚀 START SEQUENCE
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  SCREENS    — Assembly ONLY (no invention allowed)          │
-├─────────────────────────────────────────────────────────────┤
-│  SECTIONS   — Narrative regions (header, content, actions)  │
-├─────────────────────────────────────────────────────────────┤
-│  MOLECULES  — Combinations of atoms (cards, forms, lists)   │
-├─────────────────────────────────────────────────────────────┤
-│  ATOMS      — Primitive elements (buttons, inputs, text)    │
-└─────────────────────────────────────────────────────────────┘
+1. Read FRONTEND_ENTRYPOINT.md
+2. Confirm CURRENT_PHASE
+3. Confirm NEXT_LEGAL_ACTION
+4. Confirm SESSION_SCOPE (allowed files)
+5. Execute ONLY that action
+6. Check SUCCESS_CRITERIA
+7. When criteria pass → STOP
 ```
-
-**Screens may NOT introduce new visuals. They ASSEMBLE existing pieces.**
 
 ---
 
-## 🎯 Screen Archetypes (Identify BEFORE Implementation)
+## 🛑 CURRENT PHASE: BOOTSTRAP
 
-| Archetype | Purpose | Examples |
-|-----------|---------|----------|
-| **A. Entry/Commitment** | User decides to engage | Login, Signup, Welcome |
-| **B. Feed/Opportunity** | User discovers options | Task Feed, History |
-| **C. Task Lifecycle** | Active work flow | In Progress, Proof |
-| **D. Calibration/Capability** | User configures self | Onboarding, Settings |
-| **E. Progress/Status** | User sees standing | Home, Profile, XP |
-| **F. System/Interrupt** | System communicates | Errors, Maintenance |
-
-**Screens inherit visuals, motion, and hierarchy from their archetype.**
-
----
-
-## ✨ Chosen-State Requirement (Global)
-
-All screens must make the user feel:
-
-```
-✅ ALREADY SELECTED — not being tested
-✅ SYSTEM IS ACTIVE — not waiting
-✅ SUCCESS IS LIKELY — not uncertain
-```
-
-**FORBIDDEN:**
-- "No tasks yet" / "Get started" language
-- Empty states that feel like starting from zero
-- UI that makes user feel they might fail
-
----
-
-## ⚠️ Current Phase: BOOTSTRAP
-
-**Nothing proceeds until Bootstrap passes.**
-
-| Check | Status |
-|-------|--------|
+| Criteria | Status |
+|----------|--------|
 | App builds in Xcode | ❌ |
 | App launches without crash | ❌ |
 | BootstrapScreen renders | ❌ |
 | Button logs to console | ❌ |
 | 30-second stability | ❌ |
 
-See: `HUSTLEXP-DOCS/BOOTSTRAP.md`
+### BOOTSTRAP ENFORCEMENT RULE
+
+```
+While BOOTSTRAP is failing, the ONLY legal changes are:
+- Crash fixes
+- Minimal wiring to render BootstrapScreen
+
+FORBIDDEN until BOOTSTRAP passes:
+- UI polish
+- Copy changes
+- Animations
+- Aesthetic iteration
+- Navigation work
+- Other screens
+```
+
+**Violation = Invalid work.**
 
 ---
 
-## 💻 Development (Runtime Only)
+## 🧩 EXECUTION MODEL
 
-This repo exists to **RUN and VALIDATE** UI assembled from HUSTLEXP-DOCS.
+```
+SCREENS    ← Assembly only (no invention)
+SECTIONS   ← Narrative regions
+MOLECULES  ← Locked compositions
+ATOMS      ← Locked primitives
+```
 
-### Prerequisites
-- Node.js 18+
-- Xcode 15+ (iOS)
-- CocoaPods
+**Screens assemble. They do NOT invent.**
 
-### Setup
+---
+
+## 🎯 ARCHETYPES
+
+| Code | Name | Examples |
+|------|------|----------|
+| A | Entry/Commitment | Login, Signup |
+| B | Feed/Opportunity | Task Feed |
+| C | Task Lifecycle | In Progress |
+| D | Calibration | Onboarding |
+| E | Progress/Status | Home, Profile |
+| F | System/Interrupt | Errors |
+
+**Identify archetype BEFORE implementation.**
+
+---
+
+## ✨ CHOSEN-STATE
+
+```
+✅ User feels SELECTED
+✅ System feels ACTIVE
+✅ Success feels LIKELY
+
+❌ "No tasks yet"
+❌ "Get started"
+❌ Starting from zero
+```
+
+---
+
+## 🚫 HARD CONSTRAINTS
+
+```
+❌ Data fetching in screens
+❌ Business logic (eligibility, XP, trust)
+❌ Feature invention
+❌ Visual invention
+❌ Inline styles
+❌ New dependencies without approval
+❌ Navigation changes
+❌ New screens not in registry
+```
+
+---
+
+## 💻 RUN COMMANDS
+
 ```bash
 npm install
 cd ios && pod install && cd ..
+npm start
+npm run ios
 ```
 
-### Run
-```bash
-npm start          # Start Metro
-npm run ios        # Run on iOS Simulator
-```
-
-⚠️ **These commands do NOT grant permission to modify UI structure or invent features.**
+**These commands do NOT grant permission to modify structure.**
 
 ---
 
-## 📁 Directory Structure
+## 📁 STRUCTURE
 
 ```
 HUSTLEXPFINAL1/
+├── FRONTEND_ENTRYPOINT.md  ← READ FIRST
+├── .cursorrules            ← Enforcement
 ├── src/
 │   ├── components/
-│   │   ├── atoms/       ← Locked primitives (from ui-puzzle/)
-│   │   └── molecules/   ← Locked compositions (from ui-puzzle/)
-│   ├── screens/
-│   │   ├── auth/        ← Auth screens (Archetype A)
-│   │   ├── onboarding/  ← Onboarding screens (Archetype D)
-│   │   ├── hustler/     ← Hustler screens (Archetypes B, C, E)
-│   │   ├── poster/      ← Poster screens (Archetypes B, C, E)
-│   │   ├── settings/    ← Settings screens (Archetype D)
-│   │   ├── shared/      ← Shared screens (Archetype C)
-│   │   └── edge/        ← Edge case screens (Archetype F)
-│   └── navigation/      ← Navigation structure (FROZEN)
-├── ios/                 ← iOS native code
-├── android/             ← Android native code
-└── .cursorrules         ← ENFORCEMENT (not guidance)
+│   │   ├── atoms/          ← Locked
+│   │   └── molecules/      ← Locked
+│   └── screens/            ← Assembly only
+└── ios/
 ```
 
 ---
 
-## 🔗 Source of Truth
+## 🔗 SOURCE OF TRUTH
 
-| Concern | Authority |
-|---------|-----------|
-| Design authority | `HUSTLEXP-DOCS` |
-| UI structure | `HUSTLEXP-DOCS/ui-puzzle/` |
+| Concern | Location |
+|---------|----------|
+| What to do now | `FRONTEND_ENTRYPOINT.md` |
+| Build sequence | `HUSTLEXP-DOCS/EXECUTION_QUEUE.md` |
+| Components | `HUSTLEXP-DOCS/ui-puzzle/` |
 | Screen specs | `HUSTLEXP-DOCS/screens-spec/` |
-| Enforcement | `HUSTLEXP-DOCS/.cursorrules` |
-| What "done" means | `HUSTLEXP-DOCS/FINISHED_STATE.md` |
-
-**This repo is a CONSUMER, not an AUTHOR.**
+| Enforcement | `.cursorrules` |
 
 ---
 
-## 🚫 Prohibited Actions
+## ❓ IF UNCLEAR
 
 ```
-❌ Modifying navigation structure
-❌ Adding npm dependencies without approval
-❌ Creating new screens not in SCREEN_REGISTRY.md
-❌ Computing eligibility, XP, or trust client-side
-❌ Fetching data in screen components
-❌ Using Redux/Context for data
-❌ Inline styles (use design tokens only)
-❌ "Improving" or "enhancing" specs
+STOP.
+Read FRONTEND_ENTRYPOINT.md.
+If still unclear → ASK.
+Do NOT guess.
 ```
 
 ---
 
-## ❓ If Unsure
+## 📋 SESSION END CHECKLIST
 
-**Do not guess. Do not "help" by filling gaps.**
-
-Return to:
-👉 **[HUSTLEXP-DOCS/EXECUTION_QUEUE.md](https://github.com/Sebdysart/HUSTLEXP-DOCS/blob/main/EXECUTION_QUEUE.md)**
-
-Find the next unchecked step and execute exactly that.
-
----
-
-## 👤 Contact
-
-**Owner:** Sebastian Dysart  
-**Project:** HustleXP v1.0  
-**Docs Repo:** [HUSTLEXP-DOCS](https://github.com/Sebdysart/HUSTLEXP-DOCS)
+```
+[ ] SUCCESS_CRITERIA all pass
+[ ] Only ALLOWED files modified
+[ ] STOP_CONDITION triggered
+[ ] Session ends NOW
+```
 
 ---
 
