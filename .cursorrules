@@ -347,5 +347,105 @@
 # If the component you need is NOT in these registries → STOP and ask.
 
 # ══════════════════════════════════════════════════════════════════════════════
-# END OF CURSOR ENFORCEMENT POLICY
+# SECTION 12: ARCHETYPE → MOLECULE BINDING (MANDATORY)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Each archetype has a FIXED ALLOWED MOLECULE SET.
+# If a screen uses a molecule NOT in its archetype's list → INVALID.
+
+# QUICK REFERENCE (✅ = allowed, ❌ = forbidden):
+#
+# Molecule      | A | B | C | D | E | F |
+# ------------- |---|---|---|---|---|---|
+# TaskCard      | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+# UserHeader    | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ |
+# FormField     | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+# ActionBar     | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ |
+# FilterBar     | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+# ProgressBar   | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+# EmptyState    | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+# ErrorState    | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
+# LoadingState  | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+# ListItem      | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+# StatusBadge   | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ |
+# RatingStars   | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+# PriceDisplay  | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ |
+
+# Full matrix: ARCHETYPE_MOLECULE_MATRIX.md
+
+# BEFORE adding ANY molecule:
+# 1. Identify screen's archetype (A-F)
+# 2. Check if molecule is ✅ for that archetype
+# 3. If ❌ → STOP AND ASK. Do NOT proceed.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 13: SESSION TERMINATION PROTOCOL (MANDATORY)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# WHEN STOP CONDITION IS MET:
+# The session MUST terminate IMMEDIATELY.
+# Any further output is INVALID unless a new session is started.
+
+# FORBIDDEN AFTER STOP:
+# ❌ "Here's what I did..."
+# ❌ "You might also want to..."
+# ❌ "I noticed that..."
+# ❌ "For future reference..."
+# ❌ "Summary of changes..."
+# ❌ Any explanation of work done
+# ❌ Any suggestion for next steps
+# ❌ Any non-requested output
+
+# CORRECT RESPONSES AFTER STOP:
+# ✅ "Done."
+# ✅ [silence]
+# ✅ "BOOTSTRAP: PASS" (or equivalent status)
+
+# IF YOU CONTINUE AFTER STOP → INVALID SESSION.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 14: PROHIBITED OUTPUTS (ENFORCED)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# THE FOLLOWING OUTPUTS ARE ALWAYS FORBIDDEN:
+
+# ❌ Describing UI instead of committing code
+# ❌ "Verification summaries" without artifacts
+# ❌ Screenshot-based validation claims
+# ❌ Explanations of what was built
+# ❌ Suggestions for improvements
+# ❌ Alternative approaches
+# ❌ "While I was at it, I also..."
+# ❌ "I've also taken the liberty of..."
+# ❌ Hypothetical future enhancements
+# ❌ Architecture commentary
+# ❌ Refactoring suggestions
+# ❌ Code review of own work
+
+# VALID OUTPUTS:
+# ✅ Code that implements the spec exactly
+# ✅ "Done." (after STOP condition)
+# ✅ "BLOCKED: [specific error]" (if blocked)
+# ✅ Status confirmation (e.g., "BOOTSTRAP: PASS")
+
+# IF YOU PRODUCE A PROHIBITED OUTPUT → SESSION INVALID.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 15: DOCS COMMIT HASH BINDING
+# ══════════════════════════════════════════════════════════════════════════════
+
+# FRONTEND_ENTRYPOINT.md in runtime repo must reference DOCS commit hash.
+# If hashes differ → STALE ENTRYPOINT → STOP AND ASK.
+
+# Current DOCS_COMMIT_HASH: 414e1e8
+# If FRONTEND_ENTRYPOINT.md shows different hash → DO NOT PROCEED.
+
+# SYNC PROTOCOL:
+# 1. Check FRONTEND_ENTRYPOINT.md DOCS_COMMIT_HASH
+# 2. Compare to current HUSTLEXP-DOCS HEAD
+# 3. If different → "STALE: Entrypoint hash mismatch. Sync required."
+# 4. Do NOT work with stale entrypoint
+
+# ══════════════════════════════════════════════════════════════════════════════
+# END OF CURSOR ENFORCEMENT POLICY — S-TIER
 # ══════════════════════════════════════════════════════════════════════════════
