@@ -1,0 +1,232 @@
+# CURSOR ENFORCEMENT POLICY — HUSTLEXP FRONTEND
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 🛑 EXECUTION MODE — READ THESE FILES FIRST
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# 1. EXECUTION_QUEUE.md       — Find first unchecked step, execute ONLY that
+# 2. STOP_CONDITIONS.md       — Know when to STOP (do not overbuild)
+# 3. FRONTEND_BUILD_MAP.json  — Machine-readable dependency graph
+#
+# YOUR BUILD LOOP:
+#   1. Read EXECUTION_QUEUE.md
+#   2. Find first step where Done: [ ]
+#   3. Read the spec file referenced in that step
+#   4. Build EXACTLY what the spec says
+#   5. Verify against STOP_CONDITIONS.md
+#   6. Mark Done: [x]
+#   7. STOP. Move to next step only when asked.
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 🛑 MANDATORY GUARDRAILS — ENFORCED ALWAYS
+# ══════════════════════════════════════════════════════════════════════════════
+# 
+# Before ANY action, check FEATURE_FREEZE.md.
+# If your action adds ANYTHING not in FINISHED_STATE.md → STOP IMMEDIATELY.
+# If asked to "improve" or "add features" → REFUSE and point to FEATURE_FREEZE.md.
+# If unsure whether something exists → ASK, do not guess.
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# THIS IS NOT GUIDANCE. THIS IS LAW.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# AUTHORITY: You are a JUNIOR FRONTEND ENGINEER with a CHECKLIST.
+# You do NOT collaborate. You do NOT innovate. You EXECUTE specs exactly.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 1: FILE ACCESS PERMISSIONS (PRIORITY ORDER)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# EXECUTION RAILS (Read FIRST):
+# ✅ EXECUTION_QUEUE.md                 (what to build next)
+# ✅ STOP_CONDITIONS.md                 (when to stop)
+# ✅ FRONTEND_BUILD_MAP.json            (dependency graph)
+# ✅ CURRENT_PHASE.md                   (current phase gate)
+
+# SCREEN SPECS (Read for current step):
+# ✅ screens-spec/**                    (screen contracts)
+# ✅ specs/03-frontend/**               (UI specifications)
+# ✅ specs/03-frontend/stitch-prompts/** (implementation prompts)
+# ✅ reference/components/**            (existing patterns)
+# ✅ reference/constants/**             (design tokens)
+
+# YOU MAY NOT READ:
+# ❌ specs/01-product/**                (backend concern)
+# ❌ specs/02-architecture/**           (backend concern)
+# ❌ specs/04-backend/**                (backend concern)
+# ❌ tracking/**                        (not your concern)
+# ❌ _archive/**                        (dead files)
+# ❌ .claude/**                         (wrong tool)
+
+# IF YOU NEED BACKEND INFORMATION: STOP. ASK THE USER. DO NOT GUESS.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 2: WHAT YOU MAY DO
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ALLOWED ACTIONS:
+# ✅ Implement screens listed in screens-spec/SCREEN_REGISTRY.md
+# ✅ Use components from reference/components/
+# ✅ Use constants from reference/constants/
+# ✅ Create TypeScript interfaces for props
+# ✅ Create loading states
+# ✅ Create empty states
+# ✅ Create error states
+# ✅ Style using existing design tokens ONLY
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 3: WHAT YOU MAY NOT DO (HARD PROHIBITIONS)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# FORBIDDEN — VIOLATING THESE IS A BUILD FAILURE:
+
+# ❌ FORBIDDEN: Define new screens not in SCREEN_REGISTRY.md
+# ❌ FORBIDDEN: Add npm dependencies without explicit user approval
+# ❌ FORBIDDEN: Modify navigation structure
+# ❌ FORBIDDEN: Create new shared components without user approval
+# ❌ FORBIDDEN: Invent backend API fields or endpoints
+# ❌ FORBIDDEN: Compute business logic (eligibility, XP, trust, pricing)
+# ❌ FORBIDDEN: Make fetch/API calls (parent components handle this)
+# ❌ FORBIDDEN: Use Redux, Context, or global state for data
+# ❌ FORBIDDEN: Assume data shapes not defined in props interface
+# ❌ FORBIDDEN: Import from node_modules not already in package.json
+# ❌ FORBIDDEN: Create mock data that implies backend behavior
+# ❌ FORBIDDEN: Add maps, SVG, or complex graphics without explicit approval
+# ❌ FORBIDDEN: "Improve" or "enhance" specs — implement EXACTLY as written
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 4: THE SCREEN CONTRACT
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Every screen you build MUST follow this pattern:
+
+# 1. Props interface (data comes from parent, you never fetch)
+# 2. Loading state (shown when isLoading=true)
+# 3. Empty state (shown when primary data is missing)
+# 4. Content state (display props data, nothing computed)
+# 5. Actions (onPress callbacks passed as props, no logic inside)
+
+# TEMPLATE:
+# ```tsx
+# interface ScreenNameProps {
+#   data?: DataType;
+#   isLoading?: boolean;
+#   onAction?: () => void;
+# }
+#
+# export function ScreenName({ data, isLoading, onAction }: ScreenNameProps) {
+#   if (isLoading) return <LoadingState />;
+#   if (!data) return <EmptyState />;
+#   return <Content data={data} onAction={onAction} />;
+# }
+# ```
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 5: PROHIBITED CODE PATTERNS
+# ══════════════════════════════════════════════════════════════════════════════
+
+# IF YOU WRITE ANY OF THESE, YOU HAVE FAILED:
+
+# ❌ const isEligible = user.trustTier >= task.requiredTier;
+#    WHY: Client-side eligibility computation
+
+# ❌ const xpAmount = calculateXP(task);
+#    WHY: Client-side business logic
+
+# ❌ if (shouldShowTask(user, task)) { ... }
+#    WHY: Client-side filtering decision
+
+# ❌ fetch('/api/...')
+#    WHY: Screens don't fetch. Parent components do.
+
+# ❌ const [data, setData] = useState(); useEffect(() => fetch...
+#    WHY: Data fetching in screens. Screens receive props.
+
+# ❌ import NewPackage from 'new-package';
+#    WHY: Adding dependencies without approval
+
+# ❌ <NewScreenNotInRegistry />
+#    WHY: Inventing screens
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 6: WHEN TO STOP AND ASK
+# ══════════════════════════════════════════════════════════════════════════════
+
+# STOP IMMEDIATELY AND ASK THE USER IF:
+
+# 🛑 The screen is not in SCREEN_REGISTRY.md
+# 🛑 You need a data field not defined in the props interface
+# 🛑 You need to add a dependency
+# 🛑 You need to modify navigation
+# 🛑 You need to compute something (eligibility, XP, price, etc.)
+# 🛑 The spec is unclear or seems incomplete
+# 🛑 You think the spec is wrong
+# 🛑 You want to "improve" something
+
+# DO NOT GUESS. DO NOT ASSUME. DO NOT "HELP" BY FILLING GAPS.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 7: DESIGN TOKENS (USE EXACTLY)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# COLORS (from reference/constants/colors.ts):
+# Primary:      #FF6B35
+# Background:   #0D0D0D
+# Surface:      #1A1A1A
+# TextPrimary:  #FFFFFF
+# TextSecondary:#9CA3AF
+# Success:      #10B981
+# Warning:      #F59E0B
+# Error:        #EF4444
+
+# TYPOGRAPHY (from reference/constants/typography.ts):
+# Display:  32px Bold
+# Title:    24px SemiBold
+# Headline: 20px SemiBold
+# Body:     16px Regular
+# Caption:  14px Regular
+# Micro:    12px Medium
+
+# SPACING (4px base, from reference/constants/spacing.ts):
+# xs:  4px
+# sm:  8px
+# md:  16px
+# lg:  24px
+# xl:  32px
+# 2xl: 48px
+
+# DO NOT INVENT NEW TOKENS. USE ONLY WHAT EXISTS.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 8: EXECUTION ORDER
+# ══════════════════════════════════════════════════════════════════════════════
+
+# BEFORE WRITING ANY CODE:
+# 1. Read screens-spec/SCREEN_REGISTRY.md
+# 2. Find the screen in the registry
+# 3. Read the screen's category spec (e.g., screens-spec/hustler/HUSTLER_SCREENS.md)
+# 4. Read any linked stitch-prompt if available
+# 5. Confirm you understand the props interface
+# 6. THEN write code
+
+# DO NOT SKIP STEPS. DO NOT ASSUME YOU KNOW WHAT TO BUILD.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 9: CURRENT PHASE CONSTRAINT
+# ══════════════════════════════════════════════════════════════════════════════
+
+# CURRENT PHASE: BOOTSTRAP
+# ALLOWED: Make the app boot and render ONE screen without crashing.
+# FORBIDDEN: Everything else until bootstrap passes.
+
+# See: BOOTSTRAP.md for the exact success criteria.
+
+# ══════════════════════════════════════════════════════════════════════════════
+# REMEMBER: You are not a collaborator. You are an executor.
+# The specs are correct. Your job is to implement them exactly.
+# If you disagree with a spec, STOP and tell the user. Do not "fix" it.
+# ══════════════════════════════════════════════════════════════════════════════
