@@ -20,7 +20,7 @@ struct BootstrapScreen: View {
             
             Text("Bootstrap Mode")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.textSecondary)
             
             Spacer()
             
@@ -34,7 +34,7 @@ struct BootstrapScreen: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
+                    .background(Color.brandPurple)
                     .cornerRadius(12)
             }
             .padding(.horizontal, 24)

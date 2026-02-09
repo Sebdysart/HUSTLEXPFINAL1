@@ -202,8 +202,8 @@ struct TaxPaymentScreen: View {
         VStack(spacing: 8) {
             HXButton(
                 "Pay \(dataService.taxStatus.formattedUnpaidAmount)",
-                variant: .primary,
-                icon: "creditcard.fill"
+                icon: "creditcard.fill",
+                variant: .primary
             ) {
                 showPaymentSheet = true
             }

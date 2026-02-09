@@ -86,7 +86,7 @@ struct SkillGridSelectionScreen: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(.textSecondary)
+                        .foregroundStyle(Color.textSecondary)
                         .frame(width: 40, height: 40)
                 }
                 
@@ -94,7 +94,7 @@ struct SkillGridSelectionScreen: View {
                 
                 Text("\(selectedSkills.count) selected")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -102,11 +102,11 @@ struct SkillGridSelectionScreen: View {
             VStack(spacing: 4) {
                 Text("What can you do?")
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                 
                 Text("Select skills to see matching quests")
                     .font(.system(size: 15))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
             }
             .padding(.vertical, 8)
         }
@@ -117,11 +117,11 @@ struct SkillGridSelectionScreen: View {
     private var searchBar: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.textMuted)
+                .foregroundStyle(Color.textMuted)
             
             TextField("Search skills...", text: $searchText)
                 .font(.system(size: 16))
-                .foregroundStyle(.textPrimary)
+                .foregroundStyle(Color.textPrimary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -160,12 +160,12 @@ struct SkillGridSelectionScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(category.rawValue)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.textPrimary)
+                            .foregroundStyle(Color.textPrimary)
                         
                         let selectedCount = skills.filter { selectedSkills.contains($0.id) }.count
                         Text("\(selectedCount)/\(skills.count) selected")
                             .font(.system(size: 13))
-                            .foregroundStyle(.textMuted)
+                            .foregroundStyle(Color.textMuted)
                     }
                     
                     Spacer()
@@ -174,7 +174,7 @@ struct SkillGridSelectionScreen: View {
                     if category == .trades {
                         Text("LICENSE")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.instantYellow)
+                            .foregroundStyle(Color.instantYellow)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(Color.instantYellow.opacity(0.2))
@@ -184,7 +184,7 @@ struct SkillGridSelectionScreen: View {
                     // Chevron
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                 }
                 .padding(16)
                 .background(Color.surfaceElevated)
@@ -244,7 +244,7 @@ struct SkillGridSelectionScreen: View {
                                 Spacer()
                                 Image(systemName: "lock.fill")
                                     .font(.system(size: 10))
-                                    .foregroundStyle(.instantYellow)
+                                    .foregroundStyle(Color.instantYellow)
                                     .padding(4)
                                     .background(Color.brandBlack)
                                     .clipShape(Circle())
@@ -257,7 +257,7 @@ struct SkillGridSelectionScreen: View {
                 // Name
                 Text(skill.name)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(isSelected ? .textPrimary : .textSecondary)
+                    .foregroundStyle(isSelected ? Color.textPrimary : Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .frame(height: 32)
@@ -294,11 +294,11 @@ struct SkillGridSelectionScreen: View {
                     Text("Ready")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundStyle(.successGreen)
+                .foregroundStyle(Color.successGreen)
             } else {
                 Text("Available")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.textMuted)
+                    .foregroundStyle(Color.textMuted)
             }
             
         case .experienceBased:
@@ -309,7 +309,7 @@ struct SkillGridSelectionScreen: View {
                     Text("Unlocked")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundStyle(.successGreen)
+                .foregroundStyle(Color.successGreen)
             } else {
                 HStack(spacing: 3) {
                     Image(systemName: "arrow.up.circle")
@@ -317,7 +317,7 @@ struct SkillGridSelectionScreen: View {
                     Text("Lvl \(skill.requiredLevel)")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundStyle(.warningOrange)
+                .foregroundStyle(Color.warningOrange)
             }
             
         case .licensed:
@@ -328,7 +328,7 @@ struct SkillGridSelectionScreen: View {
                     Text("Verified")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundStyle(.successGreen)
+                .foregroundStyle(Color.successGreen)
             } else {
                 HStack(spacing: 3) {
                     Image(systemName: "lock.fill")
@@ -336,7 +336,7 @@ struct SkillGridSelectionScreen: View {
                     Text("License")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundStyle(.instantYellow)
+                .foregroundStyle(Color.instantYellow)
             }
         }
     }
@@ -391,10 +391,10 @@ struct SkillGridSelectionScreen: View {
         VStack(spacing: 2) {
             Text(value)
                 .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.textPrimary)
+                .foregroundStyle(Color.textPrimary)
             Text(label)
                 .font(.system(size: 11))
-                .foregroundStyle(.textMuted)
+                .foregroundStyle(Color.textMuted)
         }
     }
     
@@ -454,7 +454,7 @@ struct LicensePromptSheet: View {
                 
                 Image(systemName: licenseType.icon)
                     .font(.system(size: 36))
-                    .foregroundStyle(.instantYellow)
+                    .foregroundStyle(Color.instantYellow)
             }
             .padding(.top, 32)
             
@@ -462,27 +462,27 @@ struct LicensePromptSheet: View {
             VStack(spacing: 8) {
                 Text("\(licenseType.rawValue)")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                 
                 Text("is a Regulated Trade")
                     .font(.system(size: 17))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
             }
             
             // Description
             Text("To see \(licenseType.rawValue) quests and earn premium rates, you'll need to verify your professional license.")
                 .font(.system(size: 15))
-                .foregroundStyle(.textSecondary)
+                .foregroundStyle(Color.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
             
             // Fee info
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.shield.fill")
-                    .foregroundStyle(.successGreen)
+                    .foregroundStyle(Color.successGreen)
                 Text("One-time verification: $\(String(format: "%.2f", licenseType.verificationFee))")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 20)
@@ -501,7 +501,7 @@ struct LicensePromptSheet: View {
                         Text("Verify License Now")
                     }
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.brandBlack)
+                    .foregroundStyle(Color.brandBlack)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(Color.instantYellow)
@@ -513,7 +513,7 @@ struct LicensePromptSheet: View {
                 } label: {
                     Text("Stick to General Labor")
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                 }
             }
             .padding(.horizontal, 20)

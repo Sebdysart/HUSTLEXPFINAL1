@@ -299,12 +299,12 @@ struct AIPricingSuggestionModal: View {
     
     private var actionsSection: some View {
         VStack(spacing: 12) {
-            HXButton("Accept Suggestion", variant: .primary, icon: "checkmark.circle.fill") {
+            HXButton("Accept Suggestion", icon: "checkmark.circle.fill", variant: .primary) {
                 onAccept()
                 dismiss()
             }
             
-            HXButton("Edit Price", variant: .secondary, icon: "pencil") {
+            HXButton("Edit Price", icon: "pencil", variant: .secondary) {
                 onEdit()
                 dismiss()
             }
@@ -316,6 +316,7 @@ struct AIPricingSuggestionModal: View {
 
 struct AIPricingToggle: View {
     @Binding var isEnabled: Bool
+    var isCompact: Bool = false
     
     var body: some View {
         Button(action: {
@@ -325,20 +326,20 @@ struct AIPricingToggle: View {
             let impact = UIImpactFeedbackGenerator(style: .light)
             impact.impactOccurred()
         }) {
-            HStack(spacing: 12) {
+            HStack(spacing: isCompact ? 10 : 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: isCompact ? 8 : 10)
                         .fill(isEnabled ? Color.aiPurple.opacity(0.15) : Color.surfaceSecondary)
-                        .frame(width: 44, height: 44)
+                        .frame(width: isCompact ? 38 : 44, height: isCompact ? 38 : 44)
                     
                     Image(systemName: "sparkles")
-                        .font(.system(size: 18))
+                        .font(.system(size: isCompact ? 15 : 18))
                         .foregroundStyle(isEnabled ? Color.aiPurple : Color.textMuted)
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Let AI suggest a price")
-                        .font(.subheadline.weight(.medium))
+                        .font(isCompact ? .footnote.weight(.medium) : .subheadline.weight(.medium))
                         .foregroundStyle(Color.textPrimary)
                     
                     Text(isEnabled ? "AI will analyze your task" : "Set your own price")
@@ -351,13 +352,14 @@ struct AIPricingToggle: View {
                 Toggle("", isOn: $isEnabled)
                     .labelsHidden()
                     .tint(Color.aiPurple)
+                    .scaleEffect(isCompact ? 0.9 : 1.0)
             }
-            .padding(14)
+            .padding(isCompact ? 12 : 14)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: isCompact ? 12 : 14)
                     .fill(Color.surfaceElevated)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: isCompact ? 12 : 14)
                             .stroke(isEnabled ? Color.aiPurple.opacity(0.3) : Color.white.opacity(0.05), lineWidth: 1)
                     )
             )

@@ -8,6 +8,28 @@
 import Foundation
 import CoreLocation
 
+// MARK: - Location Error
+
+enum LocationError: Error, LocalizedError {
+    case permissionDenied
+    case locationUnavailable
+    case timeout
+    case unknown
+    
+    var errorDescription: String? {
+        switch self {
+        case .permissionDenied:
+            return "Location permission denied"
+        case .locationUnavailable:
+            return "Location unavailable"
+        case .timeout:
+            return "Location request timed out"
+        case .unknown:
+            return "Unknown location error"
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class MockLocationService {
@@ -22,16 +44,18 @@ final class MockLocationService {
     
     // MARK: - San Francisco Area Mock Locations
     
-    private let mockLocations: [(name: String, coords: GPSCoordinates)] = [
-        ("Downtown SF", GPSCoordinates(latitude: 37.7749, longitude: -122.4194)),
-        ("Mission District", GPSCoordinates(latitude: 37.7599, longitude: -122.4148)),
-        ("Castro", GPSCoordinates(latitude: 37.7609, longitude: -122.4350)),
-        ("SOMA", GPSCoordinates(latitude: 37.7785, longitude: -122.3950)),
-        ("Marina", GPSCoordinates(latitude: 37.8015, longitude: -122.4367)),
-        ("Noe Valley", GPSCoordinates(latitude: 37.7502, longitude: -122.4337)),
-        ("Pacific Heights", GPSCoordinates(latitude: 37.7925, longitude: -122.4382)),
-        ("Haight-Ashbury", GPSCoordinates(latitude: 37.7692, longitude: -122.4481))
-    ]
+    private var mockLocations: [(name: String, coords: GPSCoordinates)] {
+        [
+            ("Downtown SF", GPSCoordinates(latitude: 37.7749, longitude: -122.4194)),
+            ("Mission District", GPSCoordinates(latitude: 37.7599, longitude: -122.4148)),
+            ("Castro", GPSCoordinates(latitude: 37.7609, longitude: -122.4350)),
+            ("SOMA", GPSCoordinates(latitude: 37.7785, longitude: -122.3950)),
+            ("Marina", GPSCoordinates(latitude: 37.8015, longitude: -122.4367)),
+            ("Noe Valley", GPSCoordinates(latitude: 37.7502, longitude: -122.4337)),
+            ("Pacific Heights", GPSCoordinates(latitude: 37.7925, longitude: -122.4382)),
+            ("Haight-Ashbury", GPSCoordinates(latitude: 37.7692, longitude: -122.4481))
+        ]
+    }
     
     // MARK: - Mock Accuracy Ranges
     
@@ -44,7 +68,7 @@ final class MockLocationService {
     
     // MARK: - Public Methods
     
-    /// Simulate capturing current GPS location
+    /// Simulate capturing current GPS location (async)
     func captureLocation() async -> (coordinates: GPSCoordinates, accuracy: Double) {
         isCapturing = true
         
@@ -58,13 +82,16 @@ final class MockLocationService {
         // Add slight random offset to coordinates (within ~100m)
         let latOffset = Double.random(in: -0.001...0.001)
         let lonOffset = Double.random(in: -0.001...0.001)
-        let coordinates = GPSCoordinates(
-            latitude: location.coords.latitude + latOffset,
-            longitude: location.coords.longitude + lonOffset
-        )
         
         // Generate random accuracy
         let accuracy = generateRandomAccuracy()
+        
+        let coordinates = GPSCoordinates(
+            latitude: location.coords.latitude + latOffset,
+            longitude: location.coords.longitude + lonOffset,
+            accuracyMeters: accuracy,
+            timestamp: Date()
+        )
         
         // Update state
         currentLocation = coordinates
@@ -77,10 +104,53 @@ final class MockLocationService {
         return (coordinates, accuracy)
     }
     
+    /// Synchronous version for simpler usage - returns Result
+    func getCurrentLocation() -> Result<GPSCoordinates, LocationError> {
+        // Pick a random mock location
+        let location = mockLocations.randomElement()!
+        
+        // Add slight random offset to coordinates (within ~100m)
+        let latOffset = Double.random(in: -0.001...0.001)
+        let lonOffset = Double.random(in: -0.001...0.001)
+        
+        // Generate random accuracy
+        let accuracy = generateRandomAccuracy()
+        
+        let coordinates = GPSCoordinates(
+            latitude: location.coords.latitude + latOffset,
+            longitude: location.coords.longitude + lonOffset,
+            accuracyMeters: accuracy,
+            timestamp: Date()
+        )
+        
+        // Update state
+        currentLocation = coordinates
+        currentAccuracy = accuracy
+        captureTimestamp = Date()
+        
+        print("[MockLocation] Captured: \(location.name) (±\(String(format: "%.1f", accuracy))m)")
+        
+        return .success(coordinates)
+    }
+    
+    /// Get mock task location (returns a location near the task area)
+    func getMockTaskLocation(for taskId: String) -> CLLocationCoordinate2D {
+        // Use task ID hash to consistently return same location for same task
+        let hash = abs(taskId.hashValue)
+        let index = hash % mockLocations.count
+        return mockLocations[index].coords.clLocationCoordinate
+    }
+    
     /// Get a specific mock location by index (for testing)
     func getMockLocation(index: Int) -> GPSCoordinates {
         let safeIndex = index % mockLocations.count
-        return mockLocations[safeIndex].coords
+        let location = mockLocations[safeIndex]
+        return GPSCoordinates(
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            accuracyMeters: 10.0,
+            timestamp: Date()
+        )
     }
     
     /// Reset the service state
@@ -105,6 +175,81 @@ final class MockLocationService {
         }
         
         return Double.random(in: accuracyRanges[0].range)
+    }
+}
+
+// MARK: - Walking ETA & Distance
+
+extension MockLocationService {
+    
+    /// Calculate walking ETA between two points
+    func calculateWalkingETA(from: GPSCoordinates, to: GPSCoordinates) -> WalkingETA {
+        let fromLocation = CLLocation(latitude: from.latitude, longitude: from.longitude)
+        let toLocation = CLLocation(latitude: to.latitude, longitude: to.longitude)
+        let distance = fromLocation.distance(from: toLocation)
+        
+        // Walking speed: 5 km/h = 1.39 m/s
+        let walkingSpeed = 1.39
+        let duration = Int(distance / walkingSpeed)
+        
+        return WalkingETA(
+            distanceMeters: distance,
+            durationSeconds: duration,
+            route: generateMockRoute(from: from, to: to),
+            calculatedAt: Date()
+        )
+    }
+    
+    /// Generate mock walking route points between two locations
+    func generateMockRoute(from: GPSCoordinates, to: GPSCoordinates, steps: Int = 10) -> WalkingRoute {
+        var points: [GPSCoordinates] = []
+        let latStep = (to.latitude - from.latitude) / Double(steps)
+        let lonStep = (to.longitude - from.longitude) / Double(steps)
+        
+        for i in 0...steps {
+            // Add slight random offset to simulate real route
+            let jitter = Double.random(in: -0.0001...0.0001)
+            let point = GPSCoordinates(
+                latitude: from.latitude + (latStep * Double(i)) + jitter,
+                longitude: from.longitude + (lonStep * Double(i)) + jitter
+            )
+            points.append(point)
+        }
+        
+        return WalkingRoute(polylinePoints: points, instructions: nil)
+    }
+    
+    /// Sort tasks by distance from a location
+    func sortTasksByDistance(tasks: [HXTask], from location: GPSCoordinates) -> [HXTask] {
+        let userLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
+        return tasks
+            .filter { $0.hasCoordinates }
+            .sorted { task1, task2 in
+                let dist1 = task1.distance(from: userLocation) ?? Double.infinity
+                let dist2 = task2.distance(from: userLocation) ?? Double.infinity
+                return dist1 < dist2
+            }
+    }
+    
+    /// Get tasks within a certain radius
+    func getTasksWithinRadius(tasks: [HXTask], from location: GPSCoordinates, radiusMeters: Double) -> [HXTask] {
+        let userLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
+        return tasks.filter { task in
+            guard let distance = task.distance(from: userLocation) else { return false }
+            return distance <= radiusMeters
+        }
+    }
+    
+    /// Calculate distance between two coordinates
+    func calculateDistance(from: GPSCoordinates, to: GPSCoordinates) -> Double {
+        let fromLocation = CLLocation(latitude: from.latitude, longitude: from.longitude)
+        let toLocation = CLLocation(latitude: to.latitude, longitude: to.longitude)
+        return fromLocation.distance(from: toLocation)
+    }
+    
+    /// Get SF neighborhoods data for heat map
+    var sfNeighborhoods: [(name: String, coords: GPSCoordinates)] {
+        mockLocations
     }
 }
 

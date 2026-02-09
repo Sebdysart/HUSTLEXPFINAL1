@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		71B48DD12F38067200782AA2 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 71B48DD02F38067200782AA2 /* FirebaseAuth */; };
+		71B48DD32F38067200782AA2 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 71B48DD22F38067200782AA2 /* FirebaseCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		71972DFC2F359FB900F03F8E /* hustleXP final1.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hustleXP final1.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +28,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				71B48DD32F38067200782AA2 /* FirebaseCore in Frameworks */,
+				71B48DD12F38067200782AA2 /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +72,8 @@
 			);
 			name = "hustleXP final1";
 			packageProductDependencies = (
+				71B48DD02F38067200782AA2 /* FirebaseAuth */,
+				71B48DD22F38067200782AA2 /* FirebaseCore */,
 			);
 			productName = "hustleXP final1";
 			productReference = 71972DFC2F359FB900F03F8E /* hustleXP final1.app */;
@@ -94,6 +103,9 @@
 			);
 			mainGroup = 71972DF32F359FB900F03F8E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 71972DFD2F359FB900F03F8E /* Products */;
 			projectDirPath = "";
@@ -332,6 +344,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.9.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		71B48DD02F38067200782AA2 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		71B48DD22F38067200782AA2 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 71972DF42F359FB900F03F8E /* Project object */;
 }

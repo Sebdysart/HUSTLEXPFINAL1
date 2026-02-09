@@ -62,7 +62,7 @@ struct TaxBalanceCard: View {
             .cornerRadius(10)
             
             // Pay Now button
-            HXButton("Pay Now", variant: .primary, icon: "creditcard.fill") {
+            HXButton("Pay Now", icon: "creditcard.fill", variant: .primary) {
                 onPayNow()
             }
         }

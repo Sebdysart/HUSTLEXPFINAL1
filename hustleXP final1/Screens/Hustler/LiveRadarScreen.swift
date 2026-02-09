@@ -20,7 +20,7 @@ struct LiveRadarScreen: View {
     @State private var showQuestDetail = false
     @State private var userLocation: GPSCoordinates?
     @State private var showEligibilityWarning = false
-    @State private var selectedCategories: Set<TaskCategory> = Set(TaskCategory.allCases)
+    @State private var selectedCategories: Set<LiveTaskCategory> = Set(LiveTaskCategory.allCases)
     @State private var showCategoryPicker = false
     
     private let liveModeService = MockLiveModeService.shared
@@ -373,7 +373,7 @@ struct LiveRadarScreen: View {
     private var categoryPickerSheet: some View {
         NavigationStack {
             List {
-                ForEach(TaskCategory.allCases, id: \.self) { category in
+                ForEach(LiveTaskCategory.allCases, id: \.self) { category in
                     Button(action: {
                         if selectedCategories.contains(category) {
                             selectedCategories.remove(category)
@@ -429,7 +429,7 @@ struct LiveRadarScreen: View {
         guard let location = userLocation else { return }
         
         session = liveModeService.startLiveMode(
-            workerId: appState.currentUserId ?? "mock-worker",
+            workerId: appState.userId ?? "mock-worker",
             location: location,
             categories: Array(selectedCategories)
         )
@@ -452,7 +452,7 @@ struct LiveRadarScreen: View {
     private func acceptQuest(_ quest: QuestAlert) {
         guard let location = userLocation else { return }
         
-        if let tracking = liveModeService.acceptQuest(quest.id, workerId: appState.currentUserId ?? "mock", workerLocation: location) {
+        if let tracking = liveModeService.acceptQuest(quest.id, workerId: appState.userId ?? "mock", workerLocation: location) {
             // Navigate to on-the-way tracking
             router.navigateToHustler(.onTheWayTracking(trackingId: tracking.id))
             selectedQuest = nil

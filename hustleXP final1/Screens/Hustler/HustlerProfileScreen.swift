@@ -27,8 +27,37 @@ struct HustlerProfileScreen: View {
                         totalRatings: dataService.currentUser.totalRatings
                     )
                     
+                    // v1.8.0: Tax Balance Card (if blocked)
+                    if dataService.taxStatus.blocked {
+                        TaxBalanceCard(
+                            taxStatus: dataService.taxStatus,
+                            onPayNow: {
+                                router.navigateToHustler(.taxPayment)
+                            }
+                        )
+                    }
+                    
+                    // v1.8.0: Verification Unlock Card
+                    VerificationUnlockCard(
+                        status: dataService.verificationUnlockStatus,
+                        onUnlockTap: {
+                            router.navigateToSettings(.verification)
+                        }
+                    )
+                    
                     // Stats grid
                     StatsGridSection(user: dataService.currentUser)
+                    
+                    // v1.8.0: Insurance Pool Card
+                    InsurancePoolCard(
+                        poolStatus: dataService.insurancePoolStatus,
+                        onFileClaimTap: {
+                            router.navigateToHustler(.fileClaim)
+                        },
+                        onViewClaimsTap: {
+                            router.navigateToHustler(.claimsHistory)
+                        }
+                    )
                     
                     // Quick actions
                     QuickActionsSection(router: router)
@@ -128,28 +157,28 @@ private struct StatsGridSection: View {
     
     var body: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            StatCard(
+            ProfileStatCard(
                 icon: "checkmark.circle.fill",
                 iconColor: .successGreen,
                 title: "Tasks Completed",
                 value: "\(user.tasksCompleted)"
             )
             
-            StatCard(
+            ProfileStatCard(
                 icon: "dollarsign.circle.fill",
                 iconColor: .moneyGreen,
                 title: "Total Earnings",
                 value: "$\(Int(user.totalEarnings))"
             )
             
-            StatCard(
+            ProfileStatCard(
                 icon: "star.fill",
                 iconColor: .warningOrange,
                 title: "Avg Rating",
                 value: String(format: "%.1f", user.rating)
             )
             
-            StatCard(
+            ProfileStatCard(
                 icon: "bolt.fill",
                 iconColor: .brandPurple,
                 title: "XP Earned",
@@ -159,8 +188,8 @@ private struct StatsGridSection: View {
     }
 }
 
-// MARK: - Stat Card
-private struct StatCard: View {
+// MARK: - Profile Stat Card
+private struct ProfileStatCard: View {
     let icon: String
     let iconColor: Color
     let title: String

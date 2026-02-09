@@ -26,6 +26,12 @@ struct HXUser: Identifiable, Codable {
     var isVerified: Bool
     let createdAt: Date
     
+    // v1.8.0 additions
+    var unpaidTaxCents: Int = 0
+    var xpHeldBack: Int = 0
+    var verificationEarnedCents: Int = 0
+    var insuranceContributionsCents: Int = 0
+    
     var initials: String {
         let parts = name.split(separator: " ")
         if parts.count >= 2 {

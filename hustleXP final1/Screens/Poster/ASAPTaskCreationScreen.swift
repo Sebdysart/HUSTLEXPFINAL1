@@ -10,12 +10,13 @@ import SwiftUI
 
 struct ASAPTaskCreationScreen: View {
     @Environment(Router.self) private var router
+    @Environment(AppState.self) private var appState
     @Environment(MockDataService.self) private var dataService
     @Environment(\.dismiss) private var dismiss
     
     @State private var title: String = ""
     @State private var description: String = ""
-    @State private var selectedCategory: TaskCategory = .other
+    @State private var selectedCategory: LiveTaskCategory = .other
     @State private var basePayment: Double = 40
     @State private var location: String = ""
     @State private var currentStep: Int = 1
@@ -184,7 +185,7 @@ struct ASAPTaskCreationScreen: View {
         HStack(spacing: 8) {
             ForEach(1...3, id: \.self) { step in
                 Capsule()
-                    .fill(step <= currentStep ? Color.errorRed : Color.surfaceMuted)
+                    .fill(step <= currentStep ? Color.errorRed : Color.surfaceSecondary)
                     .frame(height: 4)
             }
         }
@@ -207,7 +208,7 @@ struct ASAPTaskCreationScreen: View {
             
             // Category grid
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(TaskCategory.allCases, id: \.self) { category in
+                ForEach(LiveTaskCategory.allCases, id: \.self) { category in
                     CategoryCard(
                         category: category,
                         isSelected: selectedCategory == category,
@@ -572,14 +573,20 @@ struct ASAPTaskCreationScreen: View {
             title: title,
             description: description,
             payment: basePayment,
-            estimatedDuration: "15-30 min",
             location: location,
             latitude: coords.latitude,
             longitude: coords.longitude,
-            requiredTier: .elite,
+            estimatedDuration: "15-30 min",
+            posterId: appState.userId ?? "poster-asap",
             posterName: "You",
             posterRating: 5.0,
-            state: .posted
+            hustlerId: nil,
+            hustlerName: nil,
+            state: .posted,
+            requiredTier: .elite,
+            createdAt: Date(),
+            claimedAt: nil,
+            completedAt: nil
         )
         
         // Create quest alert
@@ -610,7 +617,7 @@ struct ASAPTaskCreationScreen: View {
 // MARK: - Category Card
 
 private struct CategoryCard: View {
-    let category: TaskCategory
+    let category: LiveTaskCategory
     let isSelected: Bool
     let onTap: () -> Void
     
@@ -619,7 +626,7 @@ private struct CategoryCard: View {
             VStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? category.color.opacity(0.2) : Color.surfaceMuted)
+                        .fill(isSelected ? category.color.opacity(0.2) : Color.surfaceSecondary)
                         .frame(width: 50, height: 50)
                     
                     Image(systemName: category.icon)

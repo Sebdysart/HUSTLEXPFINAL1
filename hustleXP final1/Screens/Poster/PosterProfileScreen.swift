@@ -117,28 +117,28 @@ private struct PosterStatsSection: View {
     
     var body: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            PosterStatCard(
+            PosterProfileStatCard(
                 icon: "list.bullet.clipboard.fill",
                 iconColor: .accentPurple,
                 title: "Tasks Posted",
                 value: "\(user.tasksPosted)"
             )
             
-            PosterStatCard(
+            PosterProfileStatCard(
                 icon: "dollarsign.circle.fill",
                 iconColor: .moneyGreen,
                 title: "Total Spent",
                 value: "$\(Int(user.totalSpent))"
             )
             
-            PosterStatCard(
+            PosterProfileStatCard(
                 icon: "checkmark.circle.fill",
                 iconColor: .successGreen,
                 title: "Completed",
                 value: "0"
             )
             
-            PosterStatCard(
+            PosterProfileStatCard(
                 icon: "person.2.fill",
                 iconColor: .infoBlue,
                 title: "Hustlers Hired",
@@ -148,8 +148,8 @@ private struct PosterStatsSection: View {
     }
 }
 
-// MARK: - Poster Stat Card
-private struct PosterStatCard: View {
+// MARK: - Poster Profile Stat Card
+private struct PosterProfileStatCard: View {
     let icon: String
     let iconColor: Color
     let title: String

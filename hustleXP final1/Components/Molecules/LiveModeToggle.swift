@@ -183,7 +183,7 @@ struct LiveModeToggleStyle: ToggleStyle {
             ZStack {
                 // Track
                 Capsule()
-                    .fill(configuration.isOn ? Color.brandPurple : Color.surfaceMuted)
+                    .fill(configuration.isOn ? Color.brandPurple : Color.surfaceSecondary)
                     .frame(width: 52, height: 30)
                     .overlay(
                         Capsule()

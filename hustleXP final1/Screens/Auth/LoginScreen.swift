@@ -11,12 +11,14 @@ import SwiftUI
 struct LoginScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    
+    @EnvironmentObject private var authService: AuthService
+
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var isLoading: Bool = false
     @State private var emailError: String?
     @State private var passwordError: String?
+    @State private var loginError: String?
     @State private var showContent = false
     @FocusState private var focusedField: Field?
     
@@ -152,6 +154,21 @@ struct LoginScreen: View {
     
     private func formSection(isCompact: Bool) -> some View {
         VStack(spacing: isCompact ? 14 : 18) {
+            // Login error message
+            if let loginError = loginError {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.errorRed)
+                    Text(loginError)
+                        .font(.caption)
+                        .foregroundStyle(Color.textSecondary)
+                    Spacer()
+                }
+                .padding()
+                .background(Color.errorRed.opacity(0.1))
+                .cornerRadius(12)
+            }
+
             // Email field
             FormTextField(
                 label: "Email",
@@ -168,8 +185,9 @@ struct LoginScreen: View {
             .keyboardType(.emailAddress)
             .onChange(of: email) { _, newValue in
                 validateEmail(newValue)
+                loginError = nil  // Clear error when user types
             }
-            
+
             // Password field
             FormSecureField(
                 label: "Password",
@@ -182,7 +200,10 @@ struct LoginScreen: View {
                 forgotAction: { router.navigateToAuth(.forgotPassword) }
             )
             .focused($focusedField, equals: .password)
-            
+            .onChange(of: password) { _, _ in
+                loginError = nil  // Clear error when user types
+            }
+
             // Sign in button
             HXButton("Sign In", icon: isLoading ? nil : "arrow.right", variant: .primary, isLoading: isLoading) {
                 handleLogin()
@@ -259,19 +280,30 @@ struct LoginScreen: View {
     }
     
     // MARK: - Actions
-    
+
     private func handleLogin() {
         guard isValid else { return }
-        
+
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
-        
+
         isLoading = true
         focusedField = nil
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isLoading = false
-            appState.login(userId: "mock-user-id", role: .hustler)
+        loginError = nil
+
+        Task {
+            do {
+                try await authService.signIn(email: email, password: password)
+
+                // Success - AuthService will update isAuthenticated
+                // App will automatically navigate to RootNavigator
+                HapticFeedback.success()
+            } catch {
+                // Handle error
+                isLoading = false
+                loginError = error.localizedDescription
+                HapticFeedback.error()
+            }
         }
     }
 }
@@ -435,11 +467,10 @@ private struct SocialButton: View {
     .environment(Router())
 }
 
-#Preview("Compact (SE)") {
+#Preview("Compact (SE)", traits: .fixedLayout(width: 375, height: 667)) {
     NavigationStack {
         LoginScreen()
     }
     .environment(AppState())
     .environment(Router())
-    .previewDevice(PreviewDevice(rawValue: "iPhone SE (3rd generation)"))
 }

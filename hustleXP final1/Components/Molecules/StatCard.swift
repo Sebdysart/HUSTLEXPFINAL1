@@ -46,7 +46,7 @@ enum StatCardType {
     }
 }
 
-struct StatCard: View {
+struct HXStatCard: View {
     let type: StatCardType
     let value: String
     let subtitle: String?
@@ -198,10 +198,10 @@ struct StatCardCompact: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 12) {
-                StatCard(type: .xp, value: "1,245", trend: 12)
-                StatCard(type: .tasks, value: "28", trend: -3)
-                StatCard(type: .earnings, value: "$2,450", subtitle: "This Month")
-                StatCard(type: .rating, value: "4.9")
+                HXStatCard(type: .xp, value: "1,245", trend: 12)
+                HXStatCard(type: .tasks, value: "28", trend: -3)
+                HXStatCard(type: .earnings, value: "$2,450", subtitle: "This Month")
+                HXStatCard(type: .rating, value: "4.9")
             }
             
             // Compact variants

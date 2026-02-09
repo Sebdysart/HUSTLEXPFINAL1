@@ -11,7 +11,8 @@ import SwiftUI
 struct SignupScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    
+    @EnvironmentObject private var authService: AuthService
+
     @State private var name: String = ""
     @State private var email: String = ""
     @State private var password: String = ""
@@ -19,6 +20,7 @@ struct SignupScreen: View {
     @State private var isLoading: Bool = false
     @State private var showContent = false
     @State private var errors: [String: String] = [:]
+    @State private var signupError: String?
     @FocusState private var focusedField: Field?
     
     enum Field: Hashable {
@@ -35,41 +37,35 @@ struct SignupScreen: View {
     }
     
     var body: some View {
-        ZStack {
-            // Background
-            backgroundLayer
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            // Content
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 40)
-                    
+            ZStack {
+                // Background
+                backgroundLayer
+                
+                // Content - use VStack for non-scrolling layout
+                VStack(spacing: isCompact ? 12 : 18) {
                     // Logo and header
-                    headerSection
-                    
-                    Spacer(minLength: 32)
+                    headerSection(isCompact: isCompact)
+                        .padding(.top, isCompact ? 4 : 12)
                     
                     // Signup form
-                    formSection
+                    formSection(isCompact: isCompact)
                     
-                    Spacer(minLength: 24)
+                    Spacer(minLength: 0)
                     
                     // Divider with "or"
                     dividerSection
                     
-                    Spacer(minLength: 24)
-                    
                     // Social signup options
-                    socialSignupSection
-                    
-                    Spacer(minLength: 32)
+                    socialSignupSection(isCompact: isCompact)
                     
                     // Sign in link
                     signInSection
-                    
-                    Spacer(minLength: 32)
+                        .padding(.bottom, isCompact ? 8 : 16)
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, isCompact ? 16 : 24)
             }
         }
         .navigationBarBackButtonHidden(false)
@@ -112,16 +108,16 @@ struct SignupScreen: View {
     
     // MARK: - Header Section
     
-    private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Logo
+    private func headerSection(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 8 : 12) {
+            // Logo - smaller on compact screens
             ZStack {
                 Circle()
                     .fill(Color.brandPurple.opacity(0.15))
-                    .frame(width: 80, height: 80)
+                    .frame(width: isCompact ? 48 : 72, height: isCompact ? 48 : 72)
                 
                 Image(systemName: "person.badge.plus.fill")
-                    .font(.system(size: 32, weight: .semibold))
+                    .font(.system(size: isCompact ? 20 : 28, weight: .semibold))
                     .foregroundStyle(
                         LinearGradient(
                             colors: [Color.brandPurple, Color.brandPurpleLight],
@@ -134,13 +130,13 @@ struct SignupScreen: View {
             .opacity(showContent ? 1 : 0)
             .animation(.spring(response: 0.6, dampingFraction: 0.7), value: showContent)
             
-            VStack(spacing: 8) {
+            VStack(spacing: 4) {
                 Text("Join HustleXP")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: isCompact ? 22 : 28, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Start your hustle journey today")
-                    .font(.subheadline)
+                    .font(.system(size: isCompact ? 13 : 15))
                     .foregroundStyle(Color.textSecondary)
             }
             .opacity(showContent ? 1 : 0)
@@ -151,8 +147,8 @@ struct SignupScreen: View {
     
     // MARK: - Form Section
     
-    private var formSection: some View {
-        VStack(spacing: 16) {
+    private func formSection(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 8 : 12) {
             // Name field
             premiumField(
                 label: "Full Name",
@@ -178,6 +174,7 @@ struct SignupScreen: View {
             )
             .onChange(of: email) { _, newValue in
                 validateEmail(newValue)
+                signupError = nil
             }
             
             // Password field
@@ -210,12 +207,27 @@ struct SignupScreen: View {
             if !password.isEmpty {
                 passwordRequirements
             }
-            
+
+            // Error banner
+            if let signupError = signupError {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                    Text(signupError)
+                        .font(.caption)
+                }
+                .foregroundStyle(Color.errorRed)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.errorRed.opacity(0.1))
+                .cornerRadius(8)
+            }
+
             // Create account button
             HXButton("Create Account", icon: isLoading ? nil : "arrow.right", variant: .primary, isLoading: isLoading) {
                 handleSignup()
             }
-            .padding(.top, 8)
+            .padding(.top, 4)
             .disabled(!isValid || isLoading)
             .opacity(isValid ? 1 : 0.6)
         }
@@ -227,12 +239,12 @@ struct SignupScreen: View {
     // MARK: - Password Requirements
     
     private var passwordRequirements: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            requirementRow(text: "At least 8 characters", met: password.count >= 8)
+        HStack(spacing: 16) {
+            requirementRow(text: "8+ characters", met: password.count >= 8)
             requirementRow(text: "Passwords match", met: !confirmPassword.isEmpty && password == confirmPassword)
         }
         .padding(.horizontal, 4)
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
     }
     
     private func requirementRow(text: String, met: Bool) -> some View {
@@ -259,31 +271,33 @@ struct SignupScreen: View {
         contentType: UITextContentType?,
         keyboardType: UIKeyboardType
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.subheadline.weight(.medium))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(Color.textSecondary)
             
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: 14))
                     .foregroundStyle(focusedField == field ? Color.brandPurple : Color.textMuted)
-                    .frame(width: 20)
+                    .frame(width: 18)
                 
                 TextField("", text: text, prompt: Text(placeholder).foregroundColor(.textMuted))
+                    .font(.subheadline)
                     .textContentType(contentType)
                     .autocapitalization(keyboardType == .emailAddress ? .none : .words)
                     .keyboardType(keyboardType)
                     .foregroundStyle(Color.textPrimary)
                     .focused($focusedField, equals: field)
             }
-            .padding(16)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(Color.surfaceElevated)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .stroke(
                         focusedField == field ? Color.brandPurple : Color.white.opacity(0.08),
                         lineWidth: focusedField == field ? 2 : 1
@@ -294,9 +308,9 @@ struct SignupScreen: View {
             if let error = error {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.circle.fill")
-                        .font(.caption)
+                        .font(.caption2)
                     Text(error)
-                        .font(.caption)
+                        .font(.caption2)
                 }
                 .foregroundStyle(Color.errorRed)
             }
@@ -311,29 +325,31 @@ struct SignupScreen: View {
         field: Field,
         error: String?
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.subheadline.weight(.medium))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(Color.textSecondary)
             
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: 14))
                     .foregroundStyle(focusedField == field ? Color.brandPurple : Color.textMuted)
-                    .frame(width: 20)
+                    .frame(width: 18)
                 
                 SecureField("", text: text, prompt: Text(placeholder).foregroundColor(.textMuted))
+                    .font(.subheadline)
                     .textContentType(.password)
                     .foregroundStyle(Color.textPrimary)
                     .focused($focusedField, equals: field)
             }
-            .padding(16)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(Color.surfaceElevated)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .stroke(
                         focusedField == field ? Color.brandPurple : Color.white.opacity(0.08),
                         lineWidth: focusedField == field ? 2 : 1
@@ -344,9 +360,9 @@ struct SignupScreen: View {
             if let error = error {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.circle.fill")
-                        .font(.caption)
+                        .font(.caption2)
                     Text(error)
-                        .font(.caption)
+                        .font(.caption2)
                 }
                 .foregroundStyle(Color.errorRed)
             }
@@ -375,8 +391,8 @@ struct SignupScreen: View {
     
     // MARK: - Social Signup Section
     
-    private var socialSignupSection: some View {
-        HStack(spacing: 16) {
+    private func socialSignupSection(isCompact: Bool) -> some View {
+        HStack(spacing: isCompact ? 12 : 16) {
             socialButton(icon: "apple.logo", label: "Apple")
             socialButton(icon: "g.circle.fill", label: "Google")
         }
@@ -390,20 +406,20 @@ struct SignupScreen: View {
             let impact = UIImpactFeedbackGenerator(style: .light)
             impact.impactOccurred()
         }) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: 16, weight: .medium))
                 Text(label)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.caption.weight(.semibold))
             }
             .foregroundStyle(Color.textPrimary)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 10)
                     .fill(Color.surfaceElevated)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.white.opacity(0.1), lineWidth: 1)
                     )
             )
@@ -456,20 +472,47 @@ struct SignupScreen: View {
     }
     
     // MARK: - Actions
-    
+
     private func handleSignup() {
         guard isValid else { return }
-        
+
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
-        
+
         isLoading = true
         focusedField = nil
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isLoading = false
-            print("[Signup] Creating account for: \(email)")
-            router.navigateToAuth(.phoneVerification)
+        signupError = nil
+
+        Task {
+            do {
+                // Sign up with AuthService (Firebase + Backend)
+                try await authService.signUp(
+                    email: email,
+                    password: password,
+                    fullName: name,
+                    defaultMode: .hustler // Default to hustler mode, can make this a selection later
+                )
+
+                // Success! AuthService will set isAuthenticated = true
+                // App will automatically navigate to RootNavigator
+                isLoading = false
+
+                print("✅ Signup: Account created successfully for \(email)")
+
+                // Haptic feedback
+                let successFeedback = UINotificationFeedbackGenerator()
+                successFeedback.notificationOccurred(.success)
+
+            } catch {
+                isLoading = false
+                signupError = error.localizedDescription
+
+                print("❌ Signup: Failed - \(error.localizedDescription)")
+
+                // Error haptic
+                let errorFeedback = UINotificationFeedbackGenerator()
+                errorFeedback.notificationOccurred(.error)
+            }
         }
     }
 }
@@ -527,6 +570,22 @@ struct AuthSecureField: View {
                     .foregroundStyle(Color.errorRed)
             }
         }
+    }
+}
+
+// MARK: - Brand Text Field Style
+
+private struct BrandTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .padding(14)
+            .background(Color.surfaceElevated)
+            .foregroundStyle(Color.textPrimary)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.borderSubtle, lineWidth: 1)
+            )
     }
 }
 

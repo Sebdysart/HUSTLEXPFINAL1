@@ -40,11 +40,15 @@ struct AdaptiveLayout {
     let safeAreaTop: CGFloat
     let safeAreaBottom: CGFloat
     
+    // Default values use reasonable fallback for iPhone Pro (most common)
+    private static let defaultHeight: CGFloat = 852
+    private static let defaultWidth: CGFloat = 393
+    
     init(
-        screenHeight: CGFloat = UIScreen.main.bounds.height,
-        screenWidth: CGFloat = UIScreen.main.bounds.width,
-        safeAreaTop: CGFloat = 0,
-        safeAreaBottom: CGFloat = 0
+        screenHeight: CGFloat = AdaptiveLayout.defaultHeight,
+        screenWidth: CGFloat = AdaptiveLayout.defaultWidth,
+        safeAreaTop: CGFloat = 59,
+        safeAreaBottom: CGFloat = 34
     ) {
         self.screenHeight = screenHeight
         self.screenWidth = screenWidth
@@ -129,7 +133,9 @@ struct AdaptiveLayoutModifier: ViewModifier {
             
             content
                 .environment(\.adaptiveLayout, layout)
+                .frame(width: geometry.size.width, height: geometry.size.height)
         }
+        .ignoresSafeArea()
     }
 }
 

@@ -38,17 +38,17 @@ struct FormField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 4) {
-                HXText(label, style: .subheadline, color: .secondary)
+                HXText(label, style: .subheadline, color: .textSecondary)
                 
                 if isRequired {
-                    HXText("*", style: .subheadline, color: .red)
+                    HXText("*", style: .subheadline, color: .errorRed)
                 }
             }
             
             HXInput(placeholder, type: type, text: $text, error: error)
             
             if let helperText = helperText, error == nil {
-                HXText(helperText, style: .caption, color: .secondary)
+                HXText(helperText, style: .caption, color: .textSecondary)
             }
         }
     }

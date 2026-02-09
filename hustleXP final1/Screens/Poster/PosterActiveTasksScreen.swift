@@ -29,19 +29,27 @@ struct PosterActiveTasksScreen: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Filter bar
-            filterBar
+        ZStack {
+            Color.brandBlack
+                .ignoresSafeArea()
             
-            // Task list
-            if myTasks.isEmpty {
-                emptyState
-            } else {
-                taskList
+            VStack(spacing: 0) {
+                // Filter bar
+                filterBar
+                
+                // Task list
+                if myTasks.isEmpty {
+                    emptyState
+                } else {
+                    taskList
+                }
             }
         }
         .navigationTitle("Your Tasks")
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(Color.brandBlack, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { router.navigateToPoster(.createTask) }) {
@@ -70,7 +78,7 @@ struct PosterActiveTasksScreen: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
-        .background(Color(.systemBackground))
+        .background(Color.brandBlack)
     }
     
     // MARK: - Task List

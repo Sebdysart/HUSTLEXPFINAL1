@@ -47,7 +47,7 @@ struct ActionBar: View {
             
             if let secondaryTitle = secondaryTitle, let secondaryAction = secondaryAction {
                 Button(action: secondaryAction) {
-                    HXText(secondaryTitle, style: .subheadline, color: .secondary)
+                    HXText(secondaryTitle, style: .subheadline, color: .textSecondary)
                 }
             }
         }

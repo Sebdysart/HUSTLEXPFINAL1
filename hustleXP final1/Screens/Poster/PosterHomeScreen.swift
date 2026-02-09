@@ -22,28 +22,32 @@ struct PosterHomeScreen: View {
     }
     
     var body: some View {
-        ZStack {
-            // Neon background
-            neonBackground
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 28) {
-                    // Welcome header
-                    welcomeHeader
-                        .padding(.top, 8)
-                    
-                    // Post task CTA
-                    postTaskCTA
-                    
-                    // Stats grid
-                    statsSection
-                    
-                    // Active tasks section
-                    activeTasksSection
-                    
-                    Spacer(minLength: 32)
+            ZStack {
+                // Neon background
+                neonBackground
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: isCompact ? 20 : 28) {
+                        // Welcome header
+                        welcomeHeader(isCompact: isCompact)
+                            .padding(.top, isCompact ? 4 : 8)
+                        
+                        // Post task CTA
+                        postTaskCTA(isCompact: isCompact)
+                        
+                        // Stats grid
+                        statsSection(isCompact: isCompact)
+                        
+                        // Active tasks section
+                        activeTasksSection(isCompact: isCompact)
+                        
+                        Spacer(minLength: max(24, geometry.safeAreaInsets.bottom + 16))
+                    }
+                    .padding(.vertical)
                 }
-                .padding(.vertical)
             }
         }
         .navigationTitle("Dashboard")
@@ -125,14 +129,14 @@ struct PosterHomeScreen: View {
     
     // MARK: - Welcome Header
     
-    private var welcomeHeader: some View {
-        HStack(alignment: .top, spacing: 16) {
+    private func welcomeHeader(isCompact: Bool) -> some View {
+        HStack(alignment: .top, spacing: isCompact ? 12 : 16) {
             // Avatar with neon glow
             ZStack {
                 // Outer glow
                 Circle()
                     .fill(Color.accentPurple.opacity(glowPulse * 0.4))
-                    .frame(width: 76, height: 76)
+                    .frame(width: isCompact ? 64 : 76, height: isCompact ? 64 : 76)
                     .blur(radius: 15)
                 
                 // Avatar ring
@@ -143,9 +147,9 @@ struct PosterHomeScreen: View {
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 3
+                        lineWidth: isCompact ? 2 : 3
                     )
-                    .frame(width: 66, height: 66)
+                    .frame(width: isCompact ? 54 : 66, height: isCompact ? 54 : 66)
                 
                 // Avatar fill
                 Circle()
@@ -156,20 +160,20 @@ struct PosterHomeScreen: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 58, height: 58)
+                    .frame(width: isCompact ? 46 : 58, height: isCompact ? 46 : 58)
                 
                 Text(String(dataService.currentUser.name.prefix(1)))
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: isCompact ? 20 : 24, weight: .bold))
                     .foregroundStyle(.white)
             }
             
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
                 Text("Hey, \(dataService.currentUser.name)!")
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: isCompact ? 22 : 26, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("What needs doing today?")
-                    .font(.subheadline)
+                    .font(isCompact ? .footnote : .subheadline)
                     .foregroundStyle(Color.textSecondary)
             }
             .opacity(showContent ? 1 : 0)
@@ -177,20 +181,20 @@ struct PosterHomeScreen: View {
             
             Spacer()
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, isCompact ? 16 : 20)
     }
     
     // MARK: - Post Task CTA
     
-    private var postTaskCTA: some View {
-        VStack(spacing: 12) {
+    private func postTaskCTA(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 10 : 12) {
             // AI Task Creation - Primary CTA with enhanced neon
-            aiTaskCreationButton
+            aiTaskCreationButton(isCompact: isCompact)
             
             // Manual task creation - Secondary
-            manualTaskButton
+            manualTaskButton(isCompact: isCompact)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, isCompact ? 16 : 20)
         .opacity(showContent ? 1 : 0)
         .offset(y: showContent ? 0 : 20)
         .animation(.easeOut(duration: 0.5).delay(0.1), value: showContent)
@@ -198,19 +202,19 @@ struct PosterHomeScreen: View {
     
     // MARK: - AI Task Creation Button
     
-    private var aiTaskCreationButton: some View {
+    private func aiTaskCreationButton(isCompact: Bool) -> some View {
         Button(action: { 
             let impact = UIImpactFeedbackGenerator(style: .medium)
             impact.impactOccurred()
             router.navigateToPoster(.aiTaskCreation) 
         }) {
-            HStack(spacing: 16) {
+            HStack(spacing: isCompact ? 12 : 16) {
                 // AI Icon with enhanced glow
                 ZStack {
                     // Outer glow
                     Circle()
                         .fill(Color.aiPurple.opacity(aiButtonGlow * 0.4))
-                        .frame(width: 60, height: 60)
+                        .frame(width: isCompact ? 48 : 60, height: isCompact ? 48 : 60)
                         .blur(radius: 12)
                     
                     // Icon background
@@ -222,27 +226,27 @@ struct PosterHomeScreen: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 52, height: 52)
+                        .frame(width: isCompact ? 42 : 52, height: isCompact ? 42 : 52)
                     
                     // Sparkle icon
                     Image(systemName: "sparkles")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: isCompact ? 18 : 22, weight: .bold))
                         .foregroundStyle(.white)
                         .shadow(color: .white.opacity(0.5), radius: 5)
                 }
                 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
+                    HStack(spacing: isCompact ? 6 : 8) {
                         Text("Create with AI")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: isCompact ? 16 : 18, weight: .bold))
                             .foregroundStyle(.white)
                         
                         // NEW badge with glow
                         Text("NEW")
-                            .font(.system(size: 9, weight: .heavy))
+                            .font(.system(size: isCompact ? 8 : 9, weight: .heavy))
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
+                            .padding(.horizontal, isCompact ? 6 : 8)
+                            .padding(.vertical, isCompact ? 2 : 3)
                             .background(
                                 Capsule()
                                     .fill(Color.successGreen)
@@ -251,7 +255,7 @@ struct PosterHomeScreen: View {
                     }
                     
                     Text("Just describe what you need")
-                        .font(.subheadline)
+                        .font(isCompact ? .footnote : .subheadline)
                         .foregroundStyle(Color.white.opacity(0.85))
                 }
                 
@@ -261,14 +265,14 @@ struct PosterHomeScreen: View {
                 ZStack {
                     Circle()
                         .fill(Color.white.opacity(0.2))
-                        .frame(width: 44, height: 44)
+                        .frame(width: isCompact ? 36 : 44, height: isCompact ? 36 : 44)
                     
                     Image(systemName: "arrow.right")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: isCompact ? 14 : 16, weight: .bold))
                         .foregroundStyle(.white)
                 }
             }
-            .padding(18)
+            .padding(isCompact ? 14 : 18)
             .background(
                 ZStack {
                     // Gradient background
@@ -279,7 +283,7 @@ struct PosterHomeScreen: View {
                     )
                     
                     // Shimmer overlay
-                    RoundedRectangle(cornerRadius: 24)
+                    RoundedRectangle(cornerRadius: isCompact ? 20 : 24)
                         .fill(
                             LinearGradient(
                                 colors: [Color.clear, Color.white.opacity(0.1), Color.clear],
@@ -289,36 +293,36 @@ struct PosterHomeScreen: View {
                         )
                     
                     // Border glow
-                    RoundedRectangle(cornerRadius: 24)
+                    RoundedRectangle(cornerRadius: isCompact ? 20 : 24)
                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 }
             )
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .shadow(color: Color.aiPurple.opacity(aiButtonGlow * 0.6), radius: 20, x: 0, y: 10)
+            .clipShape(RoundedRectangle(cornerRadius: isCompact ? 20 : 24))
+            .shadow(color: Color.aiPurple.opacity(aiButtonGlow * 0.6), radius: isCompact ? 15 : 20, x: 0, y: isCompact ? 8 : 10)
         }
     }
     
     // MARK: - Manual Task Button
     
-    private var manualTaskButton: some View {
+    private func manualTaskButton(isCompact: Bool) -> some View {
         Button(action: { 
             let impact = UIImpactFeedbackGenerator(style: .light)
             impact.impactOccurred()
             router.navigateToPoster(.createTask) 
         }) {
-            HStack(spacing: 12) {
+            HStack(spacing: isCompact ? 10 : 12) {
                 ZStack {
                     Circle()
                         .fill(Color.surfaceSecondary)
-                        .frame(width: 36, height: 36)
+                        .frame(width: isCompact ? 32 : 36, height: isCompact ? 32 : 36)
                     
                     Image(systemName: "square.and.pencil")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: isCompact ? 12 : 14, weight: .semibold))
                         .foregroundStyle(Color.textSecondary)
                 }
                 
                 Text("Create manually")
-                    .font(.subheadline.weight(.medium))
+                    .font(isCompact ? .footnote.weight(.medium) : .subheadline.weight(.medium))
                     .foregroundStyle(Color.textSecondary)
                 
                 Spacer()
@@ -327,14 +331,14 @@ struct PosterHomeScreen: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(Color.textMuted)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, isCompact ? 12 : 16)
+            .padding(.vertical, isCompact ? 12 : 14)
             .background(
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: isCompact ? 14 : 16)
                         .fill(Color.surfaceElevated)
                     
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: isCompact ? 14 : 16)
                         .stroke(Color.white.opacity(0.05), lineWidth: 1)
                 }
             )
@@ -343,52 +347,55 @@ struct PosterHomeScreen: View {
     
     // MARK: - Stats Section
     
-    private var statsSection: some View {
-        HStack(spacing: 12) {
+    private func statsSection(isCompact: Bool) -> some View {
+        HStack(spacing: isCompact ? 8 : 12) {
             NeonPosterStatCard(
                 title: "Posted",
                 value: "\(dataService.currentUser.tasksPosted)",
                 icon: "doc.text.fill",
-                color: .brandPurple
+                color: .brandPurple,
+                isCompact: isCompact
             )
             NeonPosterStatCard(
                 title: "Active",
                 value: "\(myPostedTasks.count)",
                 icon: "clock.fill",
-                color: .infoBlue
+                color: .infoBlue,
+                isCompact: isCompact
             )
             NeonPosterStatCard(
                 title: "Spent",
                 value: "$\(Int(dataService.currentUser.totalSpent))",
                 icon: "dollarsign.circle.fill",
-                color: .moneyGreen
+                color: .moneyGreen,
+                isCompact: isCompact
             )
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, isCompact ? 16 : 20)
         .opacity(showContent ? 1 : 0)
         .animation(.easeOut(duration: 0.5).delay(0.2), value: showContent)
     }
     
     // MARK: - Active Tasks Section
     
-    private var activeTasksSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private func activeTasksSection(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 12 : 16) {
             // Section header
             HStack {
-                HStack(spacing: 10) {
+                HStack(spacing: isCompact ? 8 : 10) {
                     ZStack {
                         Circle()
                             .fill(Color.warningOrange.opacity(0.15))
-                            .frame(width: 28, height: 28)
+                            .frame(width: isCompact ? 24 : 28, height: isCompact ? 24 : 28)
                         
                         Image(systemName: "list.bullet.clipboard.fill")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: isCompact ? 10 : 12, weight: .bold))
                             .foregroundStyle(Color.warningOrange)
                             .shadow(color: Color.warningOrange.opacity(0.8), radius: 3)
                     }
                     
                     Text("Your Active Tasks")
-                        .font(.headline.weight(.bold))
+                        .font(isCompact ? .subheadline.weight(.bold) : .headline.weight(.bold))
                         .foregroundStyle(Color.textPrimary)
                 }
                 
@@ -398,7 +405,7 @@ struct PosterHomeScreen: View {
                     Button(action: { router.navigateToPoster(.activeTasks) }) {
                         HStack(spacing: 4) {
                             Text("See All")
-                                .font(.subheadline.weight(.semibold))
+                                .font(isCompact ? .footnote.weight(.semibold) : .subheadline.weight(.semibold))
                             Image(systemName: "chevron.right")
                                 .font(.caption.weight(.bold))
                         }
@@ -406,12 +413,12 @@ struct PosterHomeScreen: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, isCompact ? 16 : 20)
             
             if myPostedTasks.isEmpty {
-                emptyTasksView
+                emptyTasksView(isCompact: isCompact)
             } else {
-                VStack(spacing: 12) {
+                VStack(spacing: isCompact ? 10 : 12) {
                     ForEach(myPostedTasks.prefix(3)) { task in
                         TaskCard(
                             title: task.title,
@@ -425,62 +432,62 @@ struct PosterHomeScreen: View {
                         }
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, isCompact ? 16 : 20)
             }
         }
         .opacity(showContent ? 1 : 0)
         .animation(.easeOut(duration: 0.5).delay(0.3), value: showContent)
     }
     
-    private var emptyTasksView: some View {
-        VStack(spacing: 24) {
+    private func emptyTasksView(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 18 : 24) {
             ZStack {
                 // Glow
                 Circle()
                     .fill(Color.brandPurple.opacity(0.1))
-                    .frame(width: 88, height: 88)
+                    .frame(width: isCompact ? 72 : 88, height: isCompact ? 72 : 88)
                     .blur(radius: 15)
                 
                 Circle()
                     .fill(Color.surfaceSecondary)
-                    .frame(width: 80, height: 80)
+                    .frame(width: isCompact ? 64 : 80, height: isCompact ? 64 : 80)
                 
                 Circle()
                     .stroke(Color.brandPurple.opacity(0.3), lineWidth: 2)
-                    .frame(width: 80, height: 80)
+                    .frame(width: isCompact ? 64 : 80, height: isCompact ? 64 : 80)
                 
                 Image(systemName: "doc.text")
-                    .font(.system(size: 32, weight: .medium))
+                    .font(.system(size: isCompact ? 26 : 32, weight: .medium))
                     .foregroundStyle(Color.textMuted)
             }
             
-            VStack(spacing: 8) {
+            VStack(spacing: isCompact ? 6 : 8) {
                 Text("No active tasks")
-                    .font(.headline.weight(.semibold))
+                    .font(isCompact ? .subheadline.weight(.semibold) : .headline.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Post your first task to get started")
-                    .font(.subheadline)
+                    .font(isCompact ? .footnote : .subheadline)
                     .foregroundStyle(Color.textSecondary)
             }
             
-            HXButton("Post a Task", icon: "plus", variant: .primary, size: .medium, isFullWidth: false) {
+            HXButton("Post a Task", icon: "plus", variant: .primary, size: isCompact ? .small : .medium, isFullWidth: false) {
                 router.navigateToPoster(.aiTaskCreation)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 44)
-        .padding(.horizontal, 20)
+        .padding(.vertical, isCompact ? 32 : 44)
+        .padding(.horizontal, isCompact ? 16 : 20)
         .background(
             ZStack {
-                RoundedRectangle(cornerRadius: 24)
+                RoundedRectangle(cornerRadius: isCompact ? 20 : 24)
                     .fill(Color.surfaceElevated)
                 
-                RoundedRectangle(cornerRadius: 24)
+                RoundedRectangle(cornerRadius: isCompact ? 20 : 24)
                     .stroke(Color.white.opacity(0.05), lineWidth: 1)
             }
         )
-        .padding(.horizontal, 20)
+        .padding(.horizontal, isCompact ? 16 : 20)
     }
 }
 
@@ -491,39 +498,40 @@ struct NeonPosterStatCard: View {
     let value: String
     let icon: String
     let color: Color
+    var isCompact: Bool = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: isCompact ? 8 : 12) {
             // Icon with glow
             ZStack {
                 Circle()
                     .fill(color.opacity(0.15))
-                    .frame(width: 36, height: 36)
+                    .frame(width: isCompact ? 28 : 36, height: isCompact ? 28 : 36)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: isCompact ? 11 : 14, weight: .bold))
                     .foregroundStyle(color)
                     .shadow(color: color.opacity(0.6), radius: 3)
             }
             
             // Value
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(size: isCompact ? 18 : 22, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.textPrimary)
             
             // Label
             Text(title)
-                .font(.caption.weight(.medium))
+                .font(isCompact ? .caption2.weight(.medium) : .caption.weight(.medium))
                 .foregroundStyle(Color.textSecondary)
         }
-        .padding(14)
+        .padding(isCompact ? 10 : 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             ZStack {
-                RoundedRectangle(cornerRadius: 18)
+                RoundedRectangle(cornerRadius: isCompact ? 14 : 18)
                     .fill(Color.surfaceElevated)
                 
-                RoundedRectangle(cornerRadius: 18)
+                RoundedRectangle(cornerRadius: isCompact ? 14 : 18)
                     .fill(
                         LinearGradient(
                             colors: [color.opacity(0.08), Color.clear],
@@ -532,7 +540,7 @@ struct NeonPosterStatCard: View {
                         )
                     )
                 
-                RoundedRectangle(cornerRadius: 18)
+                RoundedRectangle(cornerRadius: isCompact ? 14 : 18)
                     .stroke(color.opacity(0.2), lineWidth: 1)
             }
         )

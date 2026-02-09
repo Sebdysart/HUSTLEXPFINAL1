@@ -98,7 +98,7 @@ struct ClaimsHistoryScreen: View {
             }
             .padding(.horizontal, 40)
             
-            HXButton("File a Claim", variant: .primary, icon: "plus.circle.fill") {
+            HXButton("File a Claim", icon: "plus.circle.fill", variant: .primary) {
                 // Navigate to file claim
             }
             .padding(.horizontal, 40)
@@ -134,7 +134,7 @@ struct ClaimsHistoryScreen: View {
     private var filterTabs: some View {
         HStack(spacing: 8) {
             ForEach(ClaimFilter.allCases, id: \.self) { filter in
-                FilterChip(
+                ClaimsFilterChip(
                     title: filter.rawValue,
                     count: countForFilter(filter),
                     isSelected: selectedFilter == filter
@@ -159,9 +159,9 @@ struct ClaimsHistoryScreen: View {
     }
 }
 
-// MARK: - Filter Chip
+// MARK: - Claims Filter Chip
 
-private struct FilterChip: View {
+private struct ClaimsFilterChip: View {
     let title: String
     let count: Int
     let isSelected: Bool
@@ -234,7 +234,7 @@ private struct ClaimDetailSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             HXText("Not satisfied with this decision?", style: .subheadline)
             
-            HXButton("Contact Support", variant: .secondary, icon: "message.fill") {
+            HXButton("Contact Support", icon: "message.fill", variant: .secondary) {
                 // Contact support action
             }
         }

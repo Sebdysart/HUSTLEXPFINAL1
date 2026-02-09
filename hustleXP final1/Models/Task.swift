@@ -37,6 +37,12 @@ struct HXTask: Identifiable, Codable {
     var claimedAt: Date?
     var completedAt: Date?
     
+    // v1.8.0 additions
+    var aiSuggestedPrice: Bool = false
+    var paymentMethod: PaymentMethod? = nil
+    var category: TaskCategory? = nil
+    var hasActiveClaim: Bool = false
+    
     var badgeStatus: HXBadgeVariant.StatusType {
         switch state {
         case .posted: return .active

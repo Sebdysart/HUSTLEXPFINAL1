@@ -179,7 +179,7 @@ struct ValidationFeedback: View {
     private var actionsSection: some View {
         VStack(spacing: 12) {
             if result.isRejected, let onRetake = onRetake {
-                HXButton("Retake Photo", variant: .primary, icon: "camera") {
+                HXButton("Retake Photo", icon: "camera", variant: .primary) {
                     onRetake()
                 }
             }

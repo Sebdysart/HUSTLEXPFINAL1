@@ -13,19 +13,25 @@ import CoreLocation
 struct GPSCoordinates: Codable {
     let latitude: Double
     let longitude: Double
+    let accuracyMeters: Double
+    let timestamp: Date
     
     var clLocationCoordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
     
-    init(latitude: Double, longitude: Double) {
+    init(latitude: Double, longitude: Double, accuracyMeters: Double = 10.0, timestamp: Date = Date()) {
         self.latitude = latitude
         self.longitude = longitude
+        self.accuracyMeters = accuracyMeters
+        self.timestamp = timestamp
     }
     
-    init(coordinate: CLLocationCoordinate2D) {
+    init(coordinate: CLLocationCoordinate2D, accuracyMeters: Double = 10.0, timestamp: Date = Date()) {
         self.latitude = coordinate.latitude
         self.longitude = coordinate.longitude
+        self.accuracyMeters = accuracyMeters
+        self.timestamp = timestamp
     }
 }
 

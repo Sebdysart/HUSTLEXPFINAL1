@@ -10,15 +10,32 @@ import SwiftUI
 
 struct HustlerFeedScreen: View {
     @Environment(Router.self) private var router
+    @Environment(AppState.self) private var appState
     @Environment(MockDataService.self) private var dataService
+    
+    // v2.2.0: Real API service
+    @StateObject private var taskDiscovery = TaskDiscoveryService.shared
     
     @State private var searchText: String = ""
     @State private var selectedFilter: TaskFilter = .all
     @State private var isLoading: Bool = false
     @State private var showFilters: Bool = false
+    @State private var apiTasks: [HXTask] = []
+    @State private var apiError: Error?
     
+    // v1.9.0 Spatial Intelligence
+    @State private var showMapView: Bool = false
+    @State private var currentLocation: GPSCoordinates?
+    @State private var batchRecommendation: BatchRecommendation?
+    
+    // v2.1.0 Professional Licensing - Eligibility Filtering
+    @State private var matchmakerResult: AIMatchmakerResult?
+    private let licenseService = MockLicenseVerificationService.shared
+    
+    // v2.2.0: Use API tasks when available, fall back to mock data
     private var filteredTasks: [HXTask] {
-        var tasks = dataService.availableTasks
+        // Use API tasks if loaded, otherwise fall back to mock
+        var tasks = apiTasks.isEmpty ? (matchmakerResult?.eligibleTasks ?? dataService.availableTasks) : apiTasks
         
         // Apply search filter
         if !searchText.isEmpty {
@@ -33,18 +50,26 @@ struct HustlerFeedScreen: View {
         case .all:
             break
         case .nearby:
-            // In production, would filter by distance
-            break
+            // v1.9.0: Implement nearby filter with location service
+            if let location = currentLocation {
+                tasks = MockLocationService.shared.sortTasksByDistance(tasks: tasks, from: location)
+                // Limit to top 10 nearest
+                tasks = Array(tasks.prefix(10))
+            }
         case .highPay:
             tasks = tasks.filter { $0.payment >= 50 }
         case .quickTask:
             tasks = tasks.filter { $0.estimatedDuration.contains("min") || $0.estimatedDuration.contains("30") }
         case .mySkills:
-            // In production, would match user capabilities
+            // v2.1.0: Already filtered by matchmaker based on skills
             break
         }
         
         return tasks
+    }
+    
+    private var lockedQuests: [LockedQuest] {
+        matchmakerResult?.lockedQuests ?? []
     }
     
     var body: some View {
@@ -59,8 +84,64 @@ struct HustlerFeedScreen: View {
                 // Filter chips
                 filterSection
                 
-                // Task list
-                taskListSection
+                // v1.9.0: Toggle between list and map view
+                if showMapView {
+                    mapViewSection
+                } else {
+                    taskListSection
+                }
+            }
+            
+            // v1.9.0: Floating map toggle button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    MapToggleButton(showMapView: $showMapView)
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 20)
+                }
+            }
+            
+            // v1.9.0: Batch recommendation overlay
+            if let recommendation = batchRecommendation, !showMapView {
+                VStack {
+                    Spacer()
+                    NearbyTaskCard(
+                        recommendation: recommendation,
+                        onAccept: {
+                            router.navigateToHustler(.batchDetails(batchId: recommendation.id))
+                        },
+                        onDismiss: {
+                            withAnimation(.spring(response: 0.3)) {
+                                batchRecommendation = nil
+                            }
+                        },
+                        isCompact: true
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 90)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            
+            // v2.1.0: Locked quests floating badge
+            if !lockedQuests.isEmpty && !showMapView && batchRecommendation == nil {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        LockedQuestCountBadge(
+                            count: lockedQuests.count,
+                            topEarnings: lockedQuests.first?.potentialEarnings ?? 0,
+                            onTap: {
+                                router.navigateToHustler(.lockedQuests)
+                            }
+                        )
+                        .padding(.trailing, 80) // Account for map toggle
+                        .padding(.bottom, 20)
+                    }
+                }
             }
         }
         .navigationTitle("Discover")
@@ -70,6 +151,24 @@ struct HustlerFeedScreen: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .searchable(text: $searchText, prompt: "Search tasks, locations...")
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                // v2.1.0: Skills button
+                Button {
+                    router.navigateToHustler(.skillSelection)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checklist")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Skills")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(Color.brandPurple)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.brandPurple.opacity(0.15))
+                    .clipShape(Capsule())
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showFilters.toggle() }) {
                     ZStack {
@@ -83,6 +182,82 @@ struct HustlerFeedScreen: View {
                     }
                 }
             }
+        }
+        .task {
+            await loadLocationData()
+        }
+    }
+    
+    // MARK: - v1.9.0 Map View Section
+    
+    private var mapViewSection: some View {
+        VStack(spacing: 0) {
+            HeatMapView(
+                heatZones: MockHeatMapService.shared.heatZones,
+                tasks: filteredTasks,
+                userLocation: currentLocation,
+                onZoneTapped: { zone in
+                    // Could show zone details
+                },
+                onTaskTapped: { task in
+                    router.navigateToHustler(.taskDetail(taskId: task.id))
+                }
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            
+            // Legend
+            HeatMapLegend()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            
+            Spacer()
+        }
+    }
+    
+    // MARK: - Location Data Loading
+    
+    private func loadLocationData() async {
+        let (coords, _) = await MockLocationService.shared.captureLocation()
+        currentLocation = coords
+        
+        // v2.2.0: Fetch tasks from real API
+        await loadTasksFromAPI(location: coords)
+        
+        // v2.1.0: Initialize license service and run matchmaker
+        licenseService.initializeProfile(for: appState.userId ?? "worker")
+        matchmakerResult = licenseService.filterEligibleTasks(
+            allTasks: apiTasks.isEmpty ? dataService.availableTasks : apiTasks,
+            location: coords
+        )
+        
+        // Generate batch recommendation
+        if let firstTask = filteredTasks.first {
+            batchRecommendation = MockTaskBatchingService.shared.generateRecommendation(
+                for: firstTask,
+                availableTasks: apiTasks.isEmpty ? dataService.availableTasks : apiTasks,
+                userLocation: coords
+            )
+        }
+    }
+    
+    // v2.2.0: Load tasks from real API
+    private func loadTasksFromAPI(location: GPSCoordinates?) async {
+        do {
+            let response = try await taskDiscovery.getFeed(
+                latitude: location?.latitude ?? 37.7749,
+                longitude: location?.longitude ?? -122.4194,
+                radiusMeters: 16093, // 10 miles
+                skills: nil,
+                limit: 50
+            )
+            apiTasks = response.tasks
+            apiError = nil
+            print("✅ HustlerFeed: Loaded \(apiTasks.count) tasks from API")
+        } catch {
+            // Fall back to mock data silently
+            apiError = error
+            print("⚠️ HustlerFeed: API failed, using mock data - \(error.localizedDescription)")
         }
     }
     
@@ -252,7 +427,7 @@ struct HustlerFeedScreen: View {
     
     private func refreshTasksAsync() async {
         isLoading = true
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        await loadTasksFromAPI(location: currentLocation)
         isLoading = false
     }
 }
@@ -283,9 +458,16 @@ enum TaskFilter: String, CaseIterable {
 
 struct FilterChip: View {
     let title: String
-    let icon: String
+    let icon: String?
     let isSelected: Bool
     let action: () -> Void
+    
+    init(title: String, icon: String? = nil, isSelected: Bool, action: @escaping () -> Void) {
+        self.title = title
+        self.icon = icon
+        self.isSelected = isSelected
+        self.action = action
+    }
     
     var body: some View {
         Button(action: {
@@ -294,8 +476,10 @@ struct FilterChip: View {
             action()
         }) {
             HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                }
                 
                 Text(title)
                     .font(.subheadline.weight(.medium))

@@ -15,27 +15,29 @@ struct PermissionsScreen: View {
     @State private var showContent = false
     
     var body: some View {
-        ZStack {
-            Color.brandBlack
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            VStack(spacing: 32) {
-                // Header
-                VStack(spacing: 12) {
-                    HXText("Enable Permissions", style: .title)
-                    
-                    HXText(
-                        "These help us give you the best experience",
-                        style: .subheadline,
-                        color: .textSecondary
-                    )
-                }
-                .padding(.top, 24)
+            ZStack {
+                Color.brandBlack
+                    .ignoresSafeArea()
                 
-                Spacer()
-                
-                // Permission toggles
-                VStack(spacing: 16) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: isCompact ? 24 : 32) {
+                        // Header
+                        VStack(spacing: isCompact ? 8 : 12) {
+                            Text("Enable Permissions")
+                                .font(.system(size: isCompact ? 24 : 28, weight: .bold))
+                                .foregroundStyle(Color.textPrimary)
+                            
+                            Text("These help us give you the best experience")
+                                .font(.system(size: isCompact ? 14 : 15))
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                        .padding(.top, isCompact ? 16 : 24)
+                        
+                        // Permission toggles
+                        VStack(spacing: isCompact ? 12 : 16) {
                     PermissionCard(
                         icon: "location.fill",
                         title: "Location",
@@ -54,44 +56,46 @@ struct PermissionsScreen: View {
                         benefit: "Never miss an opportunity",
                         isEnabled: $notificationsEnabled
                     )
-                    .opacity(showContent ? 1 : 0)
-                    .offset(y: showContent ? 0 : 20)
-                    .animation(.easeOut(duration: 0.4).delay(0.2), value: showContent)
-                }
-                .padding(.horizontal, 24)
-                
-                // Info note
-                HStack(spacing: 12) {
-                    Image(systemName: "shield.fill")
-                        .foregroundStyle(Color.brandPurple)
-                    
-                    HXText(
-                        "Your data is encrypted and never sold. See our Privacy Policy for details.",
-                        style: .caption,
-                        color: .textSecondary
-                    )
-                }
-                .padding(16)
-                .background(Color.surfaceSecondary)
-                .cornerRadius(12)
-                .padding(.horizontal, 24)
-                .opacity(showContent ? 1 : 0)
-                .animation(.easeOut(duration: 0.4).delay(0.3), value: showContent)
-                
-                Spacer()
-                
-                // Continue button
-                VStack(spacing: 16) {
-                    HXButton("Continue", variant: .primary) {
-                        router.navigateToOnboarding(.profileSetup)
+                            .opacity(showContent ? 1 : 0)
+                            .offset(y: showContent ? 0 : 20)
+                            .animation(.easeOut(duration: 0.4).delay(0.2), value: showContent)
+                        }
+                        .padding(.horizontal, isCompact ? 18 : 24)
+                        
+                        // Info note
+                        HStack(spacing: 12) {
+                            Image(systemName: "shield.fill")
+                                .foregroundStyle(Color.brandPurple)
+                            
+                            Text("Your data is encrypted and never sold. See our Privacy Policy for details.")
+                                .font(.system(size: isCompact ? 11 : 12))
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                        .padding(isCompact ? 12 : 16)
+                        .background(Color.surfaceSecondary)
+                        .cornerRadius(12)
+                        .padding(.horizontal, isCompact ? 18 : 24)
+                        .opacity(showContent ? 1 : 0)
+                        .animation(.easeOut(duration: 0.4).delay(0.3), value: showContent)
+                        
+                        Spacer(minLength: isCompact ? 20 : 40)
+                        
+                        // Continue button
+                        VStack(spacing: isCompact ? 12 : 16) {
+                            HXButton("Continue", variant: .primary) {
+                                router.navigateToOnboarding(.profileSetup)
+                            }
+                            
+                            Button(action: { router.navigateToOnboarding(.profileSetup) }) {
+                                Text("Skip for now")
+                                    .font(.system(size: isCompact ? 13 : 14))
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+                        }
+                        .padding(.horizontal, isCompact ? 18 : 24)
+                        .padding(.bottom, max(24, geometry.safeAreaInsets.bottom + 16))
                     }
-                    
-                    Button(action: { router.navigateToOnboarding(.profileSetup) }) {
-                        HXText("Skip for now", style: .subheadline, color: .textSecondary)
-                    }
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 48)
             }
         }
         .navigationBarBackButtonHidden(false)

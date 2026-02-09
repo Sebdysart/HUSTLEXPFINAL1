@@ -17,36 +17,62 @@ struct TaskInProgressScreen: View {
     @State private var currentStatus: TaskProgressStatus = .enRoute
     @State private var showMessageSheet: Bool = false
     
+    // v1.9.0 Spatial Intelligence
+    @State private var geofence: GeofenceRegion?
+    @State private var currentDistance: Double?
+    @State private var isInsideGeofence: Bool = false
+    @State private var movementSession: MovementTrackingSession?
+    @State private var userLocation: GPSCoordinates?
+    
     private var task: HXTask? {
         dataService.activeTask
     }
     
     var body: some View {
         if let task = task {
-            VStack(spacing: 0) {
-                // Status card
-                statusCard(task)
+            ZStack {
+                Color.brandBlack
+                    .ignoresSafeArea()
                 
-                // Progress steps
-                progressSteps
-                    .padding(.top, 32)
-                
-                Spacer()
-                
-                // Action buttons
-                actionButtons(task)
+                VStack(spacing: 0) {
+                    // Status card
+                    statusCard(task)
+                    
+                    // Progress steps
+                    progressSteps
+                        .padding(.top, 32)
+                    
+                    Spacer()
+                    
+                    // Action buttons
+                    actionButtons(task)
+                }
             }
             .navigationTitle("Task In Progress")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.brandBlack, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .sheet(isPresented: $showMessageSheet) {
                 ConversationScreen(conversationId: task.id)
             }
+            .task {
+                await setupSpatialIntelligence(for: task)
+            }
+            .onDisappear {
+                cleanupSpatialIntelligence()
+            }
         } else {
-            ErrorState(
-                title: "No Active Task",
-                message: "You don't have an active task"
-            ) {
-                router.hustlerPath = NavigationPath()
+            ZStack {
+                Color.brandBlack
+                    .ignoresSafeArea()
+                
+                ErrorState(
+                    title: "No Active Task",
+                    message: "You don't have an active task"
+                ) {
+                    router.hustlerPath = NavigationPath()
+                }
             }
         }
     }
@@ -55,28 +81,46 @@ struct TaskInProgressScreen: View {
     
     private func statusCard(_ task: HXTask) -> some View {
         VStack(spacing: 16) {
-            // Status icon with animation
-            ZStack {
-                Circle()
-                    .fill(currentStatus.color.opacity(0.2))
-                    .frame(width: 80, height: 80)
+            // v1.9.0: Show geofence indicator when en route
+            if currentStatus == .enRoute, let geofence = geofence {
+                GeofenceIndicator(
+                    geofence: geofence,
+                    currentDistance: currentDistance,
+                    isInside: isInsideGeofence,
+                    onSmartStartTriggered: {
+                        handleSmartStart(task)
+                    },
+                    isCompact: true
+                )
+            } else {
+                // Status icon with animation
+                ZStack {
+                    Circle()
+                        .fill(currentStatus.color.opacity(0.2))
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: currentStatus.icon)
+                        .font(.system(size: 32))
+                        .foregroundStyle(currentStatus.color)
+                }
                 
-                Image(systemName: currentStatus.icon)
-                    .font(.system(size: 32))
-                    .foregroundStyle(currentStatus.color)
+                // Status text
+                VStack(spacing: 4) {
+                    HXText(currentStatus.title, style: .title2)
+                    HXText(currentStatus.subtitle, style: .subheadline, color: .textSecondary)
+                }
             }
             
-            // Status text
-            VStack(spacing: 4) {
-                HXText(currentStatus.title, style: .title2)
-                HXText(currentStatus.subtitle, style: .subheadline, color: .secondary)
+            // v1.9.0: Show movement tracker when working
+            if currentStatus == .working, let session = movementSession {
+                MovementTracker(session: session, isActive: true, isCompact: true)
             }
             
             // Task info
             HStack(spacing: 24) {
-                VStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
                     HXText(task.title, style: .headline)
-                    HXText(task.location, style: .caption, color: .secondary)
+                    HXText(task.location, style: .caption, color: .textSecondary)
                 }
                 
                 Spacer()
@@ -84,10 +128,90 @@ struct TaskInProgressScreen: View {
                 PriceDisplay(amount: task.payment, size: .small)
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.surfaceElevated)
             .cornerRadius(12)
         }
         .padding()
+    }
+    
+    // MARK: - v1.9.0 Spatial Intelligence
+    
+    private func setupSpatialIntelligence(for task: HXTask) async {
+        // Get current location
+        let (coords, _) = await MockLocationService.shared.captureLocation()
+        userLocation = coords
+        
+        // Register geofence for Smart Start
+        geofence = MockGeofenceService.shared.registerGeofence(for: task)
+        
+        // Set up geofence callbacks
+        MockGeofenceService.shared.onGeofenceEntered = { region in
+            withAnimation(.spring(response: 0.3)) {
+                isInsideGeofence = true
+            }
+        }
+        
+        MockGeofenceService.shared.onDwellingDetected = { region in
+            // Auto-trigger Smart Start
+            if MockGeofenceService.shared.smartStartEnabled && currentStatus == .enRoute {
+                handleSmartStart(task)
+            }
+        }
+        
+        // Simulate distance updates
+        startDistanceUpdates(for: task)
+    }
+    
+    private func startDistanceUpdates(for task: HXTask) {
+        // In production, this would use real location updates
+        // For demo, simulate approaching
+        Task {
+            var simulatedDistance = 150.0 // Start 150m away
+            
+            while currentStatus == .enRoute && !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 3_000_000_000) // Every 3 seconds
+                
+                // Simulate getting closer
+                simulatedDistance = max(0, simulatedDistance - Double.random(in: 15...25))
+                currentDistance = simulatedDistance
+                
+                // Check geofence
+                if let geofence = geofence, simulatedDistance <= geofence.radiusMeters {
+                    withAnimation(.spring(response: 0.3)) {
+                        isInsideGeofence = true
+                    }
+                    
+                    // Trigger Smart Start after dwelling
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    if currentStatus == .enRoute {
+                        handleSmartStart(task)
+                    }
+                    break
+                }
+            }
+        }
+    }
+    
+    private func handleSmartStart(_ task: HXTask) {
+        let impact = UIImpactFeedbackGenerator(style: .heavy)
+        impact.impactOccurred()
+        
+        withAnimation(.spring(response: 0.3)) {
+            currentStatus = .arrived
+            dataService.updateTaskState(task.id, to: .inProgress)
+        }
+    }
+    
+    private func startMovementTracking(for task: HXTask) {
+        movementSession = MockMovementTrackingService.shared.startTracking(
+            taskId: task.id,
+            hustlerId: dataService.currentUser.id
+        )
+    }
+    
+    private func cleanupSpatialIntelligence() {
+        MockGeofenceService.shared.removeGeofence(taskId: taskId)
+        _ = MockMovementTrackingService.shared.stopTracking()
     }
     
     // MARK: - Progress Steps
@@ -144,6 +268,8 @@ struct TaskInProgressScreen: View {
                 HXButton("Start Working", variant: .primary) {
                     withAnimation(.spring(response: 0.3)) {
                         currentStatus = .working
+                        // v1.9.0: Start movement tracking
+                        startMovementTracking(for: task)
                     }
                 }
                 
@@ -221,7 +347,7 @@ struct ProgressStepRow: View {
             VStack(spacing: 0) {
                 ZStack {
                     Circle()
-                        .fill(isComplete ? Color.brandPurple : Color(.systemGray4))
+                        .fill(isComplete ? Color.brandPurple : Color.surfaceSecondary)
                         .frame(width: 28, height: 28)
                     
                     if isComplete {
@@ -233,15 +359,15 @@ struct ProgressStepRow: View {
                 
                 if !isLast {
                     Rectangle()
-                        .fill(isComplete ? Color.brandPurple : Color(.systemGray4))
+                        .fill(isComplete ? Color.brandPurple : Color.surfaceSecondary)
                         .frame(width: 2, height: 40)
                 }
             }
             
             // Step content
             VStack(alignment: .leading, spacing: 4) {
-                HXText(title, style: isCurrent ? .headline : .subheadline, color: isCurrent ? .primary : .secondary)
-                HXText(subtitle, style: .caption, color: .secondary)
+                HXText(title, style: isCurrent ? .headline : .subheadline, color: isCurrent ? .textPrimary : .textSecondary)
+                HXText(subtitle, style: .caption, color: .textSecondary)
             }
             .padding(.bottom, isLast ? 0 : 16)
             

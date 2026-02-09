@@ -44,7 +44,7 @@ struct UserHeader: View {
                     
                     if showRating, let rating = rating {
                         HStack(spacing: 2) {
-                            HXIcon(HXIcon.star, size: .small, color: .yellow)
+                            HXIcon(HXIcon.star, size: .small, color: .warningOrange)
                             HXText(String(format: "%.1f", rating), style: .caption)
                         }
                     }

@@ -225,10 +225,11 @@ struct EmptyState: View {
                 title: "No History Yet",
                 message: "Your completed tasks will appear here",
                 actionTitle: "Browse Tasks",
+                action: {
+                    print("Action tapped")
+                },
                 accentColor: .infoBlue
-            ) {
-                print("Action tapped")
-            }
+            )
             
             Spacer()
         }

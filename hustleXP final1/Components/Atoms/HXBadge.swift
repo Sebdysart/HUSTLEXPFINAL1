@@ -60,20 +60,32 @@ enum HXBadgeVariant {
 
 struct HXBadge: View {
     let variant: HXBadgeVariant
-    
+
     var body: some View {
-        switch variant {
-        case .status(let status):
-            statusBadge(text: status.text, color: status.color, icon: status.icon)
-            
-        case .count(let count):
-            countBadge(count: count)
-            
-        case .tier(let tier):
-            tierBadge(tier: tier)
-            
-        case .custom(let text, let color, let icon):
-            statusBadge(text: text, color: color, icon: icon)
+        Group {
+            switch variant {
+            case .status(let status):
+                statusBadge(text: status.text, color: status.color, icon: status.icon)
+                    .accessibilityLabel("Status: \(status.text)")
+                    .accessibilityAddTraits(.isStaticText)
+
+            case .count(let count):
+                countBadge(count: count)
+                    .accessibilityLabel("\(count) notifications")
+                    .accessibilityAddTraits(.isStaticText)
+                    .accessibilityValue(count > 99 ? "More than 99" : "\(count)")
+
+            case .tier(let tier):
+                tierBadge(tier: tier)
+                    .accessibilityLabel("Trust tier: \(tier.name)")
+                    .accessibilityAddTraits(.isStaticText)
+                    .accessibilityHint("User verification level")
+
+            case .custom(let text, let color, let icon):
+                statusBadge(text: text, color: color, icon: icon)
+                    .accessibilityLabel(text)
+                    .accessibilityAddTraits(.isStaticText)
+            }
         }
     }
     

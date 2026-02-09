@@ -31,150 +31,163 @@ struct PhoneVerificationScreen: View {
     }
     
     var body: some View {
-        ZStack {
-            // Background
-            LinearGradient.brandGradient
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            VStack(spacing: 32) {
-                Spacer()
+            ZStack {
+                // Background
+                LinearGradient.brandGradient
+                    .ignoresSafeArea()
                 
-                // Icon and header
-                VStack(spacing: 20) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.brandPurple.opacity(0.15))
-                            .frame(width: 100, height: 100)
-                        
-                        Image(systemName: isCodeSent ? "lock.shield.fill" : "phone.badge.checkmark")
-                            .font(.system(size: 40))
-                            .foregroundStyle(Color.brandPurple)
-                    }
+                VStack(spacing: isCompact ? 20 : 28) {
+                    Spacer()
                     
-                    VStack(spacing: 12) {
-                        HXText(
-                            isCodeSent ? "Enter Verification Code" : "Verify Your Phone",
-                            style: .title
-                        )
-                        
-                        HXText(
-                            isCodeSent
-                                ? "We sent a 6-digit code to \(formatPhoneNumber(phoneNumber))"
-                                : "We'll send you a verification code to confirm your number",
-                            style: .body,
-                            color: .textSecondary
-                        )
-                        .multilineTextAlignment(.center)
-                    }
-                }
-                .padding(.horizontal, 24)
-                
-                Spacer()
-                
-                // Form
-                VStack(spacing: 20) {
-                    if !isCodeSent {
-                        // Phone input
-                        VStack(alignment: .leading, spacing: 8) {
-                            HXText("Phone Number", style: .subheadline, color: .textSecondary)
+                    // Icon and header
+                    VStack(spacing: isCompact ? 12 : 16) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.brandPurple.opacity(0.15))
+                                .frame(width: isCompact ? 64 : 80, height: isCompact ? 64 : 80)
                             
-                            HStack(spacing: 12) {
-                                HXText("+1", style: .body, color: .textSecondary)
-                                    .padding(.leading, 16)
-                                
-                                TextField("", text: $phoneNumber, prompt: Text("(555) 123-4567").foregroundColor(.textTertiary))
-                                    .font(.body)
-                                    .foregroundStyle(Color.textPrimary)
-                                    .textContentType(.telephoneNumber)
-                                    .keyboardType(.phonePad)
-                                    .focused($focusedField, equals: .phone)
-                            }
-                            .padding(.vertical, 16)
-                            .padding(.trailing, 16)
-                            .background(Color.surfaceElevated)
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(focusedField == .phone ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
-                            )
+                            Image(systemName: isCodeSent ? "lock.shield.fill" : "phone.badge.checkmark")
+                                .font(.system(size: isCompact ? 26 : 32))
+                                .foregroundStyle(Color.brandPurple)
                         }
                         
-                        HXButton(
-                            isLoading ? "Sending..." : "Send Code",
-                            variant: .primary,
-                            isLoading: isLoading
-                        ) {
-                            sendCode()
+                        VStack(spacing: isCompact ? 6 : 10) {
+                            Text(isCodeSent ? "Enter Verification Code" : "Verify Your Phone")
+                                .font(.system(size: isCompact ? 22 : 26, weight: .bold))
+                                .foregroundStyle(Color.textPrimary)
+                            
+                            Text(isCodeSent
+                                ? "We sent a 6-digit code to \(formatPhoneNumber(phoneNumber))"
+                                : "We'll send you a verification code to confirm your number")
+                                .font(.system(size: isCompact ? 13 : 15))
+                                .foregroundStyle(Color.textSecondary)
+                                .multilineTextAlignment(.center)
                         }
-                        .disabled(!isValidPhone || isLoading)
-                        .opacity(isValidPhone ? 1 : 0.5)
-                    } else {
-                        // Code input
-                        VStack(spacing: 24) {
-                            // OTP-style input display
-                            HStack(spacing: 12) {
-                                ForEach(0..<6, id: \.self) { index in
-                                    CodeDigitBox(
-                                        digit: getDigit(at: index),
-                                        isFocused: focusedField == .code && verificationCode.count == index
+                    }
+                    .padding(.horizontal, isCompact ? 18 : 24)
+                    
+                    Spacer()
+                
+                        // Form
+                        VStack(spacing: isCompact ? 16 : 20) {
+                            if !isCodeSent {
+                                // Phone input
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Phone Number")
+                                        .font(.system(size: isCompact ? 13 : 14, weight: .medium))
+                                        .foregroundStyle(Color.textSecondary)
+                                    
+                                    HStack(spacing: 12) {
+                                        Text("+1")
+                                            .font(.system(size: isCompact ? 15 : 16))
+                                            .foregroundStyle(Color.textSecondary)
+                                            .padding(.leading, isCompact ? 12 : 16)
+                                        
+                                        TextField("", text: $phoneNumber, prompt: Text("(555) 123-4567").foregroundColor(.textTertiary))
+                                            .font(.system(size: isCompact ? 15 : 16))
+                                            .foregroundStyle(Color.textPrimary)
+                                            .textContentType(.telephoneNumber)
+                                            .keyboardType(.phonePad)
+                                            .focused($focusedField, equals: .phone)
+                                    }
+                                    .padding(.vertical, isCompact ? 12 : 16)
+                                    .padding(.trailing, isCompact ? 12 : 16)
+                                    .background(Color.surfaceElevated)
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(focusedField == .phone ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
                                     )
                                 }
-                            }
-                            .onTapGesture {
-                                focusedField = .code
-                            }
-                            
-                            // Hidden text field for input
-                            TextField("", text: $verificationCode)
-                                .keyboardType(.numberPad)
-                                .textContentType(.oneTimeCode)
-                                .focused($focusedField, equals: .code)
-                                .frame(width: 0, height: 0)
-                                .opacity(0)
-                                .onChange(of: verificationCode) { _, newValue in
-                                    // Limit to 6 digits
-                                    if newValue.count > 6 {
-                                        verificationCode = String(newValue.prefix(6))
+                                
+                                HXButton(
+                                    isLoading ? "Sending..." : "Send Code",
+                                    variant: .primary,
+                                    isLoading: isLoading
+                                ) {
+                                    sendCode()
+                                }
+                                .disabled(!isValidPhone || isLoading)
+                                .opacity(isValidPhone ? 1 : 0.5)
+                            } else {
+                                // Code input
+                                VStack(spacing: isCompact ? 18 : 24) {
+                                    // OTP-style input display
+                                    HStack(spacing: isCompact ? 8 : 12) {
+                                        ForEach(0..<6, id: \.self) { index in
+                                            CodeDigitBox(
+                                                digit: getDigit(at: index),
+                                                isFocused: focusedField == .code && verificationCode.count == index,
+                                                isCompact: isCompact
+                                            )
+                                        }
+                                    }
+                                    .onTapGesture {
+                                        focusedField = .code
+                                    }
+                                    
+                                    // Hidden text field for input
+                                    TextField("", text: $verificationCode)
+                                        .keyboardType(.numberPad)
+                                        .textContentType(.oneTimeCode)
+                                        .focused($focusedField, equals: .code)
+                                        .frame(width: 0, height: 0)
+                                        .opacity(0)
+                                        .onChange(of: verificationCode) { _, newValue in
+                                            if newValue.count > 6 {
+                                                verificationCode = String(newValue.prefix(6))
+                                            }
+                                            // Auto-submit when 6 digits entered
+                                            if newValue.count == 6 {
+                                                verifyCode()
+                                            }
+                                        }
+                                    
+                                    // Resend option
+                                    if countdown > 0 {
+                                        Text("Resend code in \(countdown)s")
+                                            .font(.system(size: isCompact ? 13 : 14))
+                                            .foregroundStyle(Color.textTertiary)
+                                    } else {
+                                        Button(action: resendCode) {
+                                            Text("Resend Code")
+                                                .font(.system(size: isCompact ? 13 : 14, weight: .medium))
+                                                .foregroundStyle(Color.brandPurple)
+                                        }
                                     }
                                 }
-                            
-                            // Resend option
-                            if countdown > 0 {
-                                HXText(
-                                    "Resend code in \(countdown)s",
-                                    style: .subheadline,
-                                    color: .textTertiary
-                                )
-                            } else {
-                                Button(action: resendCode) {
-                                    HXText("Resend Code", style: .subheadline, color: .brandPurple)
+                                
+                                // Loading indicator when verifying
+                                if isLoading {
+                                    HStack(spacing: 8) {
+                                        ProgressView()
+                                            .tint(Color.brandPurple)
+                                        Text("Verifying...")
+                                            .font(.system(size: isCompact ? 14 : 15, weight: .medium))
+                                            .foregroundStyle(Color.textSecondary)
+                                    }
+                                    .padding(.top, 8)
+                                }
+                                
+                                Button(action: { 
+                                    withAnimation {
+                                        isCodeSent = false
+                                        verificationCode = ""
+                                    }
+                                }) {
+                                    Text("Change Phone Number")
+                                        .font(.system(size: isCompact ? 13 : 14))
+                                        .foregroundStyle(Color.textSecondary)
                                 }
                             }
                         }
-                        
-                        HXButton(
-                            isLoading ? "Verifying..." : "Verify",
-                            variant: .primary,
-                            isLoading: isLoading
-                        ) {
-                            verifyCode()
-                        }
-                        .disabled(!isValidCode || isLoading)
-                        .opacity(isValidCode ? 1 : 0.5)
-                        
-                        Button(action: { 
-                            withAnimation {
-                                isCodeSent = false
-                                verificationCode = ""
-                            }
-                        }) {
-                            HXText("Change Phone Number", style: .subheadline, color: .textSecondary)
-                        }
-                    }
+                        .padding(.horizontal, isCompact ? 18 : 24)
+                    
+                    Spacer()
                 }
-                .padding(.horizontal, 24)
-                
-                Spacer()
             }
         }
         .navigationBarBackButtonHidden(false)
@@ -245,14 +258,15 @@ struct PhoneVerificationScreen: View {
 private struct CodeDigitBox: View {
     let digit: String
     let isFocused: Bool
+    var isCompact: Bool = false
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: isCompact ? 10 : 12)
                 .fill(Color.surfaceElevated)
-                .frame(width: 48, height: 56)
+                .frame(width: isCompact ? 42 : 48, height: isCompact ? 48 : 56)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: isCompact ? 10 : 12)
                         .stroke(
                             digit.isEmpty ? (isFocused ? Color.brandPurple : Color.borderSubtle) : Color.brandPurple,
                             lineWidth: isFocused ? 2 : 1
@@ -262,10 +276,12 @@ private struct CodeDigitBox: View {
             if digit.isEmpty && isFocused {
                 RoundedRectangle(cornerRadius: 1)
                     .fill(Color.brandPurple)
-                    .frame(width: 2, height: 24)
+                    .frame(width: 2, height: isCompact ? 20 : 24)
                     .opacity(isFocused ? 1 : 0)
             } else {
-                HXText(digit, style: .title2)
+                Text(digit)
+                    .font(.system(size: isCompact ? 20 : 24, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
             }
         }
     }

@@ -9,16 +9,19 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        // Preview helper - shows onboarding flow
+        OnboardingStack()
+            .environment(Router())
     }
 }
 
-#Preview {
+#Preview("Onboarding Flow") {
     ContentView()
 }
+#Preview("Welcome Screen") {
+    NavigationStack {
+        WelcomeScreen()
+    }
+    .environment(Router())
+}
+

@@ -15,28 +15,36 @@ struct XPBreakdownScreen: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // XP hero
-                xpHero
-                
-                // Tier progress
-                tierProgress
-                
-                // XP sources guide
-                xpSourcesGuide
+        ZStack {
+            Color.brandBlack
+                .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 24) {
+                    // XP hero
+                    xpHero
+                    
+                    // Tier progress
+                    tierProgress
+                    
+                    // XP sources guide
+                    xpSourcesGuide
+                }
+                .padding(.vertical)
             }
-            .padding(.vertical)
         }
         .navigationTitle("XP Breakdown")
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(Color.brandBlack, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
     }
     
     // MARK: - XP Hero
     
     private var xpHero: some View {
         VStack(spacing: 12) {
-            HXText("Total XP", style: .subheadline, color: .secondary)
+            HXText("Total XP", style: .subheadline, color: .textSecondary)
             
             Text("\(user.xp)")
                 .font(.system(size: 56, weight: .bold))
@@ -68,14 +76,14 @@ struct XPBreakdownScreen: View {
                 // Current tier info
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        HXText("Current Tier", style: .caption, color: .secondary)
+                        HXText("Current Tier", style: .caption, color: .textSecondary)
                         HXText(user.trustTier.name, style: .headline)
                     }
                     
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: 4) {
-                        HXText("Next Tier", style: .caption, color: .secondary)
+                        HXText("Next Tier", style: .caption, color: .textSecondary)
                         HXText(nextTierName, style: .headline, color: .brandPurple)
                     }
                 }
@@ -93,12 +101,12 @@ struct XPBreakdownScreen: View {
                 if user.trustTier != .master {
                     HStack(spacing: 8) {
                         HXIcon("sparkles", size: .small, color: .brandPurple)
-                        HXText("Unlock \(nextTierName) perks at \(user.xpToNextTier) XP", style: .caption, color: .secondary)
+                        HXText("Unlock \(nextTierName) perks at \(user.xpToNextTier) XP", style: .caption, color: .textSecondary)
                     }
                 }
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.surfaceElevated)
             .cornerRadius(12)
             .padding(.horizontal)
         }
@@ -173,7 +181,7 @@ struct XPSourceRow: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 HXText(source, style: .subheadline)
-                HXText(description, style: .caption, color: .secondary)
+                HXText(description, style: .caption, color: .textSecondary)
             }
             
             Spacer()
@@ -181,7 +189,7 @@ struct XPSourceRow: View {
             HXText(xp, style: .headline, color: .brandPurple)
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.surfaceElevated)
         .cornerRadius(12)
     }
 }

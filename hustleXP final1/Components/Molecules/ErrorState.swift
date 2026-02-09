@@ -28,11 +28,11 @@ struct ErrorState: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            HXIcon(icon, size: .xlarge, color: .red)
+            HXIcon(icon, size: .xlarge, color: .errorRed)
             
             HXText(title, style: .headline, alignment: .center)
             
-            HXText(message, style: .subheadline, color: .secondary, alignment: .center)
+            HXText(message, style: .subheadline, color: .textSecondary, alignment: .center)
                 .padding(.horizontal, 32)
             
             if let retryAction = retryAction {

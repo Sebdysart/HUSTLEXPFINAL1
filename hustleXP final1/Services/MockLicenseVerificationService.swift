@@ -113,7 +113,7 @@ final class MockLicenseVerificationService {
         // Simulate API call delay (2-4 seconds for "instant" verification)
         try? await Task.sleep(nanoseconds: UInt64.random(in: 2_000_000_000...4_000_000_000))
         
-        guard var pendingIndex = pendingVerifications.firstIndex(where: { $0.id == licenseId }) else {
+        guard let pendingIndex = pendingVerifications.firstIndex(where: { $0.id == licenseId }) else {
             isVerifying = false
             return
         }
@@ -222,8 +222,9 @@ final class MockLicenseVerificationService {
     func filterEligibleTasks(
         allTasks: [HXTask],
         location: GPSCoordinates?,
-        settings: FeedFilterSettings = FeedFilterSettings()
+        settings: FeedFilterSettings? = nil
     ) -> AIMatchmakerResult {
+        let filterSettings = settings ?? FeedFilterSettings()
         guard let profile = workerProfile else {
             return AIMatchmakerResult(
                 eligibleTasks: [],
@@ -253,7 +254,7 @@ final class MockLicenseVerificationService {
                 let taskCoords = GPSCoordinates(latitude: taskLat, longitude: taskLon)
                 distance = MockLocationService.shared.calculateDistance(from: loc, to: taskCoords)
                 
-                if distance! > settings.maxRadiusMeters {
+                if distance! > filterSettings.maxRadiusMeters {
                     filteredByDistance += 1
                     continue
                 }
@@ -293,7 +294,7 @@ final class MockLicenseVerificationService {
         }
         
         // Sort eligible tasks based on priority
-        eligibleTasks = sortTasks(eligibleTasks, by: settings.prioritySort, from: location)
+        eligibleTasks = sortTasks(eligibleTasks, by: filterSettings.prioritySort, from: location)
         
         // Generate recommendations (top 5 best matches)
         let recommendations = generateRecommendations(from: eligibleTasks, profile: profile)

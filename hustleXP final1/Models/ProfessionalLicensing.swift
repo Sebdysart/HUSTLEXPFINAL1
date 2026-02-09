@@ -326,7 +326,7 @@ struct LockedQuest: Identifiable {
 
 // MARK: - Feed Filter Settings
 
-struct FeedFilterSettings: Codable {
+struct FeedFilterSettings: Codable, Sendable {
     var maxRadiusMeters: Double = 16093  // 10 miles default
     var showOnlyMatchingSkills: Bool = true
     var hideLockedQuests: Bool = false

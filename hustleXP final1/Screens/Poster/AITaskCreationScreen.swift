@@ -29,29 +29,33 @@ struct AITaskCreationScreen: View {
     private let aiService = MockAITaskService.shared
     
     var body: some View {
-        ZStack {
-            // Neon nexus background
-            neonBackground
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            VStack(spacing: 0) {
-                // Minimal header
-                header
+            ZStack {
+                // Neon nexus background
+                neonBackground
                 
-                if showInitialPrompt && messages.count <= 1 {
-                    // Centered initial prompt view
-                    initialPromptView
-                } else {
-                    // Conversation view
-                    conversationView
+                VStack(spacing: 0) {
+                    // Minimal header
+                    header(isCompact: isCompact)
+                    
+                    if showInitialPrompt && messages.count <= 1 {
+                        // Centered initial prompt view
+                        initialPromptView(isCompact: isCompact)
+                    } else {
+                        // Conversation view
+                        conversationView(isCompact: isCompact)
+                    }
+                    
+                    // Post button (when ready)
+                    if taskDraft.isReadyToPost {
+                        postButton(isCompact: isCompact)
+                    }
+                    
+                    // Glowing input bar
+                    neonInputBar(isCompact: isCompact)
                 }
-                
-                // Post button (when ready)
-                if taskDraft.isReadyToPost {
-                    postButton
-                }
-                
-                // Glowing input bar
-                neonInputBar
             }
         }
         .navigationBarHidden(true)
@@ -120,7 +124,7 @@ struct AITaskCreationScreen: View {
     
     // MARK: - Header
     
-    private var header: some View {
+    private func header(isCompact: Bool) -> some View {
         HStack {
             Button {
                 dismiss()
@@ -128,10 +132,10 @@ struct AITaskCreationScreen: View {
                 ZStack {
                     Circle()
                         .fill(Color.white.opacity(0.05))
-                        .frame(width: 44, height: 44)
+                        .frame(width: isCompact ? 38 : 44, height: isCompact ? 38 : 44)
                     
                     Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: isCompact ? 14 : 16, weight: .medium))
                         .foregroundStyle(Color.textSecondary)
                 }
             }
@@ -139,29 +143,29 @@ struct AITaskCreationScreen: View {
             Spacer()
             
             // AI branding with glow
-            HStack(spacing: 8) {
+            HStack(spacing: isCompact ? 6 : 8) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: isCompact ? 12 : 14, weight: .semibold))
                     .foregroundStyle(Color.aiPurple)
                     .shadow(color: Color.aiPurple.opacity(0.8), radius: 8)
                 
                 Text("AI CREATOR")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: isCompact ? 10 : 12, weight: .bold))
                     .tracking(2)
                     .foregroundStyle(Color.textSecondary)
             }
             
             Spacer()
             
-            Color.clear.frame(width: 44, height: 44)
+            Color.clear.frame(width: isCompact ? 38 : 44, height: isCompact ? 38 : 44)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, isCompact ? 12 : 16)
+        .padding(.vertical, isCompact ? 8 : 12)
     }
     
     // MARK: - Initial Prompt View (Centered)
     
-    private var initialPromptView: some View {
+    private func initialPromptView(isCompact: Bool) -> some View {
         VStack(spacing: 0) {
             Spacer()
             
@@ -172,11 +176,11 @@ struct AITaskCreationScreen: View {
                     Circle()
                         .stroke(
                             Color.aiPurple.opacity(0.1 - Double(index) * 0.03),
-                            lineWidth: 2
+                            lineWidth: isCompact ? 1.5 : 2
                         )
                         .frame(
-                            width: CGFloat(120 + index * 40),
-                            height: CGFloat(120 + index * 40)
+                            width: CGFloat(isCompact ? 90 : 120) + CGFloat(index) * CGFloat(isCompact ? 30 : 40),
+                            height: CGFloat(isCompact ? 90 : 120) + CGFloat(index) * CGFloat(isCompact ? 30 : 40)
                         )
                         .scaleEffect(1 + glowIntensity * 0.1)
                 }
@@ -192,23 +196,23 @@ struct AITaskCreationScreen: View {
                             ],
                             center: .center,
                             startRadius: 0,
-                            endRadius: 50
+                            endRadius: isCompact ? 35 : 50
                         )
                     )
-                    .frame(width: 80, height: 80)
-                    .shadow(color: Color.aiPurple.opacity(glowIntensity), radius: 30)
-                    .shadow(color: Color.aiPurple.opacity(glowIntensity * 0.5), radius: 60)
+                    .frame(width: isCompact ? 60 : 80, height: isCompact ? 60 : 80)
+                    .shadow(color: Color.aiPurple.opacity(glowIntensity), radius: isCompact ? 20 : 30)
+                    .shadow(color: Color.aiPurple.opacity(glowIntensity * 0.5), radius: isCompact ? 40 : 60)
                 
                 // Sparkle icon
                 Image(systemName: "sparkles")
-                    .font(.system(size: 28, weight: .medium))
+                    .font(.system(size: isCompact ? 22 : 28, weight: .medium))
                     .foregroundStyle(.white)
             }
-            .padding(.bottom, 48)
+            .padding(.bottom, isCompact ? 32 : 48)
             
             // Main prompt text - BOLD and CENTERED
             Text("What do you need done?")
-                .font(.system(size: 32, weight: .bold))
+                .font(.system(size: isCompact ? 26 : 32, weight: .bold))
                 .foregroundStyle(.white)
                 .shadow(color: Color.aiPurple.opacity(0.5), radius: 20)
                 .multilineTextAlignment(.center)
@@ -217,39 +221,40 @@ struct AITaskCreationScreen: View {
             
             // Subtitle
             Text("Describe your task and I'll create it for you")
-                .font(.subheadline)
+                .font(isCompact ? .footnote : .subheadline)
                 .foregroundStyle(Color.textMuted)
-                .padding(.top, 12)
+                .padding(.top, isCompact ? 8 : 12)
                 .opacity(promptOpacity * 0.8)
             
             Spacer()
             Spacer()
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, isCompact ? 24 : 32)
     }
     
     // MARK: - Conversation View
     
-    private var conversationView: some View {
+    private func conversationView(isCompact: Bool) -> some View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
+                VStack(spacing: isCompact ? 16 : 20) {
                     // Messages
                     ForEach(messages) { message in
                         if message.isFromAI {
                             NeonAIMessage(
                                 message: message.content,
-                                isBold: message.isBold
+                                isBold: message.isBold,
+                                isCompact: isCompact
                             )
                         } else {
-                            NeonUserMessage(message: message.content)
+                            NeonUserMessage(message: message.content, isCompact: isCompact)
                         }
                     }
                     
                     // Typing indicator
                     if isTyping {
-                        NeonTypingIndicator()
-                            .padding(.leading, 20)
+                        NeonTypingIndicator(isCompact: isCompact)
+                            .padding(.leading, isCompact ? 16 : 20)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
@@ -261,16 +266,17 @@ struct AITaskCreationScreen: View {
                             location: taskDraft.location,
                             duration: taskDraft.duration,
                             category: taskDraft.category,
-                            isComplete: taskDraft.isReadyToPost
+                            isComplete: taskDraft.isReadyToPost,
+                            isCompact: isCompact
                         )
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, isCompact ? 12 : 16)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                     }
                     
-                    Color.clear.frame(height: 20)
+                    Color.clear.frame(height: isCompact ? 16 : 20)
                         .id("bottom")
                 }
-                .padding(.top, 24)
+                .padding(.top, isCompact ? 16 : 24)
             }
             .onChange(of: messages.count) { _, _ in
                 withAnimation(.spring(response: 0.4)) {
@@ -287,25 +293,25 @@ struct AITaskCreationScreen: View {
     
     // MARK: - Post Button
     
-    private var postButton: some View {
+    private func postButton(isCompact: Bool) -> some View {
         Button {
             postTask()
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: isCompact ? 10 : 12) {
                 if isPosting {
                     ProgressView()
                         .tint(.white)
                 } else {
                     Image(systemName: "paperplane.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: isCompact ? 14 : 16, weight: .semibold))
                     
                     Text("Post Task")
-                        .font(.headline.weight(.bold))
+                        .font(isCompact ? .subheadline.weight(.bold) : .headline.weight(.bold))
                 }
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, isCompact ? 14 : 16)
             .background(
                 LinearGradient(
                     colors: [Color.successGreen, Color.successGreen.opacity(0.8)],
@@ -313,36 +319,36 @@ struct AITaskCreationScreen: View {
                     endPoint: .trailing
                 )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.successGreen.opacity(0.5), radius: 15, y: 5)
+            .clipShape(RoundedRectangle(cornerRadius: isCompact ? 14 : 16))
+            .shadow(color: Color.successGreen.opacity(0.5), radius: isCompact ? 12 : 15, y: isCompact ? 4 : 5)
         }
         .disabled(isPosting)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.horizontal, isCompact ? 16 : 20)
+        .padding(.vertical, isCompact ? 10 : 12)
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
     
     // MARK: - Neon Input Bar
     
-    private var neonInputBar: some View {
-        HStack(spacing: 12) {
+    private func neonInputBar(isCompact: Bool) -> some View {
+        HStack(spacing: isCompact ? 10 : 12) {
             // Glowing text field
             HStack {
                 TextField("Describe what you need...", text: $userInput, axis: .vertical)
-                    .font(.body)
+                    .font(isCompact ? .subheadline : .body)
                     .foregroundStyle(Color.textPrimary)
                     .lineLimit(1...4)
                     .tint(Color.aiPurple)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.horizontal, isCompact ? 16 : 20)
+            .padding(.vertical, isCompact ? 12 : 14)
             .background(
                 ZStack {
-                    RoundedRectangle(cornerRadius: 24)
+                    RoundedRectangle(cornerRadius: isCompact ? 20 : 24)
                         .fill(Color.surfaceElevated)
                     
                     // Glow border
-                    RoundedRectangle(cornerRadius: 24)
+                    RoundedRectangle(cornerRadius: isCompact ? 20 : 24)
                         .stroke(
                             LinearGradient(
                                 colors: userInput.isEmpty 
@@ -357,7 +363,7 @@ struct AITaskCreationScreen: View {
             )
             .shadow(
                 color: userInput.isEmpty ? Color.clear : Color.aiPurple.opacity(0.3),
-                radius: 15
+                radius: isCompact ? 12 : 15
             )
             
             // Neon send button
@@ -369,24 +375,24 @@ struct AITaskCreationScreen: View {
                     if !userInput.isEmpty {
                         Circle()
                             .fill(Color.aiPurple.opacity(0.3))
-                            .frame(width: 56, height: 56)
+                            .frame(width: isCompact ? 48 : 56, height: isCompact ? 48 : 56)
                             .blur(radius: 10)
                     }
                     
                     Circle()
                         .fill(
-                            userInput.isEmpty
-                                ? Color.surfaceElevated
-                                : LinearGradient(
-                                    colors: [Color.aiPurple, Color.brandPurple],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                            LinearGradient(
+                                colors: userInput.isEmpty
+                                    ? [Color.surfaceElevated, Color.surfaceElevated]
+                                    : [Color.aiPurple, Color.brandPurple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                        .frame(width: 48, height: 48)
+                        .frame(width: isCompact ? 40 : 48, height: isCompact ? 40 : 48)
                     
                     Image(systemName: "arrow.up")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: isCompact ? 16 : 18, weight: .bold))
                         .foregroundStyle(userInput.isEmpty ? Color.textMuted : .white)
                 }
             }
@@ -394,8 +400,8 @@ struct AITaskCreationScreen: View {
             .scaleEffect(userInput.isEmpty ? 1.0 : 1.05)
             .animation(.spring(response: 0.3), value: userInput.isEmpty)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
+        .padding(.horizontal, isCompact ? 12 : 16)
+        .padding(.vertical, isCompact ? 12 : 16)
         .background(
             Color.black.opacity(0.8)
                 .blur(radius: 20)
@@ -503,14 +509,15 @@ struct AITaskCreationScreen: View {
 struct NeonAIMessage: View {
     let message: String
     let isBold: Bool
+    var isCompact: Bool = false
     
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: isCompact ? 10 : 12) {
             // AI avatar with glow
             ZStack {
                 Circle()
                     .fill(Color.aiPurple.opacity(0.2))
-                    .frame(width: 40, height: 40)
+                    .frame(width: isCompact ? 32 : 40, height: isCompact ? 32 : 40)
                     .blur(radius: 5)
                 
                 Circle()
@@ -521,33 +528,33 @@ struct NeonAIMessage: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 36, height: 36)
+                    .frame(width: isCompact ? 28 : 36, height: isCompact ? 28 : 36)
                 
                 Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: isCompact ? 11 : 14, weight: .semibold))
                     .foregroundStyle(.white)
             }
             
             // Message bubble
             VStack(alignment: .leading, spacing: 4) {
                 Text(message)
-                    .font(isBold ? .title3.bold() : .body)
+                    .font(isBold ? (isCompact ? .headline.bold() : .title3.bold()) : (isCompact ? .subheadline : .body))
                     .foregroundStyle(Color.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(16)
+            .padding(isCompact ? 12 : 16)
             .background(
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: isCompact ? 16 : 20)
                     .fill(Color.surfaceElevated)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20)
+                        RoundedRectangle(cornerRadius: isCompact ? 16 : 20)
                             .stroke(Color.aiPurple.opacity(0.2), lineWidth: 1)
                     )
             )
             
-            Spacer(minLength: 40)
+            Spacer(minLength: isCompact ? 30 : 40)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, isCompact ? 12 : 16)
     }
 }
 
@@ -555,15 +562,16 @@ struct NeonAIMessage: View {
 
 struct NeonUserMessage: View {
     let message: String
+    var isCompact: Bool = false
     
     var body: some View {
         HStack {
-            Spacer(minLength: 60)
+            Spacer(minLength: isCompact ? 48 : 60)
             
             Text(message)
-                .font(.body)
+                .font(isCompact ? .subheadline : .body)
                 .foregroundStyle(.white)
-                .padding(16)
+                .padding(isCompact ? 12 : 16)
                 .background(
                     LinearGradient(
                         colors: [Color.brandPurple, Color.aiPurple],
@@ -571,20 +579,21 @@ struct NeonUserMessage: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .shadow(color: Color.brandPurple.opacity(0.3), radius: 10, y: 5)
+                .clipShape(RoundedRectangle(cornerRadius: isCompact ? 16 : 20))
+                .shadow(color: Color.brandPurple.opacity(0.3), radius: isCompact ? 8 : 10, y: isCompact ? 4 : 5)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, isCompact ? 12 : 16)
     }
 }
 
 // MARK: - Neon Typing Indicator
 
 struct NeonTypingIndicator: View {
+    var isCompact: Bool = false
     @State private var animatingDot = 0
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: isCompact ? 10 : 12) {
             // AI avatar
             ZStack {
                 Circle()
@@ -595,19 +604,19 @@ struct NeonTypingIndicator: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 36, height: 36)
+                    .frame(width: isCompact ? 28 : 36, height: isCompact ? 28 : 36)
                 
                 Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: isCompact ? 11 : 14, weight: .semibold))
                     .foregroundStyle(.white)
             }
             
             // Dots
-            HStack(spacing: 6) {
+            HStack(spacing: isCompact ? 5 : 6) {
                 ForEach(0..<3, id: \.self) { index in
                     Circle()
                         .fill(Color.aiPurple)
-                        .frame(width: 10, height: 10)
+                        .frame(width: isCompact ? 8 : 10, height: isCompact ? 8 : 10)
                         .scaleEffect(animatingDot == index ? 1.3 : 0.8)
                         .opacity(animatingDot == index ? 1.0 : 0.4)
                         .shadow(
@@ -616,10 +625,10 @@ struct NeonTypingIndicator: View {
                         )
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, isCompact ? 12 : 16)
+            .padding(.vertical, isCompact ? 10 : 14)
             .background(
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: isCompact ? 16 : 20)
                     .fill(Color.surfaceElevated)
             )
         }
@@ -646,6 +655,7 @@ struct NeonTaskCardPreview: View {
     let duration: String
     let category: TaskCategory?
     let isComplete: Bool
+    var isCompact: Bool = false
     
     @State private var hasAppeared = false
     @State private var glowPulse: CGFloat = 0.3
@@ -654,13 +664,13 @@ struct NeonTaskCardPreview: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
-                HStack(spacing: 8) {
+                HStack(spacing: isCompact ? 6 : 8) {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: isCompact ? 10 : 12, weight: .bold))
                         .foregroundStyle(Color.aiPurple)
                     
                     Text("YOUR TASK")
-                        .font(.system(size: 10, weight: .heavy))
+                        .font(.system(size: isCompact ? 9 : 10, weight: .heavy))
                         .tracking(2)
                         .foregroundStyle(Color.aiPurple)
                 }
@@ -668,69 +678,69 @@ struct NeonTaskCardPreview: View {
                 Spacer()
                 
                 // Status
-                HStack(spacing: 6) {
+                HStack(spacing: isCompact ? 5 : 6) {
                     Circle()
                         .fill(isComplete ? Color.successGreen : Color.warningOrange)
-                        .frame(width: 8, height: 8)
+                        .frame(width: isCompact ? 6 : 8, height: isCompact ? 6 : 8)
                         .shadow(color: isComplete ? Color.successGreen : Color.warningOrange, radius: 4)
                     
                     Text(isComplete ? "Ready" : "Building...")
-                        .font(.caption2.weight(.semibold))
+                        .font(isCompact ? .system(size: 10, weight: .semibold) : .caption2.weight(.semibold))
                         .foregroundStyle(isComplete ? Color.successGreen : Color.warningOrange)
                 }
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, isCompact ? 12 : 16)
             
             // Category
             if let category = category {
                 Text(category.displayName.uppercased())
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: isCompact ? 9 : 10, weight: .bold))
                     .tracking(1)
                     .foregroundStyle(Color.brandPurple)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, isCompact ? 8 : 10)
+                    .padding(.vertical, isCompact ? 3 : 4)
                     .background(
                         Capsule()
                             .fill(Color.brandPurple.opacity(0.15))
                     )
-                    .padding(.bottom, 12)
+                    .padding(.bottom, isCompact ? 10 : 12)
             }
             
             // Title
             Text(title.isEmpty ? "Untitled Task" : title)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: isCompact ? 17 : 20, weight: .bold))
                 .foregroundStyle(title.isEmpty ? Color.textMuted : Color.textPrimary)
                 .lineLimit(2)
             
-            Spacer().frame(height: 16)
+            Spacer().frame(height: isCompact ? 12 : 16)
             
             // Payment
-            HStack(spacing: 8) {
+            HStack(spacing: isCompact ? 6 : 8) {
                 ZStack {
                     Circle()
                         .fill(Color.moneyGreen.opacity(0.15))
-                        .frame(width: 36, height: 36)
+                        .frame(width: isCompact ? 30 : 36, height: isCompact ? 30 : 36)
                     
                     Image(systemName: "dollarsign")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: isCompact ? 13 : 16, weight: .bold))
                         .foregroundStyle(Color.moneyGreen)
                 }
                 
                 if let payment = payment {
                     Text("$\(String(format: "%.0f", payment))")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: isCompact ? 22 : 28, weight: .bold))
                         .foregroundStyle(Color.moneyGreen)
                         .shadow(color: Color.moneyGreen.opacity(0.3), radius: 5)
                 } else {
                     Text("TBD")
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.system(size: isCompact ? 20 : 24, weight: .semibold))
                         .foregroundStyle(Color.textMuted)
                 }
                 
                 Spacer()
             }
             
-            Spacer().frame(height: 16)
+            Spacer().frame(height: isCompact ? 12 : 16)
             
             // Divider
             Rectangle()
@@ -743,41 +753,42 @@ struct NeonTaskCardPreview: View {
                 )
                 .frame(height: 1)
             
-            Spacer().frame(height: 16)
+            Spacer().frame(height: isCompact ? 12 : 16)
             
             // Details
             HStack(spacing: 0) {
-                HStack(spacing: 6) {
+                HStack(spacing: isCompact ? 5 : 6) {
                     Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: isCompact ? 12 : 14))
                         .foregroundStyle(Color.textMuted)
                     
                     Text(location.isEmpty ? "Location TBD" : location)
-                        .font(.subheadline)
+                        .font(isCompact ? .footnote : .subheadline)
                         .foregroundStyle(location.isEmpty ? Color.textMuted : Color.textSecondary)
+                        .lineLimit(1)
                 }
                 
                 Spacer()
                 
-                HStack(spacing: 6) {
+                HStack(spacing: isCompact ? 5 : 6) {
                     Image(systemName: "clock.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: isCompact ? 12 : 14))
                         .foregroundStyle(Color.textMuted)
                     
                     Text(duration.isEmpty ? "Duration TBD" : duration)
-                        .font(.subheadline)
+                        .font(isCompact ? .footnote : .subheadline)
                         .foregroundStyle(duration.isEmpty ? Color.textMuted : Color.textSecondary)
                 }
             }
         }
-        .padding(20)
+        .padding(isCompact ? 16 : 20)
         .background(
             ZStack {
-                RoundedRectangle(cornerRadius: 24)
+                RoundedRectangle(cornerRadius: isCompact ? 20 : 24)
                     .fill(Color.surfaceElevated)
                 
                 // Neon border
-                RoundedRectangle(cornerRadius: 24)
+                RoundedRectangle(cornerRadius: isCompact ? 20 : 24)
                     .stroke(
                         LinearGradient(
                             colors: [
@@ -792,7 +803,7 @@ struct NeonTaskCardPreview: View {
                     )
             }
         )
-        .shadow(color: Color.aiPurple.opacity(glowPulse * 0.5), radius: 20)
+        .shadow(color: Color.aiPurple.opacity(glowPulse * 0.5), radius: isCompact ? 15 : 20)
         .scaleEffect(hasAppeared ? 1.0 : 0.85)
         .opacity(hasAppeared ? 1.0 : 0)
         .onAppear {

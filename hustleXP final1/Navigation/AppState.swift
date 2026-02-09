@@ -8,13 +8,13 @@
 import SwiftUI
 
 // MARK: - User Role
-enum UserRole: String, CaseIterable {
+enum UserRole: String, CaseIterable, Codable {
     case hustler = "hustler"
     case poster = "poster"
 }
 
 // MARK: - Trust Tier (5 tiers as per spec)
-enum TrustTier: Int, CaseIterable {
+enum TrustTier: Int, CaseIterable, Codable {
     case rookie = 1
     case verified = 2
     case trusted = 3

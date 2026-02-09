@@ -29,32 +29,36 @@ struct ProfileSetupScreen: View {
     }
     
     var body: some View {
-        ZStack {
-            // Background
-            backgroundLayer
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 28) {
-                    // Header
-                    headerSection
-                    
-                    // Avatar section
-                    avatarSection
-                    
-                    // Form fields
-                    formSection
-                    
-                    // Tips card
-                    tipsCard
-                    
-                    Spacer(minLength: 120)
+            ZStack {
+                // Background
+                backgroundLayer
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: isCompact ? 20 : 28) {
+                        // Header
+                        headerSection(isCompact: isCompact)
+                        
+                        // Avatar section
+                        avatarSection(isCompact: isCompact)
+                        
+                        // Form fields
+                        formSection(isCompact: isCompact)
+                        
+                        // Tips card
+                        tipsCard(isCompact: isCompact)
+                        
+                        Spacer(minLength: isCompact ? 100 : 120)
+                    }
+                    .padding(.horizontal, isCompact ? 18 : 24)
                 }
-                .padding(.horizontal, 24)
+                .scrollDismissesKeyboard(.interactively)
+                
+                // Bottom button
+                bottomActionBar(isCompact: isCompact)
             }
-            .scrollDismissesKeyboard(.interactively)
-            
-            // Bottom button
-            bottomActionBar
         }
         .navigationBarBackButtonHidden(false)
         .navigationTitle("Profile")
@@ -100,17 +104,17 @@ struct ProfileSetupScreen: View {
     
     // MARK: - Header Section
     
-    private var headerSection: some View {
-        VStack(spacing: 12) {
+    private func headerSection(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 8 : 12) {
             Text("Set Up Your Profile")
-                .font(.system(size: 28, weight: .bold))
+                .font(.system(size: isCompact ? 24 : 28, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
             
             Text("Let people know who you are")
-                .font(.subheadline)
+                .font(.system(size: isCompact ? 14 : 15))
                 .foregroundStyle(Color.textSecondary)
         }
-        .padding(.top, 24)
+        .padding(.top, isCompact ? 16 : 24)
         .opacity(showContent ? 1 : 0)
         .offset(y: showContent ? 0 : 20)
         .animation(.easeOut(duration: 0.4), value: showContent)
@@ -118,21 +122,21 @@ struct ProfileSetupScreen: View {
     
     // MARK: - Avatar Section
     
-    private var avatarSection: some View {
-        VStack(spacing: 16) {
+    private func avatarSection(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 12 : 16) {
             // Avatar with glow
             ZStack {
                 // Glow background
                 Circle()
                     .fill(Color.brandPurple.opacity(0.2))
-                    .frame(width: 140, height: 140)
+                    .frame(width: isCompact ? 110 : 140, height: isCompact ? 110 : 140)
                     .blur(radius: 20)
                 
                 if let image = avatarImage {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 120, height: 120)
+                        .frame(width: isCompact ? 95 : 120, height: isCompact ? 95 : 120)
                         .clipShape(Circle())
                         .overlay(
                             Circle()
@@ -148,10 +152,10 @@ struct ProfileSetupScreen: View {
                 } else {
                     Circle()
                         .fill(Color.surfaceElevated)
-                        .frame(width: 120, height: 120)
+                        .frame(width: isCompact ? 95 : 120, height: isCompact ? 95 : 120)
                         .overlay(
                             Image(systemName: "person.fill")
-                                .font(.system(size: 48))
+                                .font(.system(size: isCompact ? 38 : 48))
                                 .foregroundStyle(Color.textSecondary)
                         )
                         .overlay(
@@ -169,14 +173,14 @@ struct ProfileSetupScreen: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 36, height: 36)
+                    .frame(width: isCompact ? 30 : 36, height: isCompact ? 30 : 36)
                     .overlay(
                         Image(systemName: "camera.fill")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: isCompact ? 12 : 14, weight: .semibold))
                             .foregroundStyle(.white)
                     )
                     .shadow(color: Color.brandPurple.opacity(0.4), radius: 8, y: 2)
-                    .offset(x: 42, y: 42)
+                    .offset(x: isCompact ? 34 : 42, y: isCompact ? 34 : 42)
             }
             .onTapGesture {
                 let impact = UIImpactFeedbackGenerator(style: .light)
@@ -201,8 +205,8 @@ struct ProfileSetupScreen: View {
     
     // MARK: - Form Section
     
-    private var formSection: some View {
-        VStack(spacing: 20) {
+    private func formSection(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 16 : 20) {
             // Display Name field
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -297,8 +301,8 @@ struct ProfileSetupScreen: View {
     
     // MARK: - Tips Card
     
-    private var tipsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func tipsCard(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 10 : 12) {
             HStack(spacing: 8) {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 14, weight: .semibold))
@@ -315,12 +319,12 @@ struct ProfileSetupScreen: View {
                 tipRow(icon: "star.fill", text: "Complete profiles get more tasks", color: .yellow)
             }
         }
-        .padding(16)
+        .padding(isCompact ? 12 : 16)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: isCompact ? 14 : 16)
                 .fill(Color.surfaceElevated)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: isCompact ? 14 : 16)
                         .stroke(Color.white.opacity(0.05), lineWidth: 1)
                 )
         )
@@ -342,7 +346,7 @@ struct ProfileSetupScreen: View {
     
     // MARK: - Bottom Action Bar
     
-    private var bottomActionBar: some View {
+    private func bottomActionBar(isCompact: Bool) -> some View {
         VStack {
             Spacer()
             
@@ -358,14 +362,14 @@ struct ProfileSetupScreen: View {
                                 .tint(.white)
                         } else {
                             Text("Complete Setup")
-                                .font(.headline.weight(.semibold))
+                                .font(.system(size: isCompact ? 15 : 17, weight: .semibold))
                             Image(systemName: "arrow.right")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: isCompact ? 12 : 14, weight: .bold))
                         }
                     }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 52)
+                    .frame(height: isCompact ? 48 : 52)
                     .background(
                         RoundedRectangle(cornerRadius: 14)
                             .fill(
@@ -385,8 +389,8 @@ struct ProfileSetupScreen: View {
                     .shadow(color: isValid ? Color.brandPurple.opacity(0.3) : .clear, radius: 12, y: 4)
                 }
                 .disabled(!isValid || isLoading)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
+                .padding(.horizontal, isCompact ? 18 : 24)
+                .padding(.vertical, isCompact ? 12 : 16)
                 .background(
                     Rectangle()
                         .fill(.ultraThinMaterial)

@@ -44,21 +44,21 @@ struct LockedQuestsTab: View {
         HStack(spacing: 8) {
             Image(systemName: "lock.fill")
                 .font(.system(size: 14))
-                .foregroundStyle(.instantYellow)
+                .foregroundStyle(Color.instantYellow)
             
             Text("Locked Quests")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.textPrimary)
+                .foregroundStyle(Color.textPrimary)
             
             Text("(\(lockedQuests.count))")
                 .font(.system(size: 13))
-                .foregroundStyle(.textMuted)
+                .foregroundStyle(Color.textMuted)
             
             Spacer()
             
             Text("Upgrade to unlock")
                 .font(.system(size: 12))
-                .foregroundStyle(.textMuted)
+                .foregroundStyle(Color.textMuted)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -69,15 +69,15 @@ struct LockedQuestsTab: View {
         VStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 40))
-                .foregroundStyle(.successGreen)
+                .foregroundStyle(Color.successGreen)
             
             Text("You're eligible for all nearby quests!")
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.textPrimary)
+                .foregroundStyle(Color.textPrimary)
             
             Text("Keep building your skills to unlock more")
                 .font(.system(size: 13))
-                .foregroundStyle(.textMuted)
+                .foregroundStyle(Color.textMuted)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 48)
@@ -147,7 +147,7 @@ struct LockedQuestCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(quest.task.title)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.textPrimary)
+                        .foregroundStyle(Color.textPrimary)
                         .lineLimit(1)
                     
                     HStack(spacing: 8) {
@@ -159,7 +159,7 @@ struct LockedQuestCard: View {
                                 Text(formatDistance(distance))
                                     .font(.system(size: 12))
                             }
-                            .foregroundStyle(.textMuted)
+                            .foregroundStyle(Color.textMuted)
                         }
                         
                         // Block reason
@@ -173,11 +173,11 @@ struct LockedQuestCard: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(quest.task.formattedPayment)
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.successGreen)
+                        .foregroundStyle(Color.successGreen)
                     
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: 12))
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                 }
             }
             .padding(16)
@@ -193,11 +193,11 @@ struct LockedQuestCard: View {
             HStack(spacing: 10) {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(.instantYellow)
+                    .foregroundStyle(Color.instantYellow)
                 
                 Text(quest.hookMessage)
                     .font(.system(size: 14))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 16)
@@ -211,7 +211,7 @@ struct LockedQuestCard: View {
                     Text(unlockButtonText)
                 }
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.brandBlack)
+                .foregroundStyle(Color.brandBlack)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(lockColor)
@@ -308,25 +308,25 @@ struct MiniLockedQuestBanner: View {
                         
                         Image(systemName: "lock.fill")
                             .font(.system(size: 14))
-                            .foregroundStyle(.instantYellow)
+                            .foregroundStyle(Color.instantYellow)
                     }
                     
                     // Info
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(quest.task.formattedPayment) quest nearby")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.textPrimary)
+                            .foregroundStyle(Color.textPrimary)
                         
                         Text("Upgrade to unlock \(totalLocked) more")
                             .font(.system(size: 12))
-                            .foregroundStyle(.textMuted)
+                            .foregroundStyle(Color.textMuted)
                     }
                     
                     Spacer()
                     
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.instantYellow)
+                        .foregroundStyle(Color.instantYellow)
                 }
                 .padding(12)
                 .background(

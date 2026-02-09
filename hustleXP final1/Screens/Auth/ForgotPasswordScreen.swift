@@ -20,118 +20,127 @@ struct ForgotPasswordScreen: View {
     }
     
     var body: some View {
-        ZStack {
-            // Background
-            LinearGradient.brandGradient
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            VStack(spacing: 32) {
-                Spacer()
+            ZStack {
+                // Background
+                LinearGradient.brandGradient
+                    .ignoresSafeArea()
                 
-                // Icon and header
-                VStack(spacing: 20) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.brandPurple.opacity(0.15))
-                            .frame(width: 100, height: 100)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: isCompact ? 24 : 32) {
+                        Spacer(minLength: isCompact ? 30 : 50)
                         
-                        Image(systemName: isSubmitted ? "envelope.badge.fill" : "lock.rotation")
-                            .font(.system(size: 40))
-                            .foregroundStyle(Color.brandPurple)
-                    }
-                    
-                    VStack(spacing: 12) {
-                        HXText(
-                            isSubmitted ? "Check Your Email" : "Reset Password",
-                            style: .title
-                        )
-                        
-                        HXText(
-                            isSubmitted
-                                ? "We've sent reset instructions to \(email)"
-                                : "Enter your email and we'll send you instructions to reset your password",
-                            style: .body,
-                            color: .textSecondary
-                        )
-                        .multilineTextAlignment(.center)
-                    }
-                }
-                .padding(.horizontal, 24)
-                
-                Spacer()
-                
-                if !isSubmitted {
-                    // Form
-                    VStack(spacing: 20) {
-                        // Email input
-                        VStack(alignment: .leading, spacing: 8) {
-                            HXText("Email Address", style: .subheadline, color: .textSecondary)
-                            
-                            HStack(spacing: 12) {
-                                Image(systemName: "envelope.fill")
-                                    .foregroundStyle(Color.textSecondary)
-                                
-                                TextField("", text: $email, prompt: Text("Enter your email").foregroundColor(.textTertiary))
-                                    .font(.body)
-                                    .foregroundStyle(Color.textPrimary)
-                                    .textContentType(.emailAddress)
-                                    .autocapitalization(.none)
-                                    .keyboardType(.emailAddress)
-                                    .focused($isEmailFocused)
-                            }
-                            .padding(16)
-                            .background(Color.surfaceElevated)
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(isEmailFocused ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
-                            )
-                        }
-                        
-                        HXButton(
-                            isLoading ? "Sending..." : "Send Reset Link",
-                            variant: .primary,
-                            isLoading: isLoading
-                        ) {
-                            handleSubmit()
-                        }
-                        .disabled(!isValidEmail || isLoading)
-                        .opacity(isValidEmail ? 1 : 0.5)
-                    }
-                    .padding(.horizontal, 24)
-                } else {
-                    // Success state
-                    VStack(spacing: 20) {
-                        // Success illustration
-                        VStack(spacing: 12) {
+                        // Icon and header
+                        VStack(spacing: isCompact ? 14 : 20) {
                             ZStack {
                                 Circle()
-                                    .fill(Color.successGreen.opacity(0.15))
-                                    .frame(width: 60, height: 60)
+                                    .fill(Color.brandPurple.opacity(0.15))
+                                    .frame(width: isCompact ? 80 : 100, height: isCompact ? 80 : 100)
                                 
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundStyle(Color.successGreen)
+                                Image(systemName: isSubmitted ? "envelope.badge.fill" : "lock.rotation")
+                                    .font(.system(size: isCompact ? 32 : 40))
+                                    .foregroundStyle(Color.brandPurple)
                             }
                             
-                            HXText("Email Sent!", style: .headline, color: .successGreen)
+                            VStack(spacing: isCompact ? 8 : 12) {
+                                Text(isSubmitted ? "Check Your Email" : "Reset Password")
+                                    .font(.system(size: isCompact ? 24 : 28, weight: .bold))
+                                    .foregroundStyle(Color.textPrimary)
+                                
+                                Text(isSubmitted
+                                    ? "We've sent reset instructions to \(email)"
+                                    : "Enter your email and we'll send you instructions to reset your password")
+                                    .font(.system(size: isCompact ? 14 : 16))
+                                    .foregroundStyle(Color.textSecondary)
+                                    .multilineTextAlignment(.center)
+                            }
                         }
-                        .padding(20)
-                        .background(Color.surfaceElevated)
-                        .cornerRadius(16)
+                        .padding(.horizontal, isCompact ? 18 : 24)
                         
-                        HXButton("Back to Sign In", variant: .primary) {
-                            router.popAuth()
-                        }
-                        
-                        Button(action: { isSubmitted = false }) {
-                            HXText("Didn't receive it? Try again", style: .subheadline, color: .brandPurple)
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                }
+                        Spacer(minLength: isCompact ? 20 : 40)
                 
-                Spacer()
+                        if !isSubmitted {
+                            // Form
+                            VStack(spacing: isCompact ? 16 : 20) {
+                                // Email input
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Email Address")
+                                        .font(.system(size: isCompact ? 13 : 14, weight: .medium))
+                                        .foregroundStyle(Color.textSecondary)
+                                    
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "envelope.fill")
+                                            .foregroundStyle(Color.textSecondary)
+                                        
+                                        TextField("", text: $email, prompt: Text("Enter your email").foregroundColor(.textTertiary))
+                                            .font(.system(size: isCompact ? 15 : 16))
+                                            .foregroundStyle(Color.textPrimary)
+                                            .textContentType(.emailAddress)
+                                            .autocapitalization(.none)
+                                            .keyboardType(.emailAddress)
+                                            .focused($isEmailFocused)
+                                    }
+                                    .padding(isCompact ? 12 : 16)
+                                    .background(Color.surfaceElevated)
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(isEmailFocused ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
+                                    )
+                                }
+                                
+                                HXButton(
+                                    isLoading ? "Sending..." : "Send Reset Link",
+                                    variant: .primary,
+                                    isLoading: isLoading
+                                ) {
+                                    handleSubmit()
+                                }
+                                .disabled(!isValidEmail || isLoading)
+                                .opacity(isValidEmail ? 1 : 0.5)
+                            }
+                            .padding(.horizontal, isCompact ? 18 : 24)
+                        } else {
+                            // Success state
+                            VStack(spacing: isCompact ? 16 : 20) {
+                                // Success illustration
+                                VStack(spacing: 12) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.successGreen.opacity(0.15))
+                                            .frame(width: isCompact ? 50 : 60, height: isCompact ? 50 : 60)
+                                        
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: isCompact ? 20 : 24, weight: .bold))
+                                            .foregroundStyle(Color.successGreen)
+                                    }
+                                    
+                                    Text("Email Sent!")
+                                        .font(.system(size: isCompact ? 18 : 20, weight: .bold))
+                                        .foregroundStyle(Color.successGreen)
+                                }
+                                .padding(isCompact ? 16 : 20)
+                                .background(Color.surfaceElevated)
+                                .cornerRadius(16)
+                                
+                                HXButton("Back to Sign In", variant: .primary) {
+                                    router.popAuth()
+                                }
+                                
+                                Button(action: { isSubmitted = false }) {
+                                    Text("Didn't receive it? Try again")
+                                        .font(.system(size: isCompact ? 13 : 14, weight: .medium))
+                                        .foregroundStyle(Color.brandPurple)
+                                }
+                            }
+                            .padding(.horizontal, isCompact ? 18 : 24)
+                        }
+                        
+                        Spacer(minLength: max(16, geometry.safeAreaInsets.bottom + 8))
+                    }
+                }
             }
         }
         .navigationBarBackButtonHidden(false)

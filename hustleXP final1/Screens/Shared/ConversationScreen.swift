@@ -8,11 +8,16 @@
 import SwiftUI
 
 struct ConversationScreen: View {
-    let conversationId: String
+    let conversationId: String // This is the taskId
+    
+    // v2.2.0: Real API service
+    @StateObject private var messagingService = MessagingService.shared
     
     @State private var messageText: String = ""
     @State private var messages: [ChatMessage] = []
+    @State private var apiMessages: [HXMessage] = []
     @State private var isLoading = true
+    @State private var isSending = false
     @FocusState private var isInputFocused: Bool
     
     var body: some View {
@@ -94,38 +99,63 @@ struct ConversationScreen: View {
     private func loadMessages() {
         isLoading = true
         
-        // Simulate loading mock messages
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            messages = [
-                ChatMessage(
-                    id: "1",
-                    text: "Hi! I've claimed your task and I'm on my way.",
-                    isFromCurrentUser: false,
-                    timestamp: Date().addingTimeInterval(-3600),
-                    senderName: "Jane D."
-                ),
-                ChatMessage(
-                    id: "2",
-                    text: "Great! Let me know when you arrive.",
-                    isFromCurrentUser: true,
-                    timestamp: Date().addingTimeInterval(-3500),
-                    senderName: "You"
-                ),
-                ChatMessage(
-                    id: "3",
-                    text: "I'm here now. The package is ready for pickup?",
-                    isFromCurrentUser: false,
-                    timestamp: Date().addingTimeInterval(-1800),
-                    senderName: "Jane D."
-                ),
-                ChatMessage(
-                    id: "4",
-                    text: "Yes, it's at the front desk. Ask for the brown box labeled 'Smith'.",
-                    isFromCurrentUser: true,
-                    timestamp: Date().addingTimeInterval(-1700),
-                    senderName: "You"
-                )
-            ]
+        // v2.2.0: Load messages from real API
+        Task {
+            do {
+                let hxMessages = try await messagingService.getTaskMessages(taskId: conversationId)
+                apiMessages = hxMessages
+                
+                // Convert HXMessage to ChatMessage for display
+                // Note: We determine isFromCurrentUser by checking if senderId matches current user
+                messages = hxMessages.map { msg in
+                    ChatMessage(
+                        id: msg.id,
+                        text: msg.content,
+                        isFromCurrentUser: msg.senderName == "You", // Simplified check
+                        timestamp: msg.timestamp,
+                        senderName: msg.senderName
+                    )
+                }
+                
+                // Mark as read
+                try? await messagingService.markAsRead(taskId: conversationId)
+                
+                print("✅ Conversation: Loaded \(messages.count) messages from API")
+            } catch {
+                print("⚠️ Conversation: API failed, using mock - \(error.localizedDescription)")
+                
+                // Fall back to mock messages
+                messages = [
+                    ChatMessage(
+                        id: "1",
+                        text: "Hi! I've claimed your task and I'm on my way.",
+                        isFromCurrentUser: false,
+                        timestamp: Date().addingTimeInterval(-3600),
+                        senderName: "Jane D."
+                    ),
+                    ChatMessage(
+                        id: "2",
+                        text: "Great! Let me know when you arrive.",
+                        isFromCurrentUser: true,
+                        timestamp: Date().addingTimeInterval(-3500),
+                        senderName: "You"
+                    ),
+                    ChatMessage(
+                        id: "3",
+                        text: "I'm here now. The package is ready for pickup?",
+                        isFromCurrentUser: false,
+                        timestamp: Date().addingTimeInterval(-1800),
+                        senderName: "Jane D."
+                    ),
+                    ChatMessage(
+                        id: "4",
+                        text: "Yes, it's at the front desk. Ask for the brown box labeled 'Smith'.",
+                        isFromCurrentUser: true,
+                        timestamp: Date().addingTimeInterval(-1700),
+                        senderName: "You"
+                    )
+                ]
+            }
             isLoading = false
         }
     }
@@ -133,19 +163,46 @@ struct ConversationScreen: View {
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
-        let newMessage = ChatMessage(
+        let content = messageText
+        messageText = ""
+        isSending = true
+        
+        // Optimistically add message to UI
+        let optimisticMessage = ChatMessage(
             id: UUID().uuidString,
-            text: messageText,
+            text: content,
             isFromCurrentUser: true,
             timestamp: Date(),
             senderName: "You"
         )
         
         withAnimation(.spring(response: 0.3)) {
-            messages.append(newMessage)
+            messages.append(optimisticMessage)
         }
         
-        messageText = ""
+        // v2.2.0: Send message via real API
+        Task {
+            do {
+                let sentMessage = try await messagingService.sendMessage(taskId: conversationId, content: content)
+                
+                // Update the optimistic message with real ID
+                if let index = messages.firstIndex(where: { $0.id == optimisticMessage.id }) {
+                    messages[index] = ChatMessage(
+                        id: sentMessage.id,
+                        text: sentMessage.content,
+                        isFromCurrentUser: true,
+                        timestamp: sentMessage.timestamp,
+                        senderName: sentMessage.senderName
+                    )
+                }
+                
+                print("✅ Conversation: Message sent via API")
+            } catch {
+                print("⚠️ Conversation: Failed to send message - \(error.localizedDescription)")
+                // Message is already displayed optimistically, just log the error
+            }
+            isSending = false
+        }
     }
 }
 

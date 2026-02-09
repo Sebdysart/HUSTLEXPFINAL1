@@ -41,7 +41,7 @@ struct RatingStars: View {
             }
             
             if mode == .display {
-                HXText(String(format: "%.1f", rating), style: .caption, color: .secondary)
+                HXText(String(format: "%.1f", rating), style: .caption, color: .textSecondary)
             }
         }
     }
@@ -58,7 +58,7 @@ struct RatingStars: View {
             }
         }) {
             Image(systemName: isHalfFilled ? "star.leadinghalf.filled" : (isFilled ? "star.fill" : "star"))
-                .foregroundStyle(isFilled || isHalfFilled ? .yellow : .gray.opacity(0.3))
+                .foregroundStyle(isFilled || isHalfFilled ? Color.warningOrange : Color.textMuted.opacity(0.3))
                 .font(mode == .input ? .title : .caption)
         }
         .disabled(mode == .display)

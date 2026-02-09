@@ -34,17 +34,36 @@ enum HustlerRoute: Hashable {
     case profile
     case earnings
     case xpBreakdown
+    // v1.8.0 routes
+    case taxPayment
+    case fileClaim
+    case claimsHistory
+    // v1.9.0 Spatial Intelligence routes
+    case heatMapFullscreen
+    case batchDetails(batchId: String)
+    // v2.0.0 LIVE Mode routes
+    case liveRadar
+    case onTheWayTracking(trackingId: String)
+    // v2.1.0 Professional Licensing routes
+    case skillSelection
+    case licenseUpload(type: LicenseType)
+    case lockedQuests
 }
 
 enum PosterRoute: Hashable {
     case home
     case createTask
+    case aiTaskCreation
     case taskDetail(taskId: String)
     case activeTasks
     case taskManagement(taskId: String)
     case proofReview(taskId: String)
+    case conversation(taskId: String)
     case history
     case profile
+    // v2.0.0 LIVE Mode routes
+    case asapTaskCreation
+    case questTracking(questId: String)
 }
 
 enum SharedRoute: Hashable {

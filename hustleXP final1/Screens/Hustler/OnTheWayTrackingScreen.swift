@@ -393,7 +393,7 @@ struct OnTheWayTrackingScreen: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.surfaceMuted)
+                    .fill(Color.surfaceSecondary)
             )
         }
         .padding(16)
@@ -501,7 +501,7 @@ struct OnTheWayTrackingScreen: View {
         tracking = OnTheWaySession(
             id: trackingId,
             questId: "quest-1",
-            workerId: appState.currentUserId ?? "mock",
+            workerId: appState.userId ?? "mock",
             acceptedAt: Date(),
             navigationStartedAt: nil,
             arrivedAt: nil,

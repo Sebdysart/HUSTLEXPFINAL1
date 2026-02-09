@@ -24,6 +24,7 @@ struct RootNavigator: View {
                 MainTabView()
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.3), value: appState.authState)
     }
 }

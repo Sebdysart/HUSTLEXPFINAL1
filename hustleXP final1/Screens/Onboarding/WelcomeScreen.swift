@@ -228,10 +228,9 @@ private struct FeatureRow: View {
     .environment(Router())
 }
 
-#Preview("Compact (SE)") {
+#Preview("Compact (SE)", traits: .fixedLayout(width: 375, height: 667)) {
     NavigationStack {
         WelcomeScreen()
     }
     .environment(Router())
-    .previewDevice(PreviewDevice(rawValue: "iPhone SE (3rd generation)"))
 }

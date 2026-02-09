@@ -12,15 +12,23 @@ struct HustlerHistoryScreen: View {
     @Environment(Router.self) private var router
     
     var body: some View {
-        Group {
-            if dataService.completedTasks.isEmpty {
-                emptyState
-            } else {
-                taskList
+        ZStack {
+            Color.brandBlack
+                .ignoresSafeArea()
+            
+            Group {
+                if dataService.completedTasks.isEmpty {
+                    emptyState
+                } else {
+                    taskList
+                }
             }
         }
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(Color.brandBlack, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
     }
     
     // MARK: - Task List
@@ -86,7 +94,7 @@ struct HistoryStatCard: View {
     var body: some View {
         VStack(spacing: 4) {
             HXText(value, style: .title2, color: color)
-            HXText(title, style: .caption, color: .secondary)
+            HXText(title, style: .caption, color: .textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding()
@@ -105,7 +113,7 @@ struct CompletedTaskCard: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     HXText(task.title, style: .headline)
-                    HXText(task.location, style: .caption, color: .secondary)
+                    HXText(task.location, style: .caption, color: .textSecondary)
                 }
                 
                 Spacer()
@@ -117,7 +125,7 @@ struct CompletedTaskCard: View {
             
             HStack {
                 if let completedAt = task.completedAt {
-                    HXText(completedAt.formatted(date: .abbreviated, time: .omitted), style: .caption, color: .secondary)
+                    HXText(completedAt.formatted(date: .abbreviated, time: .omitted), style: .caption, color: .textSecondary)
                 }
                 
                 Spacer()
@@ -126,7 +134,7 @@ struct CompletedTaskCard: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.surfaceElevated)
         .cornerRadius(12)
     }
 }

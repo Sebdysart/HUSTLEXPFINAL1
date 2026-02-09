@@ -19,7 +19,7 @@ struct ListItem: View {
     
     init(
         icon: String? = nil,
-        iconColor: Color = .blue,
+        iconColor: Color = .infoBlue,
         title: String,
         subtitle: String? = nil,
         trailing: AnyView? = nil,
@@ -47,7 +47,7 @@ struct ListItem: View {
                     HXText(title, style: .body)
                     
                     if let subtitle = subtitle {
-                        HXText(subtitle, style: .caption, color: .secondary)
+                        HXText(subtitle, style: .caption, color: .textSecondary)
                     }
                 }
                 
@@ -58,11 +58,11 @@ struct ListItem: View {
                 }
                 
                 if showChevron {
-                    HXIcon(HXIcon.chevronRight, size: .small, color: .secondary)
+                    HXIcon(HXIcon.chevronRight, size: .small, color: .textTertiary)
                 }
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.surfaceElevated)
             .cornerRadius(12)
         }
         .buttonStyle(.plain)
@@ -80,14 +80,14 @@ struct ListItem: View {
         
         ListItem(
             icon: "bell.fill",
-            iconColor: .orange,
+            iconColor: .warningOrange,
             title: "Notifications",
             subtitle: "Manage your alerts"
         ) {}
         
         ListItem(
             icon: "creditcard.fill",
-            iconColor: .green,
+            iconColor: .moneyGreen,
             title: "Payment Methods",
             trailing: AnyView(HXBadge(variant: .count(2))),
             action: {}

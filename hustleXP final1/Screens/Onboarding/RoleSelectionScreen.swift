@@ -17,27 +17,29 @@ struct RoleSelectionScreen: View {
     @State private var hasAnimated = false
     
     var body: some View {
-        ZStack {
-            // Background
-            backgroundLayer
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            ScrollView(showsIndicators: false) {
+            ZStack {
+                // Background
+                backgroundLayer
+                
                 VStack(spacing: 0) {
                     // Header
-                    headerSection
-                        .padding(.top, 20)
+                    headerSection(isCompact: isCompact)
+                        .padding(.top, isCompact ? 8 : 16)
                     
-                    Spacer(minLength: 32)
+                    Spacer()
                     
                     // Role cards
-                    roleCardsSection
+                    roleCardsSection(isCompact: isCompact)
                     
-                    Spacer(minLength: 32)
+                    Spacer()
                     
                     // Continue button
-                    continueSection
+                    continueSection(isCompact: isCompact)
+                        .padding(.bottom, max(16, geometry.safeAreaInsets.bottom + 8))
                 }
-                .padding(.bottom, 32)
             }
         }
         .navigationBarBackButtonHidden(false)
@@ -89,28 +91,28 @@ struct RoleSelectionScreen: View {
     
     // MARK: - Header Section
     
-    private var headerSection: some View {
-        VStack(spacing: 16) {
+    private func headerSection(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 12 : 16) {
             // Icon
             ZStack {
                 Circle()
                     .fill(Color.brandPurple.opacity(0.15))
-                    .frame(width: 72, height: 72)
+                    .frame(width: isCompact ? 60 : 72, height: isCompact ? 60 : 72)
                 
                 Image(systemName: "arrow.triangle.branch")
-                    .font(.system(size: 28, weight: .medium))
+                    .font(.system(size: isCompact ? 24 : 28, weight: .medium))
                     .foregroundStyle(Color.brandPurple)
             }
             .scaleEffect(showContent ? 1 : 0.5)
             .opacity(showContent ? 1 : 0)
             
-            VStack(spacing: 8) {
-                Text("How will you hustle?")
-                    .font(.system(size: 28, weight: .bold))
+            VStack(spacing: 6) {
+                Text("Choose Your Role")
+                    .font(.system(size: isCompact ? 24 : 28, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
                 
-                Text("Choose your path — you can always do both later")
-                    .font(.subheadline)
+                Text("Select how you want to use HustleXP")
+                    .font(.system(size: isCompact ? 14 : 15))
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -118,14 +120,14 @@ struct RoleSelectionScreen: View {
             .opacity(showContent ? 1 : 0)
             .offset(y: showContent ? 0 : 20)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, isCompact ? 18 : 24)
         .animation(.easeOut(duration: 0.5), value: showContent)
     }
     
     // MARK: - Role Cards Section
     
-    private var roleCardsSection: some View {
-        VStack(spacing: 16) {
+    private func roleCardsSection(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 12 : 16) {
             PremiumRoleCard(
                 role: .hustler,
                 title: "Hustler",
@@ -156,14 +158,14 @@ struct RoleSelectionScreen: View {
             }
             .opacity(showContent ? 1 : 0)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, isCompact ? 18 : 24)
         .animation(.easeOut(duration: 0.5).delay(0.2), value: showContent)
     }
     
     // MARK: - Continue Section
     
-    private var continueSection: some View {
-        VStack(spacing: 16) {
+    private func continueSection(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 12 : 16) {
             HXButton(
                 "Continue",
                 icon: selectedRole != nil ? "arrow.right" : nil,
@@ -184,7 +186,7 @@ struct RoleSelectionScreen: View {
                     .foregroundStyle(Color.textMuted)
             }
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, isCompact ? 18 : 24)
         .opacity(showContent ? 1 : 0)
         .animation(.easeOut(duration: 0.5).delay(0.4), value: showContent)
     }
@@ -233,69 +235,51 @@ private struct PremiumRoleCard: View {
             impact.impactOccurred()
             action()
         }) {
-            VStack(alignment: .leading, spacing: 16) {
-                // Header row
-                HStack {
-                    // Icon with glow
-                    ZStack {
-                        if isSelected {
-                            Circle()
-                                .fill(Color.white.opacity(0.3))
-                                .frame(width: 56, height: 56)
-                                .blur(radius: 8)
-                        }
-                        
+            HStack(spacing: 16) {
+                // Icon with glow
+                ZStack {
+                    if isSelected {
                         Circle()
-                            .fill(isSelected ? Color.white.opacity(0.25) : gradient[0].opacity(0.2))
-                            .frame(width: 52, height: 52)
-                        
-                        Image(systemName: icon)
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(isSelected ? .white : gradient[0])
+                            .fill(Color.white.opacity(0.3))
+                            .frame(width: 56, height: 56)
+                            .blur(radius: 8)
                     }
                     
-                    Spacer()
+                    Circle()
+                        .fill(isSelected ? Color.white.opacity(0.25) : gradient[0].opacity(0.2))
+                        .frame(width: 52, height: 52)
                     
-                    // Selection indicator
-                    ZStack {
-                        Circle()
-                            .stroke(
-                                isSelected ? Color.white : Color.white.opacity(0.2),
-                                lineWidth: 2
-                            )
-                            .frame(width: 26, height: 26)
-                        
-                        if isSelected {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 14, height: 14)
-                        }
-                    }
+                    Image(systemName: icon)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(isSelected ? .white : gradient[0])
                 }
                 
                 // Title and subtitle
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(isSelected ? .white : Color.textPrimary)
                     
                     Text(subtitle)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(isSelected ? Color.white.opacity(0.8) : gradient[0])
+                        .font(.subheadline)
+                        .foregroundStyle(isSelected ? Color.white.opacity(0.8) : Color.textSecondary)
                 }
                 
-                // Features list
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(features, id: \.self) { feature in
-                        HStack(spacing: 10) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 14))
-                                .foregroundStyle(isSelected ? Color.white.opacity(0.7) : gradient[0].opacity(0.6))
-                            
-                            Text(feature)
-                                .font(.subheadline)
-                                .foregroundStyle(isSelected ? Color.white.opacity(0.8) : Color.textSecondary)
-                        }
+                Spacer()
+                
+                // Selection indicator
+                ZStack {
+                    Circle()
+                        .stroke(
+                            isSelected ? Color.white : Color.white.opacity(0.2),
+                            lineWidth: 2
+                        )
+                        .frame(width: 26, height: 26)
+                    
+                    if isSelected {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 14, height: 14)
                     }
                 }
             }

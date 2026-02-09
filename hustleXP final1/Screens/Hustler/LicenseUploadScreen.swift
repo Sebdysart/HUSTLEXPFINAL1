@@ -100,7 +100,7 @@ struct LicenseUploadScreen: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(.textSecondary)
+                        .foregroundStyle(Color.textSecondary)
                         .frame(width: 40, height: 40)
                 }
                 
@@ -108,7 +108,7 @@ struct LicenseUploadScreen: View {
                 
                 Text("License Verification")
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                 
                 Spacer()
                 
@@ -129,13 +129,13 @@ struct LicenseUploadScreen: View {
                 
                 Image(systemName: licenseType.icon)
                     .font(.system(size: 26))
-                    .foregroundStyle(.instantYellow)
+                    .foregroundStyle(Color.instantYellow)
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(licenseType.rawValue)
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                 
                 HStack(spacing: 6) {
                     Image(systemName: licenseType.stateRegulated ? "building.columns.fill" : "checkmark.shield")
@@ -143,7 +143,7 @@ struct LicenseUploadScreen: View {
                     Text(licenseType.stateRegulated ? "State Regulated" : "Certification")
                         .font(.system(size: 13))
                 }
-                .foregroundStyle(.textSecondary)
+                .foregroundStyle(Color.textSecondary)
             }
             
             Spacer()
@@ -161,11 +161,11 @@ struct LicenseUploadScreen: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("License Number")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
                 
                 TextField("Enter your license number", text: $licenseNumber)
                     .font(.system(size: 16))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                     .padding(14)
                     .background(Color.surfaceSecondary)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -176,7 +176,7 @@ struct LicenseUploadScreen: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Issuing State")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
                 
                 Button {
                     showStateSelector = true
@@ -184,13 +184,13 @@ struct LicenseUploadScreen: View {
                     HStack {
                         Text(issuingState.isEmpty ? "Select state" : issuingState)
                             .font(.system(size: 16))
-                            .foregroundStyle(issuingState.isEmpty ? .textMuted : .textPrimary)
+                            .foregroundStyle(issuingState.isEmpty ? Color.textMuted : Color.textPrimary)
                         
                         Spacer()
                         
                         Image(systemName: "chevron.down")
                             .font(.system(size: 14))
-                            .foregroundStyle(.textMuted)
+                            .foregroundStyle(Color.textMuted)
                     }
                     .padding(14)
                     .background(Color.surfaceSecondary)
@@ -206,7 +206,7 @@ struct LicenseUploadScreen: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("License Photo (Optional)")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.textSecondary)
+                .foregroundStyle(Color.textSecondary)
             
             Button {
                 // Mock document upload
@@ -218,23 +218,23 @@ struct LicenseUploadScreen: View {
                     if hasUploadedDocument {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 40))
-                            .foregroundStyle(.successGreen)
+                            .foregroundStyle(Color.successGreen)
                         
                         Text("Document Uploaded")
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.successGreen)
+                            .foregroundStyle(Color.successGreen)
                     } else {
                         Image(systemName: "camera.fill")
                             .font(.system(size: 32))
-                            .foregroundStyle(.textMuted)
+                            .foregroundStyle(Color.textMuted)
                         
                         Text("Tap to upload license photo")
                             .font(.system(size: 15))
-                            .foregroundStyle(.textSecondary)
+                            .foregroundStyle(Color.textSecondary)
                         
                         Text("Speeds up verification")
                             .font(.system(size: 13))
-                            .foregroundStyle(.textMuted)
+                            .foregroundStyle(Color.textMuted)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -266,11 +266,11 @@ struct LicenseUploadScreen: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle(for: status))
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                 
                 Text(statusMessage(for: status))
                     .font(.system(size: 13))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
             }
             
             Spacer()
@@ -308,11 +308,11 @@ struct LicenseUploadScreen: View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: "info.circle.fill")
-                    .foregroundStyle(.infoBlue)
+                    .foregroundStyle(Color.infoBlue)
                 
                 Text("Verification Details")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                 
                 Spacer()
             }
@@ -333,12 +333,12 @@ struct LicenseUploadScreen: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 14))
-                .foregroundStyle(.textMuted)
+                .foregroundStyle(Color.textMuted)
                 .frame(width: 20)
             
             Text(text)
                 .font(.system(size: 13))
-                .foregroundStyle(.textSecondary)
+                .foregroundStyle(Color.textSecondary)
         }
     }
     
@@ -358,7 +358,7 @@ struct LicenseUploadScreen: View {
                 }
             }
             .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(isValid ? .brandBlack : .textMuted)
+            .foregroundStyle(isValid ? Color.brandBlack : Color.textMuted)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(isValid ? Color.instantYellow : Color.surfaceSecondary)
@@ -387,13 +387,13 @@ struct LicenseUploadScreen: View {
                 } label: {
                     HStack {
                         Text(state)
-                            .foregroundStyle(.textPrimary)
+                            .foregroundStyle(Color.textPrimary)
                         
                         Spacer()
                         
                         if issuingState == state {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(.brandPurple)
+                                .foregroundStyle(Color.brandPurple)
                         }
                     }
                 }
@@ -424,17 +424,17 @@ struct LicenseUploadScreen: View {
                 
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 56))
-                    .foregroundStyle(.successGreen)
+                    .foregroundStyle(Color.successGreen)
             }
             
             VStack(spacing: 8) {
                 Text("License Verified!")
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                 
                 Text("You can now accept \(licenseType.rawValue) quests and earn premium rates.")
                     .font(.system(size: 15))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -444,19 +444,19 @@ struct LicenseUploadScreen: View {
                 VStack(spacing: 4) {
                     Text("$\(String(format: "%.0f", Double.random(in: 75...150)))+")
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.successGreen)
+                        .foregroundStyle(Color.successGreen)
                     Text("Avg Quest")
                         .font(.system(size: 12))
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                 }
                 
                 VStack(spacing: 4) {
                     Text("\(Int.random(in: 5...15))")
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.infoBlue)
+                        .foregroundStyle(Color.infoBlue)
                     Text("Nearby")
                         .font(.system(size: 12))
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                 }
             }
             .padding(.vertical, 20)
@@ -490,7 +490,7 @@ struct LicenseUploadScreen: View {
         verificationStatus = .pending
         
         // Submit to service
-        let license = licenseService.uploadLicense(
+        _ = licenseService.uploadLicense(
             type: licenseType,
             licenseNumber: licenseNumber,
             issuingState: issuingState,

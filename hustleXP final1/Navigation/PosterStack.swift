@@ -22,6 +22,8 @@ struct PosterStack: View {
                         PosterHomeScreen()
                     case .createTask:
                         CreateTaskScreen()
+                    case .aiTaskCreation:
+                        AITaskCreationScreen()
                     case .taskDetail(let taskId):
                         PosterTaskDetailScreen(taskId: taskId)
                     case .activeTasks:
@@ -30,10 +32,18 @@ struct PosterStack: View {
                         TaskManagementScreen(taskId: taskId)
                     case .proofReview(let taskId):
                         ProofReviewScreen(taskId: taskId)
+                    case .conversation(let taskId):
+                        ConversationScreen(conversationId: taskId)
                     case .history:
                         PosterHistoryScreen()
                     case .profile:
                         PosterProfileScreen()
+                    // v2.0.0 LIVE Mode routes
+                    case .asapTaskCreation:
+                        ASAPTaskCreationScreen()
+                    case .questTracking(let questId):
+                        // Would show poster's view of worker tracking
+                        PosterTaskDetailScreen(taskId: questId)
                     }
                 }
         }

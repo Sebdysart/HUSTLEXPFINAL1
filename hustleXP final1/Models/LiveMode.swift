@@ -82,7 +82,7 @@ struct LiveModeSession: Identifiable {
     var isMoving: Bool
     var batteryLevel: Double // Ensure they have battery
     var signalStrength: SignalStrength
-    var availableFor: [TaskCategory]
+    var availableFor: [LiveTaskCategory]
     var maxDistance: Double // How far they're willing to go
     
     // Stats for this session
@@ -130,7 +130,7 @@ enum SignalStrength: String, Codable {
     }
 }
 
-enum TaskCategory: String, Codable, CaseIterable {
+enum LiveTaskCategory: String, Codable, CaseIterable {
     case lifting = "Heavy Lifting"
     case driving = "Driving/Transport"
     case lockout = "Lockout Help"
@@ -274,7 +274,7 @@ struct ASAPSurge {
 
 struct QuestPing {
     let questId: String
-    let category: TaskCategory
+    let category: LiveTaskCategory
     let payment: Double
     let distance: Double
     let expiresIn: Int

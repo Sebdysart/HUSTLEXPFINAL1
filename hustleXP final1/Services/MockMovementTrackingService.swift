@@ -92,7 +92,8 @@ final class MockMovementTrackingService {
         // Calculate speed if we have a previous location
         var speed: Double? = nil
         if let lastLocation = session.locations.last {
-            let distance = MockLocationService.shared.calculateDistance(from: lastLocation, to: location)
+            let lastCoords = GPSCoordinates(latitude: lastLocation.latitude, longitude: lastLocation.longitude)
+            let distance = MockLocationService.shared.calculateDistance(from: lastCoords, to: location)
             let timeDiff = location.timestamp.timeIntervalSince(lastLocation.timestamp)
             if timeDiff > 0 {
                 speed = distance / timeDiff

@@ -40,7 +40,7 @@ struct PriceDisplay: View {
         amount: Double,
         label: String? = nil,
         size: PriceDisplaySize = .medium,
-        color: Color = .green
+        color: Color = .moneyGreen
     ) {
         self.amount = amount
         self.label = label
@@ -61,7 +61,7 @@ struct PriceDisplay: View {
             }
             
             if let label = label {
-                HXText(label, style: size.labelStyle, color: .secondary)
+                HXText(label, style: size.labelStyle, color: .textSecondary)
             }
         }
     }

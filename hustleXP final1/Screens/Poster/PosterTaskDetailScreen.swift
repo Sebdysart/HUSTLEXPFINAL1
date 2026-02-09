@@ -102,7 +102,7 @@ struct PosterTaskDetailScreen: View {
                         .cornerRadius(16)
                         
                         // Assigned hustler section (if in progress)
-                        if task.state == .inProgress || task.state == .pendingVerification {
+                        if task.state == .inProgress || task.state == .proofSubmitted {
                             AssignedHustlerSection(task: task, router: router)
                         }
                         
@@ -195,7 +195,7 @@ private struct TaskStatusBadge: View {
         case .posted: return .infoBlue
         case .claimed: return .warningOrange
         case .inProgress: return .brandPurple
-        case .pendingVerification: return .warningOrange
+        case .proofSubmitted: return .warningOrange
         case .completed: return .successGreen
         case .cancelled: return .errorRed
         case .disputed: return .errorRed
@@ -221,7 +221,7 @@ private struct AssignedHustlerSection: View {
             HXText("Assigned Hustler", style: .headline)
             
             HStack(spacing: 16) {
-                HXAvatar(imageURL: nil, size: .medium, initials: "JD")
+                HXAvatar(initials: "JD", size: .medium)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     HXText("Jane Doe", style: .headline)
@@ -313,7 +313,7 @@ private struct TaskTimelineSection: View {
                     )
                 }
                 
-                if task.state == .inProgress || task.state == .pendingVerification || task.state == .completed {
+                if task.state == .inProgress || task.state == .proofSubmitted || task.state == .completed {
                     TimelineRow(
                         title: "Task Started",
                         subtitle: "Dec 15, 2024 at 4:00 PM",
@@ -322,12 +322,12 @@ private struct TaskTimelineSection: View {
                     )
                 }
                 
-                if task.state == .pendingVerification || task.state == .completed {
+                if task.state == .proofSubmitted || task.state == .completed {
                     TimelineRow(
                         title: "Proof Submitted",
                         subtitle: task.state == .completed ? "Dec 15, 2024 at 5:30 PM" : "Awaiting your review",
                         isCompleted: task.state == .completed,
-                        isLast: task.state == .pendingVerification
+                        isLast: task.state == .proofSubmitted
                     )
                 }
                 
@@ -394,7 +394,7 @@ private struct TaskActionBar: View {
                 .background(Color.borderSubtle)
             
             HStack(spacing: 16) {
-                if task.state == .pendingVerification {
+                if task.state == .proofSubmitted {
                     HXButton("Review Proof", variant: .primary) {
                         router.navigateToPoster(.proofReview(taskId: task.id))
                     }

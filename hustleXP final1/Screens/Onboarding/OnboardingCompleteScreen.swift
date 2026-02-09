@@ -16,42 +16,46 @@ struct OnboardingCompleteScreen: View {
     @State private var confettiTrigger = false
     
     var body: some View {
-        ZStack {
-            // Background
-            LinearGradient.brandGradient
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            // Confetti particles (simple version)
-            if confettiTrigger {
-                ConfettiView()
-            }
-            
-            VStack(spacing: 32) {
-                Spacer()
+            ZStack {
+                // Background
+                LinearGradient.brandGradient
+                    .ignoresSafeArea()
                 
-                // Success illustration with animation
-                ZStack {
-                    // Outer rings
-                    ForEach(0..<3, id: \.self) { index in
-                        Circle()
-                            .stroke(Color.successGreen.opacity(0.2 - Double(index) * 0.05), lineWidth: 2)
-                            .frame(width: CGFloat(120 + index * 40), height: CGFloat(120 + index * 40))
-                            .scaleEffect(showContent ? 1 : 0.5)
-                            .animation(.spring(response: 0.6).delay(Double(index) * 0.1), value: showContent)
-                    }
-                    
-                    // Main circle
-                    Circle()
-                        .fill(Color.successGreen)
-                        .frame(width: 100, height: 100)
-                        .scaleEffect(checkmarkScale)
-                    
-                    // Checkmark
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 48, weight: .bold))
-                        .foregroundStyle(.white)
-                        .scaleEffect(checkmarkScale)
+                // Confetti particles (simple version)
+                if confettiTrigger {
+                    ConfettiView()
                 }
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: isCompact ? 24 : 32) {
+                        Spacer(minLength: isCompact ? 30 : 50)
+                        
+                        // Success illustration with animation
+                        ZStack {
+                            // Outer rings
+                            ForEach(0..<3, id: \.self) { index in
+                                Circle()
+                                    .stroke(Color.successGreen.opacity(0.2 - Double(index) * 0.05), lineWidth: 2)
+                                    .frame(width: CGFloat((isCompact ? 90 : 120) + index * (isCompact ? 30 : 40)), height: CGFloat((isCompact ? 90 : 120) + index * (isCompact ? 30 : 40)))
+                                    .scaleEffect(showContent ? 1 : 0.5)
+                                    .animation(.spring(response: 0.6).delay(Double(index) * 0.1), value: showContent)
+                            }
+                            
+                            // Main circle
+                            Circle()
+                                .fill(Color.successGreen)
+                                .frame(width: isCompact ? 80 : 100, height: isCompact ? 80 : 100)
+                                .scaleEffect(checkmarkScale)
+                            
+                            // Checkmark
+                            Image(systemName: "checkmark")
+                                .font(.system(size: isCompact ? 36 : 48, weight: .bold))
+                                .foregroundStyle(.white)
+                                .scaleEffect(checkmarkScale)
+                        }
                 .onAppear {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.6).delay(0.2)) {
                         checkmarkScale = 1.0
@@ -62,74 +66,81 @@ struct OnboardingCompleteScreen: View {
                     }
                 }
                 
-                // Header
-                VStack(spacing: 16) {
-                    HXText("You're All Set!", style: .largeTitle)
-                    
-                    HXText(
-                        "Welcome to HustleXP, \(appState.userName ?? "Hustler")!",
-                        style: .body,
-                        color: .textSecondary
-                    )
-                }
-                .opacity(showContent ? 1 : 0)
-                .offset(y: showContent ? 0 : 20)
-                .animation(.easeOut(duration: 0.5).delay(0.4), value: showContent)
-                
-                Spacer()
-                
-                // Stats preview card
-                VStack(spacing: 0) {
-                    // Header
-                    HStack {
-                        HXText("Your Profile", style: .headline)
-                        Spacer()
-                        HXBadge(variant: .tier(appState.trustTier))
-                    }
-                    .padding(20)
-                    .background(Color.surfaceElevated)
-                    
-                    HXDivider()
-                    
-                    // Stats
-                    VStack(spacing: 16) {
-                        StatRow(
-                            icon: "person.fill",
-                            label: "Role",
-                            value: appState.userRole?.rawValue.capitalized ?? "Hustler"
-                        )
+                        // Header
+                        VStack(spacing: isCompact ? 12 : 16) {
+                            Text("You're All Set!")
+                                .font(.system(size: isCompact ? 28 : 34, weight: .bold))
+                                .foregroundStyle(Color.textPrimary)
+                            
+                            Text("Welcome to HustleXP, \(appState.userName ?? "Hustler")!")
+                                .font(.system(size: isCompact ? 15 : 17))
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                        .opacity(showContent ? 1 : 0)
+                        .offset(y: showContent ? 0 : 20)
+                        .animation(.easeOut(duration: 0.5).delay(0.4), value: showContent)
                         
-                        StatRow(
-                            icon: "star.fill",
-                            label: "Starting XP",
-                            value: "0 XP"
-                        )
+                        Spacer(minLength: isCompact ? 20 : 30)
                         
-                        StatRow(
-                            icon: "shield.fill",
-                            label: "Trust Tier",
-                            value: appState.trustTier.name
-                        )
+                        // Stats preview card
+                        VStack(spacing: 0) {
+                            // Header
+                            HStack {
+                                Text("Your Profile")
+                                    .font(.system(size: isCompact ? 16 : 18, weight: .semibold))
+                                    .foregroundStyle(Color.textPrimary)
+                                Spacer()
+                                HXBadge(variant: .tier(appState.trustTier))
+                            }
+                            .padding(isCompact ? 16 : 20)
+                            .background(Color.surfaceElevated)
+                            
+                            HXDivider()
+                            
+                            // Stats
+                            VStack(spacing: isCompact ? 12 : 16) {
+                                StatRow(
+                                    icon: "person.fill",
+                                    label: "Role",
+                                    value: appState.userRole?.rawValue.capitalized ?? "Hustler",
+                                    isCompact: isCompact
+                                )
+                                
+                                StatRow(
+                                    icon: "star.fill",
+                                    label: "Starting XP",
+                                    value: "0 XP",
+                                    isCompact: isCompact
+                                )
+                                
+                                StatRow(
+                                    icon: "shield.fill",
+                                    label: "Trust Tier",
+                                    value: appState.trustTier.name,
+                                    isCompact: isCompact
+                                )
+                            }
+                            .padding(isCompact ? 16 : 20)
+                            .background(Color.surfacePrimary)
+                        }
+                        .cornerRadius(isCompact ? 16 : 20)
+                        .padding(.horizontal, isCompact ? 18 : 24)
+                        .opacity(showContent ? 1 : 0)
+                        .offset(y: showContent ? 0 : 30)
+                        .animation(.easeOut(duration: 0.5).delay(0.6), value: showContent)
+                        
+                        Spacer(minLength: isCompact ? 20 : 30)
+                        
+                        // Start button
+                        HXButton("Start Hustling", variant: .primary) {
+                            appState.completeOnboarding()
+                        }
+                        .padding(.horizontal, isCompact ? 18 : 24)
+                        .padding(.bottom, max(24, geometry.safeAreaInsets.bottom + 16))
+                        .opacity(showContent ? 1 : 0)
+                        .animation(.easeOut(duration: 0.5).delay(0.8), value: showContent)
                     }
-                    .padding(20)
-                    .background(Color.surfacePrimary)
                 }
-                .cornerRadius(20)
-                .padding(.horizontal, 24)
-                .opacity(showContent ? 1 : 0)
-                .offset(y: showContent ? 0 : 30)
-                .animation(.easeOut(duration: 0.5).delay(0.6), value: showContent)
-                
-                Spacer()
-                
-                // Start button
-                HXButton("Start Hustling", variant: .primary) {
-                    appState.completeOnboarding()
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 48)
-                .opacity(showContent ? 1 : 0)
-                .animation(.easeOut(duration: 0.5).delay(0.8), value: showContent)
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -141,21 +152,26 @@ private struct StatRow: View {
     let icon: String
     let label: String
     let value: String
+    var isCompact: Bool = false
     
     var body: some View {
         HStack {
-            HStack(spacing: 12) {
+            HStack(spacing: isCompact ? 10 : 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: isCompact ? 14 : 16))
                     .foregroundStyle(Color.brandPurple)
-                    .frame(width: 24)
+                    .frame(width: isCompact ? 20 : 24)
                 
-                HXText(label, style: .body, color: .textSecondary)
+                Text(label)
+                    .font(.system(size: isCompact ? 14 : 16))
+                    .foregroundStyle(Color.textSecondary)
             }
             
             Spacer()
             
-            HXText(value, style: .headline)
+            Text(value)
+                .font(.system(size: isCompact ? 15 : 17, weight: .semibold))
+                .foregroundStyle(Color.textPrimary)
         }
     }
 }
@@ -163,26 +179,29 @@ private struct StatRow: View {
 // MARK: - Simple Confetti View
 private struct ConfettiView: View {
     @State private var particles: [ConfettiParticle] = []
+    @State private var hasCreatedParticles = false
     
     var body: some View {
-        ZStack {
-            ForEach(particles) { particle in
-                Circle()
-                    .fill(particle.color)
-                    .frame(width: particle.size, height: particle.size)
-                    .position(particle.position)
-                    .opacity(particle.opacity)
+        GeometryReader { geometry in
+            ZStack {
+                ForEach(particles) { particle in
+                    Circle()
+                        .fill(particle.color)
+                        .frame(width: particle.size, height: particle.size)
+                        .position(particle.position)
+                        .opacity(particle.opacity)
+                }
             }
-        }
-        .onAppear {
-            createParticles()
+            .onAppear {
+                guard !hasCreatedParticles else { return }
+                hasCreatedParticles = true
+                createParticles(screenWidth: geometry.size.width, screenHeight: geometry.size.height)
+            }
         }
     }
     
-    private func createParticles() {
+    private func createParticles(screenWidth: CGFloat, screenHeight: CGFloat) {
         let colors: [Color] = [.brandPurple, .accentPurple, .successGreen, .warningOrange, .infoBlue]
-        let screenWidth = UIScreen.main.bounds.width
-        let screenHeight = UIScreen.main.bounds.height
         
         for i in 0..<30 {
             let particle = ConfettiParticle(
@@ -195,10 +214,14 @@ private struct ConfettiView: View {
             particles.append(particle)
             
             // Animate falling
-            withAnimation(.easeIn(duration: Double.random(in: 2...4)).delay(Double.random(in: 0...0.5))) {
-                particles[i].position.y = screenHeight + 50
-                particles[i].position.x += CGFloat.random(in: -100...100)
-                particles[i].opacity = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.easeIn(duration: Double.random(in: 2...4)).delay(Double.random(in: 0...0.5))) {
+                    if i < particles.count {
+                        particles[i].position.y = screenHeight + 50
+                        particles[i].position.x += CGFloat.random(in: -100...100)
+                        particles[i].opacity = 0
+                    }
+                }
             }
         }
     }

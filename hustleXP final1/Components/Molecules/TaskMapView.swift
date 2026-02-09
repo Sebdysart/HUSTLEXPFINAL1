@@ -24,7 +24,7 @@ struct TaskMapView: View {
                     .background(Color.surfaceSecondary)
                 
                 // Route line (if showing)
-                if showRoute, let eta = walkingETA, let userLoc = userLocation {
+                if showRoute, let _ = walkingETA, let userLoc = userLocation {
                     WalkingRouteLine(
                         from: userLoc,
                         to: task.gpsCoordinates,

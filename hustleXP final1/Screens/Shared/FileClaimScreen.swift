@@ -340,8 +340,8 @@ struct FileClaimScreen: View {
         VStack(spacing: 8) {
             HXButton(
                 isSubmitting ? "Submitting..." : "Submit Claim",
-                variant: isValid ? .primary : .secondary,
                 icon: "shield.checkered",
+                variant: isValid ? .primary : .secondary,
                 isLoading: isSubmitting
             ) {
                 submitClaim()

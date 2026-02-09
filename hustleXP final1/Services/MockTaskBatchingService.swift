@@ -124,7 +124,7 @@ final class MockTaskBatchingService {
         
         // Efficiency boost (percentage improvement)
         let baseTime = tasks.count * 30 // 30 min per task if done separately
-        let batchTime = baseTime - timeSaved
+        _ = baseTime - timeSaved // batchTime for potential future use
         let efficiencyBoost = Double(timeSaved) / Double(baseTime) * 100
         
         return BatchSavings(

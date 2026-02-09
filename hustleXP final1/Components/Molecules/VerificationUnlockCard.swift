@@ -145,7 +145,7 @@ struct VerificationUnlockCard: View {
                 HXText("Submit your ID for free", style: .caption, color: .textSecondary)
             }
             
-            HXButton("Submit Verification", variant: .primary, icon: "checkmark.shield") {
+            HXButton("Submit Verification", icon: "checkmark.shield", variant: .primary) {
                 onUnlockTap()
             }
         }

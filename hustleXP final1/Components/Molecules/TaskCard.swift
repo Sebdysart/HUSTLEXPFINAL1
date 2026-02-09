@@ -288,6 +288,9 @@ struct NeonStatusBadge: View {
         case .pending: return .warningOrange
         case .completed: return .successGreen
         case .cancelled: return .errorRed
+        case .inProgress: return .warningOrange
+        case .live: return .liveRed
+        case .instant: return .instantYellow
         }
     }
     
@@ -297,6 +300,9 @@ struct NeonStatusBadge: View {
         case .pending: return "Pending"
         case .completed: return "Done"
         case .cancelled: return "Cancelled"
+        case .inProgress: return "In Progress"
+        case .live: return "Live"
+        case .instant: return "Instant"
         }
     }
     

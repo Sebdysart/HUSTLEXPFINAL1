@@ -8,32 +8,38 @@
 
 import SwiftUI
 
+/// Typography styles per TYPOGRAPHY_AUTHORITY_RESOLUTION.md
+/// Reference: STITCH HTML / Apple HIG specifications
 enum HXTextStyle {
-    case largeTitle
-    case title
-    case title2
-    case title3
-    case headline
-    case body
-    case callout
-    case subheadline
-    case footnote
-    case caption
-    case caption2
+    case display      // 36px Bold - Hero text, major headings
+    case largeTitle   // 34px Bold - Screen titles
+    case title        // 28px Bold - Section headers
+    case title2       // 24px SemiBold - Subsections
+    case title3       // 20px SemiBold - Card titles
+    case headline     // 18px SemiBold - Emphasized content
+    case body         // 16px Regular - Primary content
+    case callout      // 14px Regular - Supporting content
+    case subheadline  // 15px Regular - Secondary content
+    case footnote     // 13px Regular - Tertiary content
+    case caption      // 12px Medium - Labels, timestamps
+    case caption2     // 11px Regular - Fine print
+    case micro        // 10px SemiBold - Badges, status indicators
     
     var font: Font {
         switch self {
+        case .display: return .system(size: 36, weight: .bold)
         case .largeTitle: return .largeTitle.weight(.bold)
         case .title: return .title.weight(.bold)
-        case .title2: return .title2.weight(.bold)
+        case .title2: return .title2.weight(.semibold)
         case .title3: return .title3.weight(.semibold)
-        case .headline: return .headline
+        case .headline: return .headline.weight(.semibold)
         case .body: return .body
         case .callout: return .callout
         case .subheadline: return .subheadline
         case .footnote: return .footnote
-        case .caption: return .caption
+        case .caption: return .caption.weight(.medium)
         case .caption2: return .caption2
+        case .micro: return .system(size: 10, weight: .semibold)
         }
     }
 }
@@ -47,7 +53,7 @@ struct HXText: View {
     init(
         _ text: String,
         style: HXTextStyle = .body,
-        color: Color = .primary,
+        color: Color = .textPrimary,
         alignment: TextAlignment = .leading
     ) {
         self.text = text
@@ -72,8 +78,8 @@ struct HXText: View {
         HXText("Title 3", style: .title3)
         HXText("Headline", style: .headline)
         HXText("Body text", style: .body)
-        HXText("Subheadline", style: .subheadline, color: .secondary)
-        HXText("Caption", style: .caption, color: .secondary)
+        HXText("Subheadline", style: .subheadline, color: .textSecondary)
+        HXText("Caption", style: .caption, color: .textSecondary)
     }
     .padding()
 }

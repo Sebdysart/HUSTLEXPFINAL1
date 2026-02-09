@@ -26,7 +26,7 @@ struct EligibilityScreen: View {
                 HStack {
                     Spacer()
                     Button(action: onDismiss) {
-                        HXIcon(name: "xmark", size: .medium, color: .textSecondary)
+                        HXIcon("xmark", size: .medium, color: .textSecondary)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -41,7 +41,7 @@ struct EligibilityScreen: View {
                         .frame(width: 120, height: 120)
                     
                     HXIcon(
-                        name: "lock.fill",
+                        "lock.fill",
                         size: .custom(48),
                         color: .warningYellow
                     )
@@ -80,7 +80,7 @@ struct EligibilityScreen: View {
                         }
                         .frame(maxWidth: .infinity)
                         
-                        HXIcon(name: "arrow.right", size: .small, color: .textTertiary)
+                        HXIcon("arrow.right", size: .small, color: .textTertiary)
                         
                         VStack(spacing: 4) {
                             HXText("Required", style: .caption, color: .textSecondary)
@@ -115,13 +115,13 @@ struct EligibilityScreen: View {
                 // Actions
                 VStack(spacing: 12) {
                     HXButton(
-                        title: "Learn How to Level Up",
+                        "Learn How to Level Up",
                         variant: .primary,
                         action: onLearnMore
                     )
                     
                     HXButton(
-                        title: "Find Other Tasks",
+                        "Find Other Tasks",
                         variant: .ghost,
                         action: onDismiss
                     )

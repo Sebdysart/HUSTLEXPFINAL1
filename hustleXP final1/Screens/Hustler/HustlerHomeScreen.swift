@@ -18,31 +18,35 @@ struct HustlerHomeScreen: View {
     @State private var glowPulse: Double = 0.3
     
     var body: some View {
-        ZStack {
-            // Neon background
-            neonBackground
+        GeometryReader { geometry in
+            let isCompact = geometry.size.height < 700
             
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 28) {
-                    // Welcome header with avatar
-                    welcomeHeader
-                        .padding(.top, 8)
-                    
-                    // Premium XP card
-                    xpProgressCard
-                    
-                    // Quick stats grid
-                    statsGrid
-                    
-                    // Active task section
-                    activeTaskSection
-                    
-                    // Recommended tasks
-                    recommendedSection
-                    
-                    Spacer(minLength: 32)
+            ZStack {
+                // Neon background
+                neonBackground
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: isCompact ? 20 : 28) {
+                        // Welcome header with avatar
+                        welcomeHeader(isCompact: isCompact)
+                            .padding(.top, isCompact ? 4 : 8)
+                        
+                        // Premium XP card
+                        xpProgressCard(isCompact: isCompact)
+                        
+                        // Quick stats grid
+                        statsGrid(isCompact: isCompact)
+                        
+                        // Active task section
+                        activeTaskSection(isCompact: isCompact)
+                        
+                        // Recommended tasks
+                        recommendedSection(isCompact: isCompact)
+                        
+                        Spacer(minLength: max(24, geometry.safeAreaInsets.bottom + 16))
+                    }
+                    .padding(.vertical)
                 }
-                .padding(.vertical)
             }
         }
         .navigationTitle("Home")
@@ -126,14 +130,14 @@ struct HustlerHomeScreen: View {
     
     // MARK: - Welcome Header
     
-    private var welcomeHeader: some View {
-        HStack(alignment: .top, spacing: 16) {
+    private func welcomeHeader(isCompact: Bool) -> some View {
+        HStack(alignment: .top, spacing: isCompact ? 12 : 16) {
             // Avatar with neon glow
             ZStack {
                 // Outer glow
                 Circle()
                     .fill(Color.brandPurple.opacity(glowPulse * 0.5))
-                    .frame(width: 76, height: 76)
+                    .frame(width: isCompact ? 60 : 76, height: isCompact ? 60 : 76)
                     .blur(radius: 15)
                 
                 // Avatar ring
@@ -144,9 +148,9 @@ struct HustlerHomeScreen: View {
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 3
+                        lineWidth: isCompact ? 2 : 3
                     )
-                    .frame(width: 66, height: 66)
+                    .frame(width: isCompact ? 52 : 66, height: isCompact ? 52 : 66)
                 
                 // Avatar fill
                 Circle()
@@ -157,22 +161,22 @@ struct HustlerHomeScreen: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 58, height: 58)
+                    .frame(width: isCompact ? 46 : 58, height: isCompact ? 46 : 58)
                 
                 Text(String(dataService.currentUser.name.prefix(1)))
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: isCompact ? 20 : 24, weight: .bold))
                     .foregroundStyle(.white)
             }
             
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
                 Text("Hey, \(dataService.currentUser.name)!")
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: isCompact ? 22 : 26, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
                     .opacity(showGreeting ? 1 : 0)
                     .offset(x: showGreeting ? 0 : -20)
                 
                 Text("Ready to hustle?")
-                    .font(.subheadline)
+                    .font(.system(size: isCompact ? 14 : 15))
                     .foregroundStyle(Color.textSecondary)
                     .opacity(showGreeting ? 1 : 0)
                     .offset(x: showGreeting ? 0 : -20)
@@ -194,7 +198,7 @@ struct HustlerHomeScreen: View {
                     HStack(spacing: 6) {
                         Image(systemName: tierIcon)
                             .font(.system(size: 12, weight: .bold))
-                        Text(dataService.currentUser.trustTier.displayName.uppercased())
+                        Text(dataService.currentUser.trustTier.name.uppercased())
                             .font(.system(size: 10, weight: .heavy))
                             .tracking(0.5)
                     }
@@ -208,7 +212,7 @@ struct HustlerHomeScreen: View {
                     .foregroundStyle(Color.textMuted)
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, isCompact ? 16 : 20)
     }
     
     private var tierColor: Color {
@@ -243,8 +247,8 @@ struct HustlerHomeScreen: View {
     
     // MARK: - XP Progress Card
     
-    private var xpProgressCard: some View {
-        VStack(spacing: 16) {
+    private func xpProgressCard(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 12 : 16) {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "flame.fill")
@@ -337,7 +341,7 @@ struct HustlerHomeScreen: View {
                     )
             }
         )
-        .padding(.horizontal, 20)
+        .padding(.horizontal, isCompact ? 16 : 20)
     }
     
     private var xpProgress: CGFloat {
@@ -368,8 +372,8 @@ struct HustlerHomeScreen: View {
     
     // MARK: - Stats Grid
     
-    private var statsGrid: some View {
-        HStack(spacing: 12) {
+    private func statsGrid(isCompact: Bool) -> some View {
+        HStack(spacing: isCompact ? 8 : 12) {
             NeonStatCard(
                 title: "Tasks",
                 value: "\(dataService.currentUser.tasksCompleted)",
@@ -394,13 +398,13 @@ struct HustlerHomeScreen: View {
                 isAnimated: statsAnimated
             )
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, isCompact ? 16 : 20)
     }
     
     // MARK: - Active Task Section
     
-    private var activeTaskSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private func activeTaskSection(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 12 : 16) {
             neonSectionHeader(title: "Active Task", icon: "bolt.fill", iconColor: .warningOrange)
             
             if let activeTask = dataService.activeTask {
@@ -487,8 +491,8 @@ struct HustlerHomeScreen: View {
     
     // MARK: - Recommended Section
     
-    private var recommendedSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private func recommendedSection(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 12 : 16) {
             HStack {
                 neonSectionHeader(title: "Recommended for You", icon: "sparkles", iconColor: .aiPurple)
                 

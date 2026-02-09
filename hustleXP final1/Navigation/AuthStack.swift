@@ -10,10 +10,11 @@ import SwiftUI
 
 struct AuthStack: View {
     @Environment(Router.self) private var router
-    
+    @EnvironmentObject private var authService: AuthService
+
     var body: some View {
         @Bindable var nav = router
-        
+
         NavigationStack(path: $nav.authPath) {
             LoginScreen()
                 .navigationDestination(for: AuthRoute.self) { route in

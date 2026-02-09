@@ -55,7 +55,7 @@ struct LockedQuestsScreen: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                     .frame(width: 44, height: 44)
             }
             
@@ -63,7 +63,7 @@ struct LockedQuestsScreen: View {
             
             Text("Locked Quests")
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.textPrimary)
+                .foregroundStyle(Color.textPrimary)
             
             Spacer()
             
@@ -72,7 +72,7 @@ struct LockedQuestsScreen: View {
             } label: {
                 Image(systemName: "slider.horizontal.3")
                     .font(.system(size: 18))
-                    .foregroundStyle(.brandPurple)
+                    .foregroundStyle(Color.brandPurple)
                     .frame(width: 44, height: 44)
             }
         }
@@ -125,7 +125,7 @@ struct LockedQuestsScreen: View {
                 .foregroundStyle(color)
             Text(label)
                 .font(.system(size: 11))
-                .foregroundStyle(.textMuted)
+                .foregroundStyle(Color.textMuted)
         }
     }
     
@@ -142,17 +142,17 @@ struct LockedQuestsScreen: View {
                 
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 40))
-                    .foregroundStyle(.successGreen)
+                    .foregroundStyle(Color.successGreen)
             }
             
             VStack(spacing: 8) {
                 Text("All Caught Up!")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
                 
                 Text("You're eligible for all nearby quests.\nKeep building your skills to unlock premium tasks.")
                     .font(.system(size: 14))
-                    .foregroundStyle(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
             }
             
@@ -164,7 +164,7 @@ struct LockedQuestsScreen: View {
                     Text("Add More Skills")
                 }
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.brandPurple)
+                .foregroundStyle(Color.brandPurple)
             }
             .padding(.top, 8)
             

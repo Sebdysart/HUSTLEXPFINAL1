@@ -5,6 +5,9 @@
 //  Color Semantics per COLOR_SEMANTICS_LAW.md
 //  Brand: Black + Purple (NOT green as primary)
 //
+//  AUTHORITY: This file implements the official HustleXP color system
+//  Reference: https://github.com/Sebdysart/HUSTLEXP-DOCS/COLOR_SEMANTICS_LAW.md
+//
 
 import SwiftUI
 
@@ -15,58 +18,140 @@ extension Color {
     // MARK: Layer 1: Brand Canvas (Identity)
     
     /// Premium foundation - use for backgrounds, entry screens
+    /// Hex: #0B0B0F
     static let brandBlack = Color(hex: "0B0B0F")
     
-    /// Primary accent - brand identity color
+    /// Primary accent - brand identity color, CTAs, glow effects
+    /// Hex: #5B2DFF
     static let brandPurple = Color(hex: "5B2DFF")
     
-    /// For gradients and lighter accents
+    /// For gradient transitions and lighter accents
+    /// Hex: #7A4DFF
     static let brandPurpleLight = Color(hex: "7A4DFF")
+    
+    /// Glow effects, emphasis
+    /// Hex: #8B5CF6
+    static let brandPurpleGlow = Color(hex: "8B5CF6")
     
     // MARK: Layer 2: Brand Accent (Energy)
     
-    /// Highlights, progress bars, selection states (use sparingly)
+    /// Highlights, progress bars, focus states (use sparingly)
+    /// Hex: #8B5CF6
     static let accentPurple = Color(hex: "8B5CF6")
     
-    /// Secondary accent for visual variety
+    /// Lighter emphasis, depth creation
+    /// Hex: #A78BFA
     static let accentViolet = Color(hex: "A78BFA")
     
     // MARK: Layer 3: Success/Money (Conditional)
-    // CRITICAL: Never on entry screens or as primary brand color
+    // CRITICAL: 🚨 NEVER on entry screens or as primary brand color
+    // CRITICAL: 🚨 ONLY appears AFTER user action succeeds
     
-    /// Success states only - task completion, verification passed
+    /// Success states only - task completion, confirmations
+    /// Hex: #34C759 (Apple HIG Green)
     static let successGreen = Color(hex: "34C759")
     
-    /// Money/payment displays only
+    /// Money received, escrow release displays only
+    /// Hex: #1FAD7E
     static let moneyGreen = Color(hex: "1FAD7E")
     
     // MARK: Layer 4: Status Colors
     
-    /// Errors, destructive actions, disputes
+    /// Errors, destructive actions, alerts, disputes
+    /// Hex: #FF3B30 (Apple HIG Red)
     static let errorRed = Color(hex: "FF3B30")
     
-    /// Warnings, pending states, caution
+    /// Warnings, XP/streak indicators, pending states
+    /// Hex: #FF9500 (Apple HIG Orange)
     static let warningOrange = Color(hex: "FF9500")
     
-    /// Information, links, interactive elements
+    /// Alias for warningOrange (backward compatibility)
+    static let warningYellow = warningOrange
+    
+    /// Information, trust badges, links
+    /// Hex: #007AFF (Apple HIG Blue)
     static let infoBlue = Color(hex: "007AFF")
     
-    // MARK: Layer 5: Neutrals
+    /// Live mode indicators
+    /// Hex: #FF3B30
+    static let liveRed = Color(hex: "FF3B30")
     
-    /// Primary text on dark backgrounds
+    /// Instant mode accents only
+    /// Hex: #FFD900
+    static let instantYellow = Color(hex: "FFD900")
+    
+    // MARK: Layer 5: v1.8.0 Feature Colors
+    
+    /// AI/Scoper purple for AI-suggested pricing
+    /// Hex: #8B5CF6
+    static let aiPurple = Color(hex: "8B5CF6")
+    
+    /// Risk level: Low (same as success)
+    static let riskLow = successGreen
+    
+    /// Risk level: Medium (same as warning)
+    static let riskMedium = warningOrange
+    
+    /// Risk level: High (same as error)
+    static let riskHigh = errorRed
+    
+    /// Risk level: Critical
+    /// Hex: #DC2626
+    static let riskCritical = Color(hex: "DC2626")
+    
+    /// Insurance pool indicator
+    static let insurancePool = infoBlue
+    
+    /// Insurance claim accent
+    static let insuranceClaim = accentPurple
+    
+    /// Tax warning (unpaid taxes)
+    static let taxWarning = warningOrange
+    
+    /// Verification progress
+    static let verificationProgress = brandPurple
+    
+    // MARK: Layer 6: Neutrals
+    
+    /// Primary text content on dark backgrounds
+    /// Hex: #FFFFFF
     static let textPrimary = Color.white
     
-    /// Secondary/muted text
-    static let textSecondary = Color(white: 0.6)
+    /// Secondary text, reduced prominence
+    /// Hex: #E5E5EA
+    static let textSecondary = Color(hex: "E5E5EA")
     
-    /// Pure black background
+    /// Disabled states, hints
+    /// Hex: #8E8E93 (Apple HIG Gray)
+    static let textMuted = Color(hex: "8E8E93")
+    
+    /// Tertiary text (darker than muted)
+    static let textTertiary = Color(white: 0.4)
+    
+    /// Primary background foundation
+    /// Hex: #000000
     static let backgroundBlack = Color.black
     
-    /// Glass/frosted surface effect
+    /// Elevated surface layers
+    /// Hex: #1C1C1E
+    static let backgroundElevated = Color(hex: "1C1C1E")
+    
+    /// Glass-morphism backgrounds
+    /// Hex: rgba(28, 28, 30, 0.6)
     static let glassSurface = Color(hex: "1C1C1E").opacity(0.6)
     
-    /// Card/container backgrounds
+    /// Glass-morphism borders
+    /// Hex: rgba(255, 255, 255, 0.1)
+    static let glassBorder = Color.white.opacity(0.1)
+    
+    /// Card/container backgrounds (alias for backgroundElevated)
     static let surfaceElevated = Color(hex: "1C1C1E")
+    
+    /// Primary surface
+    static let surfacePrimary = Color(hex: "1C1C1E")
+    
+    /// Secondary surface (darker)
+    static let surfaceSecondary = Color(hex: "141417")
     
     /// Subtle borders and dividers
     static let borderSubtle = Color(white: 0.2)
@@ -133,9 +218,39 @@ extension Color {
     static let badgeCancelled = errorRed
     
     // Trust tier colors
-    static let tierRookie = Color.gray
+    static let tierRookie = textMuted  // Use muted gray, not raw .gray
     static let tierVerified = infoBlue
     static let tierTrusted = successGreen
     static let tierElite = accentPurple
     static let tierMaster = warningOrange
+    
+    // MARK: - v1.9.0 Heat Map Colors
+    
+    /// Heat zone: Low density (1-2 tasks) - cool blue
+    /// Hex: #3B82F6
+    static let heatLow = Color(hex: "3B82F6")
+    
+    /// Heat zone: Medium density (3-4 tasks) - warm yellow
+    /// Hex: #FBBF24
+    static let heatMedium = Color(hex: "FBBF24")
+    
+    /// Heat zone: High density (5-7 tasks) - hot orange
+    /// Hex: #F97316
+    static let heatHigh = Color(hex: "F97316")
+    
+    /// Heat zone: Hot density (8+ tasks) - blazing red
+    /// Hex: #EF4444
+    static let heatHot = Color(hex: "EF4444")
+    
+    /// Geofence boundary color
+    static let geofenceBoundary = brandPurple
+    
+    /// Movement tracking path color
+    static let movementPath = infoBlue
+    
+    /// Walking route color
+    static let walkingRoute = brandPurple
+    
+    /// Map grid lines
+    static let mapGrid = Color(white: 0.15)
 }

@@ -68,15 +68,16 @@ struct HXInput: View {
                 }
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.surfaceElevated)
+            .foregroundStyle(Color.textPrimary)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(error != nil ? Color.red : Color.clear, lineWidth: 1)
+                    .stroke(error != nil ? Color.errorRed : Color.clear, lineWidth: 1)
             )
             
             if let error = error {
-                HXText(error, style: .caption, color: .red)
+                HXText(error, style: .caption, color: .errorRed)
             }
         }
     }

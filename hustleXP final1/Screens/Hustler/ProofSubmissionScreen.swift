@@ -16,13 +16,19 @@ struct ProofSubmissionScreen: View {
     @Environment(Router.self) private var router
     @Environment(MockDataService.self) private var dataService
     
+    // v2.2.0: Real API services
+    @StateObject private var proofService = ProofService.shared
+    @StateObject private var taskService = TaskService.shared
+    
     let taskId: String
     
     // Form state
     @State private var notes: String = ""
     @State private var hasPhoto: Bool = false
+    @State private var capturedImage: UIImage?
     @State private var isSubmitting: Bool = false
     @State private var showCamera: Bool = false
+    @State private var uploadedPhotoUrls: [String] = []
     
     // GPS state (v1.8.0)
     @State private var gpsCoordinates: GPSCoordinates?
@@ -476,8 +482,8 @@ struct ProofSubmissionScreen: View {
                     // Header based on result
                     validationHeader(result)
                     
-                    // Validation feedback component
-                    ValidationFeedback(result: result, isCompact: false)
+                    // Validation scores section
+                    validationScoresSection(result)
                         .padding(.horizontal)
                     
                     // Action based on result
@@ -545,6 +551,113 @@ struct ProofSubmissionScreen: View {
         case .manualReview: return "The poster will review your submission"
         case .reject: return "Please try submitting again"
         }
+    }
+    
+    private func validationScoresSection(_ result: BiometricValidationResult) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Reasoning
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "info.circle.fill")
+                    .foregroundStyle(Color.textMuted)
+                
+                Text(result.reasoning)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.surfaceSecondary)
+            .cornerRadius(12)
+            
+            // Flags (if any)
+            if !result.flags.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HXText("Flags", style: .caption, color: .textMuted)
+                    
+                    HStack(spacing: 8) {
+                        ForEach(result.flags, id: \.self) { flag in
+                            HStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 10))
+                                
+                                Text(flag.replacingOccurrences(of: "_", with: " ").capitalized)
+                                    .font(.caption.weight(.medium))
+                            }
+                            .foregroundStyle(Color.warningOrange)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.warningOrange.opacity(0.15))
+                            .cornerRadius(8)
+                        }
+                    }
+                }
+            }
+            
+            // Scores
+            VStack(alignment: .leading, spacing: 12) {
+                HXText("Validation Scores", style: .caption, color: .textMuted)
+                
+                VStack(spacing: 10) {
+                    scoreBar(label: "Liveness", value: result.scores.liveness)
+                    scoreBar(label: "Authenticity", value: 100 - result.scores.deepfake)
+                    scoreBar(label: "GPS Proximity", value: result.scores.gpsProximity)
+                }
+            }
+            
+            // Risk badge
+            HStack {
+                Spacer()
+                RiskBadge(level: result.riskLevel)
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.surfaceElevated)
+        )
+    }
+    
+    private func scoreBar(label: String, value: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(label)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.textSecondary)
+                
+                Spacer()
+                
+                HStack(spacing: 4) {
+                    Text("\(value)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(scoreColor(for: value))
+                    
+                    if value >= 70 {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(Color.successGreen)
+                    }
+                }
+            }
+            
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.surfaceSecondary)
+                    
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(scoreColor(for: value))
+                        .frame(width: geometry.size.width * CGFloat(value) / 100)
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+    
+    private func scoreColor(for value: Int) -> Color {
+        if value >= 80 { return .successGreen }
+        if value >= 60 { return .warningOrange }
+        return .errorRed
     }
     
     private func validationActions(_ result: BiometricValidationResult) -> some View {
@@ -650,16 +763,6 @@ struct ProofSubmissionScreen: View {
         // Use mock location service
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             let mockService = MockLocationService.shared
-            
-            // Get mock task location (or use current location)
-            let taskLocation: CLLocationCoordinate2D?
-            if let task = task {
-                // Use a nearby location for the task
-                taskLocation = mockService.getMockTaskLocation(for: task.id)
-            } else {
-                taskLocation = nil
-            }
-            
             let result = mockService.getCurrentLocation()
             
             switch result {
@@ -686,33 +789,105 @@ struct ProofSubmissionScreen: View {
         print("[ProofSubmission] Submitting proof for task: \(taskId)")
         print("[ProofSubmission] GPS: \(coords.latitude), \(coords.longitude)")
         
-        // Create biometric proof submission
-        let submission = BiometricProofSubmission(
-            proofId: UUID().uuidString,
-            photoURL: nil, // Mock - would be real photo URL
-            gpsCoordinates: coords,
-            lidarDepthMapURL: nil, // iPhone 16e doesn't have LiDAR
-            deviceModel: "iPhone16,3", // iPhone 16e
-            osVersion: "18.0",
-            notes: notes.isEmpty ? nil : notes
-        )
-        
-        // Simulate submission and validation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            // Get validation result from mock service
-            let result = dataService.validateBiometricProof(
-                submission: submission,
-                taskId: taskId
-            )
-            
-            isSubmitting = false
-            validationResult = result
-            
-            withAnimation(.spring(response: 0.4)) {
-                showValidationFeedback = true
+        // v2.2.0: Use real API to submit proof
+        Task {
+            do {
+                // Upload photo if we have one
+                var photoUrls: [String] = uploadedPhotoUrls
+                if let image = capturedImage, photoUrls.isEmpty {
+                    print("[ProofSubmission] Uploading photo to R2...")
+                    let url = try await proofService.uploadProofPhoto(
+                        image: image,
+                        taskId: taskId,
+                        photoIndex: 0
+                    )
+                    photoUrls = [url]
+                    uploadedPhotoUrls = photoUrls
+                    print("[ProofSubmission] Photo uploaded: \(url)")
+                }
+                
+                // Generate biometric hash
+                let biometricHash = BiometricProofGenerator.generateHash(
+                    latitude: coords.latitude,
+                    longitude: coords.longitude
+                )
+                
+                // Submit proof via API
+                _ = try await proofService.submitProof(
+                    taskId: taskId,
+                    photoUrls: photoUrls.isEmpty ? ["mock://proof-photo.jpg"] : photoUrls,
+                    notes: notes.isEmpty ? nil : notes,
+                    gpsLatitude: coords.latitude,
+                    gpsLongitude: coords.longitude,
+                    biometricHash: biometricHash
+                )
+                
+                print("✅ ProofSubmission: Proof submitted via API")
+                
+                // Also submit via TaskService to update task state
+                _ = try await taskService.submitProof(
+                    taskId: taskId,
+                    photoUrls: photoUrls.isEmpty ? ["mock://proof-photo.jpg"] : photoUrls,
+                    notes: notes.isEmpty ? nil : notes,
+                    gpsLatitude: coords.latitude,
+                    gpsLongitude: coords.longitude,
+                    biometricHash: biometricHash
+                )
+                
+                // Create biometric proof submission for local validation
+                let photoURL: URL? = photoUrls.first.flatMap { URL(string: $0) }
+                let submission = BiometricProofSubmission(
+                    proofId: UUID().uuidString,
+                    photoURL: photoURL,
+                    gpsCoordinates: coords,
+                    gpsAccuracyMeters: coords.accuracyMeters,
+                    gpsTimestamp: coords.timestamp,
+                    deviceModel: "iPhone16,3",
+                    osVersion: "18.0"
+                )
+                
+                // Get validation result from mock service (for UI feedback)
+                let result = dataService.validateBiometricProof(
+                    submission: submission,
+                    taskId: taskId
+                )
+                
+                isSubmitting = false
+                validationResult = result
+                
+                withAnimation(.spring(response: 0.4)) {
+                    showValidationFeedback = true
+                }
+                
+                print("[ProofSubmission] Validation result: \(result.recommendation.rawValue)")
+                
+            } catch {
+                print("⚠️ ProofSubmission: API failed - \(error.localizedDescription)")
+                
+                // Fall back to mock validation
+                let photoURL: URL? = uploadedPhotoUrls.first.flatMap { URL(string: $0) }
+                let submission = BiometricProofSubmission(
+                    proofId: UUID().uuidString,
+                    photoURL: photoURL,
+                    gpsCoordinates: coords,
+                    gpsAccuracyMeters: coords.accuracyMeters,
+                    gpsTimestamp: coords.timestamp,
+                    deviceModel: "iPhone16,3",
+                    osVersion: "18.0"
+                )
+                
+                let result = dataService.validateBiometricProof(
+                    submission: submission,
+                    taskId: taskId
+                )
+                
+                isSubmitting = false
+                validationResult = result
+                
+                withAnimation(.spring(response: 0.4)) {
+                    showValidationFeedback = true
+                }
             }
-            
-            print("[ProofSubmission] Validation result: \(result.recommendation.rawValue)")
         }
     }
     

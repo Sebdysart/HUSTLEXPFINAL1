@@ -71,7 +71,7 @@ final class MockLiveModeService {
     func startLiveMode(
         workerId: String,
         location: GPSCoordinates,
-        categories: [TaskCategory],
+        categories: [LiveTaskCategory],
         maxDistance: Double = 3218
     ) -> LiveModeSession {
         let session = LiveModeSession(
@@ -141,7 +141,7 @@ final class MockLiveModeService {
     func createQuestAlert(
         task: HXTask,
         posterLocation: GPSCoordinates,
-        category: TaskCategory
+        category: LiveTaskCategory
     ) -> QuestAlert {
         let basePayment = task.payment
         let urgencyPremium = basePayment * baseUrgencyPremium
@@ -520,7 +520,7 @@ final class MockLiveModeService {
     // MARK: - Mock Data
     
     private func generateMockQuests() {
-        let categories: [TaskCategory] = [.lockout, .jumpstart, .lifting, .delivery]
+        let categories: [LiveTaskCategory] = [.lockout, .jumpstart, .lifting, .delivery]
         let locations = MockLocationService.shared.sfNeighborhoods
         
         // Generate 2-3 active quests
@@ -528,19 +528,26 @@ final class MockLiveModeService {
             guard let neighborhood = locations.randomElement() else { continue }
             let category = categories.randomElement() ?? .other
             
+            let basePayment = Double.random(in: 35...75)
             let task = HXTask(
                 id: "asap-\(i)",
                 title: mockTitle(for: category),
                 description: mockDescription(for: category),
-                payment: Double.random(in: 35...75),
-                estimatedDuration: "15-30 min",
+                payment: basePayment,
                 location: neighborhood.name,
-                latitude: neighborhood.coordinates.latitude,
-                longitude: neighborhood.coordinates.longitude,
-                requiredTier: .elite,
+                latitude: neighborhood.coords.latitude,
+                longitude: neighborhood.coords.longitude,
+                estimatedDuration: "15-30 min",
+                posterId: "poster-live-\(i)",
                 posterName: ["Alex M.", "Jordan K.", "Taylor S."].randomElement() ?? "User",
                 posterRating: Double.random(in: 4.5...5.0),
-                state: .posted
+                hustlerId: nil,
+                hustlerName: nil,
+                state: .posted,
+                requiredTier: .elite,
+                createdAt: Date(),
+                claimedAt: nil,
+                completedAt: nil
             )
             
             var quest = QuestAlert(
@@ -548,14 +555,14 @@ final class MockLiveModeService {
                 task: task,
                 createdAt: Date().addingTimeInterval(Double.random(in: -30...0)),
                 expiresAt: Date().addingTimeInterval(Double.random(in: 30...60)),
-                initialPayment: task.payment,
-                currentPayment: task.payment + Double.random(in: 0...10),
+                initialPayment: basePayment,
+                currentPayment: basePayment + Double.random(in: 0...10),
                 surgeMultiplier: 1.0,
-                urgencyPremium: task.payment * 0.25,
+                urgencyPremium: basePayment * 0.25,
                 decisionWindowSeconds: 60,
                 priceBoosts: Int.random(in: 0...2),
                 maxRadius: maxRadiusMeters,
-                posterLocation: neighborhood.coordinates,
+                posterLocation: neighborhood.coords,
                 status: .broadcasting
             )
             quest.distanceMeters = Double.random(in: 200...1500)
@@ -564,7 +571,7 @@ final class MockLiveModeService {
         }
     }
     
-    private func mockTitle(for category: TaskCategory) -> String {
+    private func mockTitle(for category: LiveTaskCategory) -> String {
         switch category {
         case .lockout: return "Locked out of my apartment - URGENT"
         case .jumpstart: return "Car won't start - need jump NOW"
@@ -577,7 +584,7 @@ final class MockLiveModeService {
         }
     }
     
-    private func mockDescription(for category: TaskCategory) -> String {
+    private func mockDescription(for category: LiveTaskCategory) -> String {
         switch category {
         case .lockout: return "Locked myself out, keys inside. Need someone with lockout tools or to wait with me for locksmith."
         case .jumpstart: return "Battery dead in parking lot. Have cables, just need another car or portable jumper."

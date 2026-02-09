@@ -49,7 +49,7 @@ struct TaskManagementScreen: View {
                 }
                 
                 // Bottom action
-                if task.state == .pendingVerification {
+                if task.state == .proofSubmitted {
                     VStack {
                         Spacer()
                         ReviewProofCTA(task: task, router: router)
@@ -145,7 +145,7 @@ private struct TaskStateBadge: View {
     var color: Color {
         switch state {
         case .posted: return .infoBlue
-        case .claimed, .pendingVerification: return .warningOrange
+        case .claimed, .proofSubmitted: return .warningOrange
         case .inProgress: return .brandPurple
         case .completed: return .successGreen
         case .cancelled, .disputed: return .errorRed
@@ -250,7 +250,7 @@ private struct HustlerInfoCard: View {
             HXText("Assigned Hustler", style: .headline)
             
             HStack(spacing: 16) {
-                HXAvatar(imageURL: nil, size: .medium, initials: "JD")
+                HXAvatar(initials: "JD", size: .medium)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     HXText("Jane Doe", style: .headline)

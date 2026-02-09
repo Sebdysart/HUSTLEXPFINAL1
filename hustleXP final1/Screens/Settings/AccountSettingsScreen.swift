@@ -16,15 +16,19 @@ struct AccountSettingsScreen: View {
     var body: some View {
         List {
             // Profile section
-            Section("Profile") {
+            Section {
                 AccountInfoRow(label: "Name", value: dataService.currentUser.name)
                 AccountInfoRow(label: "Email", value: dataService.currentUser.email)
                 AccountInfoRow(label: "Phone", value: dataService.currentUser.phone ?? "Not set")
                 AccountInfoRow(label: "Role", value: appState.userRole?.rawValue.capitalized ?? "—")
+            } header: {
+                Text("Profile")
+                    .foregroundStyle(Color.textSecondary)
             }
+            .listRowBackground(Color.surfaceElevated)
             
             // Trust & Reputation
-            Section("Trust & Reputation") {
+            Section {
                 HStack {
                     HXText("Trust Tier", style: .body)
                     Spacer()
@@ -39,7 +43,11 @@ struct AccountSettingsScreen: View {
                 
                 AccountInfoRow(label: "Total Ratings", value: "\(dataService.currentUser.totalRatings)")
                 AccountInfoRow(label: "XP", value: "\(dataService.currentUser.xp)")
+            } header: {
+                Text("Trust & Reputation")
+                    .foregroundStyle(Color.textSecondary)
             }
+            .listRowBackground(Color.surfaceElevated)
             
             // Actions
             Section {
@@ -57,6 +65,7 @@ struct AccountSettingsScreen: View {
                     }
                 }
             }
+            .listRowBackground(Color.surfaceElevated)
             
             // Danger zone
             Section {
@@ -69,10 +78,17 @@ struct AccountSettingsScreen: View {
             } footer: {
                 Text("This action cannot be undone. All your data will be permanently deleted.")
                     .font(.caption)
+                    .foregroundStyle(Color.textTertiary)
             }
+            .listRowBackground(Color.surfaceElevated)
         }
         .navigationTitle("Account")
         .navigationBarTitleDisplayMode(.inline)
+        .scrollContentBackground(.hidden)
+        .background(Color.brandBlack)
+        .toolbarBackground(Color.brandBlack, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .alert("Delete Account?", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
@@ -92,7 +108,7 @@ struct AccountInfoRow: View {
         HStack {
             HXText(label, style: .body)
             Spacer()
-            HXText(value, style: .body, color: .secondary)
+            HXText(value, style: .body, color: .textSecondary)
         }
     }
 }

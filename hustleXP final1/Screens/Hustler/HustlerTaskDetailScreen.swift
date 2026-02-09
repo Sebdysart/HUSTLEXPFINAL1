@@ -13,14 +13,24 @@ struct HustlerTaskDetailScreen: View {
     @Environment(MockDataService.self) private var dataService
     @Environment(AppState.self) private var appState
     
+    // v2.2.0: Real API service
+    @StateObject private var taskService = TaskService.shared
+    
     let taskId: String
     
     @State private var showContent = false
     @State private var isAccepting = false
+    @State private var apiTask: HXTask?
+    @State private var loadError: Error?
     
+    // v1.9.0 Spatial Intelligence
+    @State private var userLocation: GPSCoordinates?
+    @State private var walkingETA: WalkingETA?
+    @State private var batchRecommendation: BatchRecommendation?
+    
+    // v2.2.0: Use API task when available, fall back to mock
     private var task: HXTask? {
-        dataService.availableTasks.first { $0.id == taskId } ??
-        dataService.activeTask
+        apiTask ?? dataService.availableTasks.first { $0.id == taskId } ?? dataService.activeTask
     }
     
     var body: some View {
@@ -81,6 +91,10 @@ struct HustlerTaskDetailScreen: View {
                 withAnimation(.easeOut(duration: 0.5)) {
                     showContent = true
                 }
+            }
+            .task {
+                // v2.2.0: Load task from real API
+                await loadTaskFromAPI()
             }
         } else {
             loadingOrErrorView
@@ -309,7 +323,7 @@ struct HustlerTaskDetailScreen: View {
         .animation(.easeOut(duration: 0.4).delay(0.15), value: showContent)
     }
     
-    // MARK: - Location Card
+    // MARK: - Location Card (v1.9.0 with TaskMapView)
     
     private func locationCard(_ task: HXTask) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -323,52 +337,29 @@ struct HustlerTaskDetailScreen: View {
                 
                 Spacer()
                 
-                Button(action: {}) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "map.fill")
-                            .font(.caption)
-                        Text("Open Maps")
-                            .font(.caption.weight(.medium))
-                    }
-                    .foregroundStyle(Color.brandPurple)
-                }
+                // Location name
+                Text(task.location)
+                    .font(.caption)
+                    .foregroundStyle(Color.textSecondary)
             }
             
-            HStack(spacing: 12) {
-                // Map placeholder
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.brandBlack)
-                    .frame(width: 80, height: 80)
-                    .overlay(
-                        Image(systemName: "map")
-                            .font(.title2)
-                            .foregroundStyle(Color.textMuted)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                    )
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(task.location)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.textPrimary)
-                    
-                    Text("1.2 miles away")
-                        .font(.caption)
-                        .foregroundStyle(Color.textMuted)
-                    
-                    HStack(spacing: 4) {
-                        Image(systemName: "car.fill")
-                            .font(.caption2)
-                        Text("~5 min drive")
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(Color.textSecondary)
-                    .padding(.top, 2)
+            // v1.9.0: TaskMapView with walking ETA
+            TaskMapView(
+                task: task,
+                userLocation: userLocation,
+                walkingETA: walkingETA,
+                showRoute: true,
+                onOpenMaps: {
+                    openInMaps(task)
                 }
-                
-                Spacer()
+            )
+            
+            // v1.9.0: Show batch recommendation if available
+            if let recommendation = batchRecommendation {
+                MiniNearbyIndicator(
+                    nearbyCount: recommendation.nearbyTasks.count,
+                    walkingTime: recommendation.savings.timeSavedMinutes
+                )
             }
         }
         .padding(16)
@@ -382,6 +373,34 @@ struct HustlerTaskDetailScreen: View {
         )
         .opacity(showContent ? 1 : 0)
         .animation(.easeOut(duration: 0.4).delay(0.2), value: showContent)
+        .task {
+            await loadLocationData(for: task)
+        }
+    }
+    
+    // MARK: - Location Data Loading
+    
+    private func loadLocationData(for task: HXTask) async {
+        let (coords, _) = await MockLocationService.shared.captureLocation()
+        userLocation = coords
+        
+        // Calculate walking ETA if task has coordinates
+        if let taskCoords = task.gpsCoordinates {
+            walkingETA = MockLocationService.shared.calculateWalkingETA(from: coords, to: taskCoords)
+        }
+        
+        // Check for batch recommendations
+        batchRecommendation = MockTaskBatchingService.shared.generateRecommendation(
+            for: task,
+            availableTasks: dataService.availableTasks,
+            userLocation: coords
+        )
+    }
+    
+    private func openInMaps(_ task: HXTask) {
+        guard let lat = task.latitude, let lon = task.longitude else { return }
+        // In production, would open Apple Maps
+        print("[Maps] Opening directions to \(lat), \(lon)")
     }
     
     // MARK: - Poster Card
@@ -690,9 +709,34 @@ struct HustlerTaskDetailScreen: View {
         
         isAccepting = true
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            dataService.claimTask(task.id)
-            router.navigateToHustler(.taskInProgress(taskId: task.id))
+        // v2.2.0: Use real API to accept task
+        Task {
+            do {
+                let updatedTask = try await taskService.acceptTask(taskId: task.id)
+                apiTask = updatedTask
+                
+                // Also update mock data for consistency
+                dataService.claimTask(task.id)
+                
+                router.navigateToHustler(.taskInProgress(taskId: task.id))
+            } catch {
+                // Fall back to mock data if API fails
+                print("⚠️ TaskDetail: API accept failed, using mock - \(error.localizedDescription)")
+                dataService.claimTask(task.id)
+                router.navigateToHustler(.taskInProgress(taskId: task.id))
+            }
+            isAccepting = false
+        }
+    }
+    
+    // v2.2.0: Load task from API
+    private func loadTaskFromAPI() async {
+        do {
+            apiTask = try await taskService.getTask(id: taskId)
+            print("✅ TaskDetail: Loaded task from API")
+        } catch {
+            loadError = error
+            print("⚠️ TaskDetail: API load failed, using mock - \(error.localizedDescription)")
         }
     }
 }

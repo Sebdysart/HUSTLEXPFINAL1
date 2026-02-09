@@ -155,10 +155,12 @@ struct HXButton: View {
     let size: HXButtonSize
     let isFullWidth: Bool
     let isLoading: Bool
+    let accessibilityLabel: String?
+    let accessibilityHint: String?
     let action: () -> Void
-    
+
     @State private var isPressed = false
-    
+
     init(
         _ title: String,
         icon: String? = nil,
@@ -166,6 +168,8 @@ struct HXButton: View {
         size: HXButtonSize = .large,
         isFullWidth: Bool = true,
         isLoading: Bool = false,
+        accessibilityLabel: String? = nil,
+        accessibilityHint: String? = nil,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -174,6 +178,8 @@ struct HXButton: View {
         self.size = size
         self.isFullWidth = isFullWidth
         self.isLoading = isLoading
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityHint = accessibilityHint
         self.action = action
     }
     
@@ -245,6 +251,11 @@ struct HXButton: View {
         .disabled(isLoading)
         .opacity(isLoading ? 0.85 : 1)
         .buttonStyle(PressableButtonStyle(isPressed: $isPressed))
+        .accessibilityLabel(accessibilityLabel ?? title)
+        .accessibilityHint(accessibilityHint ?? "")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityRemoveTraits(isLoading ? [] : [])
+        .accessibilityValue(isLoading ? "Loading" : "")
     }
 }
 

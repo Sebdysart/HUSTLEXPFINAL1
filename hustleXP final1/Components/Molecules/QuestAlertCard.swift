@@ -398,17 +398,23 @@ struct MiniQuestAlert: View {
                 title: "Locked out of apartment - URGENT",
                 description: "Need help",
                 payment: 45,
-                estimatedDuration: "15-30 min",
                 location: "Mission District",
                 latitude: 37.76,
                 longitude: -122.42,
-                requiredTier: .elite,
+                estimatedDuration: "15-30 min",
+                posterId: "poster-1",
                 posterName: "Alex M.",
                 posterRating: 4.8,
-                state: .posted
+                hustlerId: nil,
+                hustlerName: nil,
+                state: .posted,
+                requiredTier: .elite,
+                createdAt: Date(),
+                claimedAt: nil,
+                completedAt: nil
             )
             
-            var quest = QuestAlert(
+            let quest = QuestAlert(
                 id: "1",
                 task: mockTask,
                 createdAt: Date(),
