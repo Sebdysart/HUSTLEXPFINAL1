@@ -2,6 +2,8 @@ import Foundation
 import Combine
 import FirebaseAuth
 import FirebaseCore
+import AuthenticationServices
+import CryptoKit
 
 /// Manages user authentication with Firebase and backend registration
 ///
@@ -205,6 +207,163 @@ final class AuthService: ObservableObject {
         }
     }
 
+    // MARK: - Sign In with Apple
+
+    /// Stored nonce for Apple Sign-In verification
+    private var currentNonce: String?
+
+    /// Signs in or registers a user with Apple credentials
+    func signInWithApple(authorization: ASAuthorization) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let nonce = currentNonce,
+              let appleIDToken = appleIDCredential.identityToken,
+              let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+            throw NSError(domain: "AuthService", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "Unable to process Apple Sign-In credentials."])
+        }
+
+        do {
+            let credential = OAuthProvider.appleCredential(
+                withIDToken: idTokenString,
+                rawNonce: nonce,
+                fullName: appleIDCredential.fullName
+            )
+
+            let authResult = try await Auth.auth().signIn(with: credential)
+            let idToken = try await authResult.user.getIDToken()
+
+            // Store token
+            trpc.setAuthToken(idToken)
+            KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
+
+            // Try to load existing user from backend
+            do {
+                await loadCurrentUser()
+                if isAuthenticated {
+                    print("✅ Auth: Apple Sign-In successful (existing user)")
+                    return
+                }
+            } catch {
+                // User doesn't exist on backend yet, register them
+            }
+
+            // Register new user with backend
+            let fullName = [
+                appleIDCredential.fullName?.givenName,
+                appleIDCredential.fullName?.familyName
+            ].compactMap { $0 }.joined(separator: " ")
+
+            let displayName = fullName.isEmpty
+                ? (authResult.user.displayName ?? "HustleXP User")
+                : fullName
+
+            struct RegisterInput: Codable {
+                let firebaseUid: String
+                let email: String
+                let fullName: String
+                let defaultMode: String
+            }
+
+            let input = RegisterInput(
+                firebaseUid: authResult.user.uid,
+                email: authResult.user.email ?? "",
+                fullName: displayName,
+                defaultMode: UserRole.hustler.rawValue
+            )
+
+            let user: HXUser = try await trpc.call(
+                router: "user",
+                procedure: "register",
+                input: input
+            )
+
+            KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
+            self.currentUser = user
+            self.isAuthenticated = true
+
+            print("✅ Auth: Apple Sign-In successful (new user) - \(user.name)")
+        } catch let error as NSError {
+            self.error = error
+            print("❌ Auth: Apple Sign-In failed - \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    /// Prepares a crypto nonce for Apple Sign-In and returns the request
+    func prepareAppleSignInRequest(_ request: ASAuthorizationAppleIDRequest) {
+        let nonce = randomNonceString()
+        currentNonce = nonce
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = sha256(nonce)
+    }
+
+    // MARK: - Sign In with Google
+
+    /// Signs in or registers a user with Google credentials via Firebase
+    func signInWithGoogle(idToken: String, accessToken: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let credential = GoogleAuthProvider.credential(
+                withIDToken: idToken,
+                accessToken: accessToken
+            )
+
+            let authResult = try await Auth.auth().signIn(with: credential)
+            let firebaseToken = try await authResult.user.getIDToken()
+
+            // Store token
+            trpc.setAuthToken(firebaseToken)
+            KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
+
+            // Try to load existing user from backend
+            do {
+                await loadCurrentUser()
+                if isAuthenticated {
+                    print("✅ Auth: Google Sign-In successful (existing user)")
+                    return
+                }
+            } catch {
+                // User doesn't exist on backend yet, register them
+            }
+
+            // Register new user with backend
+            struct RegisterInput: Codable {
+                let firebaseUid: String
+                let email: String
+                let fullName: String
+                let defaultMode: String
+            }
+
+            let input = RegisterInput(
+                firebaseUid: authResult.user.uid,
+                email: authResult.user.email ?? "",
+                fullName: authResult.user.displayName ?? "HustleXP User",
+                defaultMode: UserRole.hustler.rawValue
+            )
+
+            let user: HXUser = try await trpc.call(
+                router: "user",
+                procedure: "register",
+                input: input
+            )
+
+            KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
+            self.currentUser = user
+            self.isAuthenticated = true
+
+            print("✅ Auth: Google Sign-In successful (new user) - \(user.name)")
+        } catch let error as NSError {
+            self.error = error
+            print("❌ Auth: Google Sign-In failed - \(error.localizedDescription)")
+            throw error
+        }
+    }
+
     // MARK: - Sign Out
 
     /// Signs out the current user and clears all stored credentials
@@ -282,5 +441,26 @@ final class AuthService: ObservableObject {
     func sendPasswordReset(email: String) async throws {
         try await Auth.auth().sendPasswordReset(withEmail: email)
         print("✅ Auth: Password reset email sent to \(email)")
+    }
+
+    // MARK: - Crypto Helpers
+
+    /// Generates a random nonce string for Apple Sign-In
+    private func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        var randomBytes = [UInt8](repeating: 0, count: length)
+        let errorCode = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+        if errorCode != errSecSuccess {
+            fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+        }
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(randomBytes.map { charset[Int($0) % charset.count] })
+    }
+
+    /// SHA256 hash of the input string
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        return hashedData.compactMap { String(format: "%02x", $0) }.joined()
     }
 }

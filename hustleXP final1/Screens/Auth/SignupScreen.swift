@@ -7,6 +7,8 @@
 //
 
 import SwiftUI
+import AuthenticationServices
+import FirebaseCore
 
 struct SignupScreen: View {
     @Environment(AppState.self) private var appState
@@ -21,6 +23,8 @@ struct SignupScreen: View {
     @State private var showContent = false
     @State private var errors: [String: String] = [:]
     @State private var signupError: String?
+    @State private var isSocialLoading = false
+    @State private var appleSignInDelegate: AppleSignInDelegateSignup?
     @FocusState private var focusedField: Field?
     
     enum Field: Hashable {
@@ -390,22 +394,24 @@ struct SignupScreen: View {
     }
     
     // MARK: - Social Signup Section
-    
+
     private func socialSignupSection(isCompact: Bool) -> some View {
         HStack(spacing: isCompact ? 12 : 16) {
-            socialButton(icon: "apple.logo", label: "Apple")
-            socialButton(icon: "g.circle.fill", label: "Google")
+            socialButton(icon: "apple.logo", label: "Apple") {
+                handleAppleSignIn()
+            }
+            socialButton(icon: "g.circle.fill", label: "Google") {
+                handleGoogleSignIn()
+            }
         }
+        .disabled(isSocialLoading)
+        .opacity(isSocialLoading ? 0.6 : 1)
         .opacity(showContent ? 1 : 0)
         .animation(.easeOut(duration: 0.5).delay(0.5), value: showContent)
     }
-    
-    private func socialButton(icon: String, label: String) -> some View {
-        Button(action: {
-            // Handle social signup
-            let impact = UIImpactFeedbackGenerator(style: .light)
-            impact.impactOccurred()
-        }) {
+
+    private func socialButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .medium))
@@ -514,6 +520,103 @@ struct SignupScreen: View {
                 errorFeedback.notificationOccurred(.error)
             }
         }
+    }
+
+    // MARK: - Apple Sign-In
+
+    private func handleAppleSignIn() {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        authService.prepareAppleSignInRequest(request)
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        let delegate = AppleSignInDelegateSignup { result in
+            Task { @MainActor in
+                switch result {
+                case .success(let authorization):
+                    isSocialLoading = true
+                    signupError = nil
+                    do {
+                        try await authService.signInWithApple(authorization: authorization)
+                        HapticFeedback.success()
+                    } catch {
+                        signupError = error.localizedDescription
+                        HapticFeedback.error()
+                    }
+                    isSocialLoading = false
+                case .failure(let error):
+                    if (error as NSError).code != ASAuthorizationError.canceled.rawValue {
+                        signupError = error.localizedDescription
+                        HapticFeedback.error()
+                    }
+                }
+            }
+        }
+        appleSignInDelegate = delegate
+        controller.delegate = delegate
+        controller.performRequests()
+    }
+
+    // MARK: - Google Sign-In
+
+    private func handleGoogleSignIn() {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+
+        isSocialLoading = true
+        signupError = nil
+
+        Task {
+            do {
+                guard let clientID = FirebaseApp.app()?.options.clientID else {
+                    throw NSError(domain: "AuthService", code: -1,
+                                  userInfo: [NSLocalizedDescriptionKey: "Firebase client ID not found."])
+                }
+
+                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                      let rootViewController = windowScene.windows.first?.rootViewController else {
+                    throw NSError(domain: "AuthService", code: -1,
+                                  userInfo: [NSLocalizedDescriptionKey: "No root view controller found."])
+                }
+
+                let result = try await GIDSignInHelper.signIn(
+                    withClientID: clientID,
+                    presenting: rootViewController
+                )
+
+                try await authService.signInWithGoogle(
+                    idToken: result.idToken,
+                    accessToken: result.accessToken
+                )
+                HapticFeedback.success()
+            } catch {
+                if (error as NSError).code != GIDSignInHelper.cancelledCode {
+                    signupError = error.localizedDescription
+                    HapticFeedback.error()
+                }
+            }
+            isSocialLoading = false
+        }
+    }
+}
+
+// MARK: - Apple Sign-In Delegate (Signup)
+
+private class AppleSignInDelegateSignup: NSObject, ASAuthorizationControllerDelegate {
+    let completion: (Result<ASAuthorization, Error>) -> Void
+
+    init(completion: @escaping (Result<ASAuthorization, Error>) -> Void) {
+        self.completion = completion
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        completion(.success(authorization))
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        completion(.failure(error))
     }
 }
 

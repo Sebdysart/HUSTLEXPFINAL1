@@ -20,6 +20,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         print("✅ Firebase configured successfully")
         return true
     }
+
+    // Handle Google Sign-In URL callback
+    func application(
+        _ app: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey : Any] = [:]
+    ) -> Bool {
+        // GoogleSignIn SDK will handle the URL when added
+        // GIDSignIn.sharedInstance.handle(url)
+        return false
+    }
 }
 
 // MARK: - Main App
