@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		71B48DD12F38067200782AA2 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 71B48DD02F38067200782AA2 /* FirebaseAuth */; };
 		71B48DD32F38067200782AA2 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 71B48DD22F38067200782AA2 /* FirebaseCore */; };
+		71F70B822F3B0710000ACBA0 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 71F70B812F3B0710000ACBA0 /* GoogleSignIn */; };
+		71F70B842F3B0710000ACBA0 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 71F70B832F3B0710000ACBA0 /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +32,8 @@
 			files = (
 				71B48DD32F38067200782AA2 /* FirebaseCore in Frameworks */,
 				71B48DD12F38067200782AA2 /* FirebaseAuth in Frameworks */,
+				71F70B822F3B0710000ACBA0 /* GoogleSignIn in Frameworks */,
+				71F70B842F3B0710000ACBA0 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +78,8 @@
 			packageProductDependencies = (
 				71B48DD02F38067200782AA2 /* FirebaseAuth */,
 				71B48DD22F38067200782AA2 /* FirebaseCore */,
+				71F70B812F3B0710000ACBA0 /* GoogleSignIn */,
+				71F70B832F3B0710000ACBA0 /* GoogleSignInSwift */,
 			);
 			productName = "hustleXP final1";
 			productReference = 71972DFC2F359FB900F03F8E /* hustleXP final1.app */;
@@ -105,6 +111,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				71F70B802F3B0710000ACBA0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 71972DFD2F359FB900F03F8E /* Products */;
@@ -269,6 +276,7 @@
 				DEVELOPMENT_TEAM = V85B8S6KA2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "hustleXP-final1-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -302,6 +310,7 @@
 				DEVELOPMENT_TEAM = V85B8S6KA2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "hustleXP-final1-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -356,6 +365,14 @@
 				minimumVersion = 12.9.0;
 			};
 		};
+		71F70B802F3B0710000ACBA0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -368,6 +385,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
+		};
+		71F70B812F3B0710000ACBA0 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 71F70B802F3B0710000ACBA0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		71F70B832F3B0710000ACBA0 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 71F70B802F3B0710000ACBA0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

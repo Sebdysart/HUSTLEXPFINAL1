@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseCore
+import GoogleSignIn
 
 // MARK: - App Delegate for Firebase
 
@@ -27,9 +28,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey : Any] = [:]
     ) -> Bool {
-        // GoogleSignIn SDK will handle the URL when added
-        // GIDSignIn.sharedInstance.handle(url)
-        return false
+        return GIDSignIn.sharedInstance.handle(url)
     }
 }
 
