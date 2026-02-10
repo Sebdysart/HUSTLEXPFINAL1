@@ -240,17 +240,13 @@ final class AuthService: ObservableObject {
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
 
             // Try to load existing user from backend
-            do {
-                await loadCurrentUser()
-                if isAuthenticated {
-                    print("✅ Auth: Apple Sign-In successful (existing user)")
-                    return
-                }
-            } catch {
-                // User doesn't exist on backend yet, register them
+            await loadCurrentUser()
+            if isAuthenticated {
+                print("✅ Auth: Apple Sign-In successful (existing user)")
+                return
             }
 
-            // Register new user with backend
+            // User doesn't exist on backend yet, register them
             let fullName = [
                 appleIDCredential.fullName?.givenName,
                 appleIDCredential.fullName?.familyName
@@ -321,17 +317,13 @@ final class AuthService: ObservableObject {
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
 
             // Try to load existing user from backend
-            do {
-                await loadCurrentUser()
-                if isAuthenticated {
-                    print("✅ Auth: Google Sign-In successful (existing user)")
-                    return
-                }
-            } catch {
-                // User doesn't exist on backend yet, register them
+            await loadCurrentUser()
+            if isAuthenticated {
+                print("✅ Auth: Google Sign-In successful (existing user)")
+                return
             }
 
-            // Register new user with backend
+            // User doesn't exist on backend yet, register them
             struct RegisterInput: Codable {
                 let firebaseUid: String
                 let email: String

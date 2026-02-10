@@ -21,15 +21,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         print("✅ Firebase configured successfully")
         return true
     }
-
-    // Handle Google Sign-In URL callback
-    func application(
-        _ app: UIApplication,
-        open url: URL,
-        options: [UIApplication.OpenURLOptionsKey : Any] = [:]
-    ) -> Bool {
-        return GIDSignIn.sharedInstance.handle(url)
-    }
 }
 
 // MARK: - Main App
@@ -62,6 +53,10 @@ struct hustleXP_final1App: App {
             .environment(router)
             .environment(dataService)
             .adaptiveLayout()  // Inject AdaptiveLayout for consistent responsive sizing
+            .onOpenURL { url in
+                // Handle Google Sign-In URL callback
+                GIDSignIn.sharedInstance.handle(url)
+            }
         }
     }
 }
