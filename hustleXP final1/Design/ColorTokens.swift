@@ -80,8 +80,26 @@ extension Color {
     /// Hex: #FFD900
     static let instantYellow = Color(hex: "FFD900")
     
+    // MARK: Layer 5a: v2.4.0 Unlockable Feature Colors
+
+    /// Squads Mode (Gold-tier) — warm amber/gold
+    /// Hex: #F59E0B (Amber-500)
+    static let squadGold = Color(hex: "F59E0B")
+
+    /// Squads Mode lighter variant for backgrounds
+    /// Hex: #FCD34D (Amber-300)
+    static let squadGoldLight = Color(hex: "FCD34D")
+
+    /// Recurring Tasks (Silver-tier) — cool blue
+    /// Hex: #3B82F6 (Blue-500)
+    static let recurringBlue = Color(hex: "3B82F6")
+
+    /// Recurring Tasks lighter variant for backgrounds
+    /// Hex: #93C5FD (Blue-300)
+    static let recurringBlueLight = Color(hex: "93C5FD")
+
     // MARK: Layer 5: v1.8.0 Feature Colors
-    
+
     /// AI/Scoper purple for AI-suggested pricing
     /// Hex: #8B5CF6
     static let aiPurple = Color(hex: "8B5CF6")
@@ -253,4 +271,16 @@ extension Color {
     
     /// Map grid lines
     static let mapGrid = Color(white: 0.15)
+
+    // MARK: - Additional Tokens
+
+    /// XP gold accent for celebrations and XP displays
+    /// Hex: #FFD700
+    static let xpGold = Color(hex: "FFD700")
+
+    /// Default surface (slightly lighter than brandBlack)
+    static let surfaceDefault = Color(hex: "141417")
+
+    /// Surface border for dividers and outlines
+    static let surfaceBorder = Color(white: 0.2)
 }

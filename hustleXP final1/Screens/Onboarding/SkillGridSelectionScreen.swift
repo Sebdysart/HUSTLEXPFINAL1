@@ -28,9 +28,16 @@ struct SkillGridSelectionScreen: View {
             Color.brandBlack.ignoresSafeArea()
             
             VStack(spacing: 0) {
+                // Progress bar (shown during onboarding)
+                OnboardingProgressBar(
+                    currentStep: OnboardingRoute.skillSelection.stepIndex,
+                    totalSteps: OnboardingRoute.totalSteps
+                )
+                .padding(.top, 8)
+
                 // Header
                 header
-                
+
                 // Search bar
                 searchBar
                 
@@ -52,7 +59,12 @@ struct SkillGridSelectionScreen: View {
                 bottomButton
             }
         }
-        .navigationBarHidden(true)
+        .navigationBarBackButtonHidden(false)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.brandBlack, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .sheet(isPresented: $showLicensePrompt) {
             if let licenseType = selectedLicenseType {
                 LicensePromptSheet(
@@ -81,22 +93,13 @@ struct SkillGridSelectionScreen: View {
     private var header: some View {
         VStack(spacing: 8) {
             HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Color.textSecondary)
-                        .frame(width: 40, height: 40)
-                }
-                
                 Spacer()
                 
                 Text("\(selectedSkills.count) selected")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.textSecondary)
+                    .padding(.trailing, 16)
             }
-            .padding(.horizontal, 16)
             .padding(.top, 8)
             
             VStack(spacing: 4) {
@@ -433,7 +436,8 @@ struct SkillGridSelectionScreen: View {
         for skillId in selectedSkills {
             licenseService.selectSkill(skillId)
         }
-        dismiss()
+        // Navigate to onboarding complete (or dismiss if accessed from settings)
+        router.navigateToOnboarding(.complete)
     }
 }
 

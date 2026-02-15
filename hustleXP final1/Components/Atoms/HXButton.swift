@@ -160,6 +160,7 @@ struct HXButton: View {
     let action: () -> Void
 
     @State private var isPressed = false
+    @State private var isActionInProgress = false
 
     init(
         _ title: String,
@@ -185,9 +186,18 @@ struct HXButton: View {
     
     var body: some View {
         Button(action: {
+            // Prevent double-tap by debouncing
+            guard !isActionInProgress else { return }
+            isActionInProgress = true
+            
             let impact = UIImpactFeedbackGenerator(style: .medium)
             impact.impactOccurred()
             action()
+            
+            // Reset after a short delay to allow next tap
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                isActionInProgress = false
+            }
         }) {
             HStack(spacing: 10) {
                 if isLoading {

@@ -252,7 +252,7 @@ final class MockLicenseVerificationService {
             var distance: Double? = nil
             if let loc = location, let taskLat = task.latitude, let taskLon = task.longitude {
                 let taskCoords = GPSCoordinates(latitude: taskLat, longitude: taskLon)
-                distance = MockLocationService.shared.calculateDistance(from: loc, to: taskCoords)
+                distance = LocationService.current.calculateDistance(from: loc, to: taskCoords)
                 
                 if distance! > filterSettings.maxRadiusMeters {
                     filteredByDistance += 1
@@ -417,7 +417,7 @@ final class MockLicenseVerificationService {
             }
         case .nearest:
             guard let loc = location else { return tasks }
-            return MockLocationService.shared.sortTasksByDistance(tasks: tasks, from: loc)
+            return LocationService.current.sortTasksByDistance(tasks: tasks, from: loc)
         case .highestPay:
             return tasks.sorted { $0.payment > $1.payment }
         case .newest:
@@ -437,7 +437,7 @@ final class MockLicenseVerificationService {
         // Distance penalty (up to -20 points)
         if let loc = location, let lat = task.latitude, let lon = task.longitude {
             let taskCoords = GPSCoordinates(latitude: lat, longitude: lon)
-            let distance = MockLocationService.shared.calculateDistance(from: loc, to: taskCoords)
+            let distance = LocationService.current.calculateDistance(from: loc, to: taskCoords)
             let distanceKm = distance / 1000
             score -= min(20, distanceKm * 2)
         }

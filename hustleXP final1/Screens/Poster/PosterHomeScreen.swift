@@ -11,14 +11,14 @@ import SwiftUI
 struct PosterHomeScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     @State private var showContent = false
     @State private var glowPulse: Double = 0.3
     @State private var aiButtonGlow: Double = 0.5
     
     private var myPostedTasks: [HXTask] {
-        dataService.availableTasks.filter { $0.posterId == dataService.currentUser.id }
+        dataService.postedTasks
     }
     
     var body: some View {
@@ -68,6 +68,9 @@ struct PosterHomeScreen: View {
                 glowPulse = 0.8
                 aiButtonGlow = 1.0
             }
+        }
+        .task {
+            await dataService.refreshAll()
         }
     }
     
@@ -553,5 +556,5 @@ struct NeonPosterStatCard: View {
     }
     .environment(AppState())
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

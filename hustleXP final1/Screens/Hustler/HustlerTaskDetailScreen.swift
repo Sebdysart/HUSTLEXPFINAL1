@@ -10,7 +10,7 @@ import SwiftUI
 
 struct HustlerTaskDetailScreen: View {
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     @Environment(AppState.self) private var appState
     
     // v2.2.0: Real API service
@@ -22,6 +22,8 @@ struct HustlerTaskDetailScreen: View {
     @State private var isAccepting = false
     @State private var apiTask: HXTask?
     @State private var loadError: Error?
+    @State private var acceptError: String?
+    @State private var showAcceptError: Bool = false
     
     // v1.9.0 Spatial Intelligence
     @State private var userLocation: GPSCoordinates?
@@ -95,6 +97,18 @@ struct HustlerTaskDetailScreen: View {
             .task {
                 // v2.2.0: Load task from real API
                 await loadTaskFromAPI()
+            }
+            // v2.5.0: Error alert for accept failures
+            .alert("Couldn't Accept Task", isPresented: $showAcceptError) {
+                Button("Try Again") {
+                    acceptTask(task)
+                }
+                Button("Continue Offline", role: .destructive) {
+                    acceptTaskOffline(task)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(acceptError ?? "An unexpected error occurred. You can try again or continue in offline mode.")
             }
         } else {
             loadingOrErrorView
@@ -381,15 +395,28 @@ struct HustlerTaskDetailScreen: View {
     // MARK: - Location Data Loading
     
     private func loadLocationData(for task: HXTask) async {
-        let (coords, _) = await MockLocationService.shared.captureLocation()
+        let (coords, _) = await LocationService.current.captureLocation()
         userLocation = coords
         
         // Calculate walking ETA if task has coordinates
         if let taskCoords = task.gpsCoordinates {
-            walkingETA = MockLocationService.shared.calculateWalkingETA(from: coords, to: taskCoords)
+            walkingETA = LocationService.current.calculateWalkingETA(from: coords, to: taskCoords)
         }
         
-        // Check for batch recommendations
+        // v2.2.0: Fetch batch suggestions from real API
+        Task {
+            do {
+                let suggestions = try await BatchQuestService.shared.getSuggestions(
+                    currentTaskId: task.id,
+                    maxResults: 5
+                )
+                print("✅ HustlerTaskDetail: Got \(suggestions.count) batch suggestions from API")
+            } catch {
+                print("⚠️ HustlerTaskDetail: Batch API failed - \(error.localizedDescription)")
+            }
+        }
+
+        // Check for batch recommendations (mock fallback for UI)
         batchRecommendation = MockTaskBatchingService.shared.generateRecommendation(
             for: task,
             availableTasks: dataService.availableTasks,
@@ -654,20 +681,67 @@ struct HustlerTaskDetailScreen: View {
         }
     }
     
-    // MARK: - Loading/Error View
+    // MARK: - Loading/Error View (v2.5.0 Enhanced)
     
     private var loadingOrErrorView: some View {
         ZStack {
             Color.brandBlack.ignoresSafeArea()
             
-            VStack(spacing: 16) {
-                ProgressView()
-                    .scaleEffect(1.2)
-                    .tint(Color.brandPurple)
-                
-                Text("Loading task...")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.textSecondary)
+            if loadError != nil {
+                // v2.5.0: Show error state with retry option
+                VStack(spacing: 24) {
+                    ErrorState(
+                        icon: "exclamationmark.triangle.fill",
+                        title: "Couldn't Load Task",
+                        message: "There was a problem loading this task. Please check your connection and try again.",
+                        retryAction: {
+                            Task {
+                                loadError = nil
+                                await loadTaskFromAPI()
+                            }
+                        }
+                    )
+                    
+                    // Show fallback option if mock data available
+                    if dataService.availableTasks.first(where: { $0.id == taskId }) != nil {
+                        VStack(spacing: 12) {
+                            HXDivider()
+                                .padding(.horizontal, 40)
+                            
+                            Button(action: {
+                                withAnimation {
+                                    loadError = nil
+                                    // Use mock data fallback
+                                }
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.system(size: 14))
+                                    Text("Show Cached Version")
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .foregroundStyle(Color.brandPurple)
+                            }
+                            
+                            HXText(
+                                "Data may be outdated",
+                                style: .caption,
+                                color: .textMuted
+                            )
+                        }
+                    }
+                }
+                .padding(24)
+            } else {
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                        .tint(Color.brandPurple)
+                    
+                    Text("Loading task...")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.textSecondary)
+                }
             }
         }
         .navigationTitle("Task Details")
@@ -720,13 +794,19 @@ struct HustlerTaskDetailScreen: View {
                 
                 router.navigateToHustler(.taskInProgress(taskId: task.id))
             } catch {
-                // Fall back to mock data if API fails
-                print("⚠️ TaskDetail: API accept failed, using mock - \(error.localizedDescription)")
-                dataService.claimTask(task.id)
-                router.navigateToHustler(.taskInProgress(taskId: task.id))
+                // v2.5.0: Show error alert instead of silent fallback
+                print("⚠️ TaskDetail: API accept failed - \(error.localizedDescription)")
+                acceptError = "Could not accept this task. Please check your connection and try again."
+                showAcceptError = true
             }
             isAccepting = false
         }
+    }
+    
+    // v2.5.0: Fallback accept with mock data (only after user acknowledges error)
+    private func acceptTaskOffline(_ task: HXTask) {
+        dataService.claimTask(task.id)
+        router.navigateToHustler(.taskInProgress(taskId: task.id))
     }
     
     // v2.2.0: Load task from API
@@ -746,6 +826,6 @@ struct HustlerTaskDetailScreen: View {
         HustlerTaskDetailScreen(taskId: "task-001")
     }
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
     .environment(AppState())
 }

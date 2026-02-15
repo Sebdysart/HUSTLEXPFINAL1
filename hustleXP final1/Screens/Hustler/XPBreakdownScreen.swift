@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct XPBreakdownScreen: View {
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     private var user: HXUser {
         dataService.currentUser
@@ -198,5 +198,5 @@ struct XPSourceRow: View {
     NavigationStack {
         XPBreakdownScreen()
     }
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

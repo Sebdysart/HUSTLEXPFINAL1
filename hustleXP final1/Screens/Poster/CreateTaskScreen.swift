@@ -7,10 +7,11 @@
 //
 
 import SwiftUI
+import StripePaymentSheet
 
 struct CreateTaskScreen: View {
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     // v2.2.0: Real API services
     @StateObject private var taskService = TaskService.shared
@@ -668,8 +669,8 @@ struct CreateTaskScreen: View {
     
     private func submitTask() {
         isSubmitting = true
-        
-        // v2.2.0: Use real API to create task
+
+        // v2.2.0: Use real API to create task, then present Stripe PaymentSheet
         Task {
             do {
                 let newTask = try await taskService.createTask(
@@ -684,66 +685,82 @@ struct CreateTaskScreen: View {
                     requiredTier: requiredTier,
                     requiredSkills: nil
                 )
-                
+
                 print("✅ CreateTask: Task created via API - \(newTask.id)")
-                
+
                 // Store task ID for payment
                 pendingTaskId = newTask.id
-                
+
                 // Create payment intent for escrow
-                do {
-                    let paymentIntent = try await escrowService.createPaymentIntent(taskId: newTask.id)
-                    print("✅ CreateTask: Payment intent created - \(paymentIntent.paymentIntentId)")
-                    
-                    // In production, show Stripe payment sheet here
-                    // For now, simulate successful payment
-                    showPaymentSheet = true
-                    
-                    // Simulate payment confirmation after delay
-                    try? await Task.sleep(nanoseconds: 1_500_000_000)
-                    
-                    _ = try await escrowService.confirmFunding(
-                        escrowId: paymentIntent.escrowId,
-                        stripePaymentIntentId: paymentIntent.paymentIntentId
+                let paymentIntent = try await escrowService.createPaymentIntent(taskId: newTask.id)
+                print("✅ CreateTask: Payment intent created - \(paymentIntent.paymentIntentId)")
+
+                // Prepare and present real Stripe PaymentSheet
+                let stripeManager = StripePaymentManager.shared
+                stripeManager.preparePaymentSheet(clientSecret: paymentIntent.clientSecret)
+
+                let result = await stripeManager.presentPaymentSheet()
+
+                switch result {
+                case .completed:
+                    // Payment succeeded - confirm escrow funding on backend
+                    print("✅ CreateTask: Stripe payment completed")
+
+                    do {
+                        _ = try await escrowService.confirmFunding(
+                            escrowId: paymentIntent.escrowId,
+                            stripePaymentIntentId: paymentIntent.paymentIntentId
+                        )
+                        print("✅ CreateTask: Escrow funded successfully")
+                    } catch {
+                        print("⚠️ CreateTask: Escrow confirm failed - \(error.localizedDescription)")
+                        // Payment went through but confirm failed - backend webhook will reconcile
+                    }
+
+                    // Also update mock data for consistency
+                    let mockTask = HXTask(
+                        id: newTask.id,
+                        title: title,
+                        description: description,
+                        payment: paymentAmount,
+                        location: location,
+                        latitude: nil,
+                        longitude: nil,
+                        estimatedDuration: duration.isEmpty ? "1 hr" : duration,
+                        posterId: dataService.currentUser.id,
+                        posterName: dataService.currentUser.name,
+                        posterRating: dataService.currentUser.rating,
+                        hustlerId: nil,
+                        hustlerName: nil,
+                        state: .posted,
+                        requiredTier: requiredTier,
+                        createdAt: Date(),
+                        claimedAt: nil,
+                        completedAt: nil,
+                        aiSuggestedPrice: taskWasAIPriced
                     )
-                    
-                    print("✅ CreateTask: Escrow funded successfully")
-                } catch {
-                    print("⚠️ CreateTask: Payment failed - \(error.localizedDescription)")
-                    // Task created but not funded - still navigate back
+                    dataService.postTask(mockTask)
+
+                    stripeManager.reset()
+                    isSubmitting = false
+                    router.popPoster()
+
+                case .canceled:
+                    print("⚠️ CreateTask: Payment canceled by user")
+                    stripeManager.reset()
+                    isSubmitting = false
+                    // Task created but not funded - user can retry from task detail
+
+                case .failed(error: let error):
+                    print("⚠️ CreateTask: Stripe payment failed - \(error.localizedDescription)")
+                    stripeManager.reset()
+                    isSubmitting = false
+                    // Task created but not funded - user can retry from task detail
                 }
-                
-                // Also update mock data for consistency
-                let mockTask = HXTask(
-                    id: newTask.id,
-                    title: title,
-                    description: description,
-                    payment: paymentAmount,
-                    location: location,
-                    latitude: nil,
-                    longitude: nil,
-                    estimatedDuration: duration.isEmpty ? "1 hr" : duration,
-                    posterId: dataService.currentUser.id,
-                    posterName: dataService.currentUser.name,
-                    posterRating: dataService.currentUser.rating,
-                    hustlerId: nil,
-                    hustlerName: nil,
-                    state: .posted,
-                    requiredTier: requiredTier,
-                    createdAt: Date(),
-                    claimedAt: nil,
-                    completedAt: nil,
-                    aiSuggestedPrice: taskWasAIPriced
-                )
-                dataService.postTask(mockTask)
-                
-                isSubmitting = false
-                showPaymentSheet = false
-                router.popPoster()
-                
+
             } catch {
                 print("⚠️ CreateTask: API failed, using mock - \(error.localizedDescription)")
-                
+
                 // Fall back to mock data
                 let mockTask = HXTask(
                     id: "task-\(UUID().uuidString.prefix(8))",
@@ -767,7 +784,7 @@ struct CreateTaskScreen: View {
                     aiSuggestedPrice: taskWasAIPriced
                 )
                 dataService.postTask(mockTask)
-                
+
                 isSubmitting = false
                 router.popPoster()
             }
@@ -982,5 +999,5 @@ struct SummaryRow: View {
         CreateTaskScreen()
     }
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

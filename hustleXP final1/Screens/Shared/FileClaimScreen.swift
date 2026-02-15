@@ -11,28 +11,27 @@ import SwiftUI
 struct FileClaimScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
-    
+    @Environment(LiveDataService.self) private var dataService
+
     let preselectedTaskId: String?
-    
+
     @State private var selectedTaskId: String = ""
     @State private var description: String = ""
     @State private var amountText: String = ""
     @State private var isSubmitting = false
     @State private var showSuccess = false
     @State private var errors: [String] = []
+    @State private var eligibleTasks: [HXTask] = []
+    @State private var submitError: String?
+    @State private var loadError: Error?
     @FocusState private var focusedField: Field?
-    
+
     private enum Field {
         case description, amount
     }
-    
+
     init(taskId: String? = nil) {
         self.preselectedTaskId = taskId
-    }
-    
-    private var eligibleTasks: [HXTask] {
-        dataService.getCompletedTasksForClaims()
     }
     
     private var amountCents: Int {
@@ -62,10 +61,11 @@ struct FileClaimScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .onAppear {
+        .task {
             if let taskId = preselectedTaskId {
                 selectedTaskId = taskId
             }
+            await loadEligibleTasks()
         }
     }
     
@@ -86,8 +86,8 @@ struct FileClaimScreen: View {
                 // Amount
                 amountSection
                 
-                // Errors
-                if !errors.isEmpty {
+                // Errors (validation + API errors)
+                if !errors.isEmpty || submitError != nil {
                     errorsSection
                 }
                 
@@ -299,6 +299,21 @@ struct FileClaimScreen: View {
     
     private var errorsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // v2.5.0: Show API submit error prominently
+            if let apiError = submitError {
+                HStack(spacing: 10) {
+                    Image(systemName: "wifi.exclamationmark")
+                        .font(.system(size: 16))
+                    Text(apiError)
+                        .font(.subheadline)
+                }
+                .foregroundStyle(Color.errorRed)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.errorRed.opacity(0.1))
+                .cornerRadius(12)
+            }
+            
             ForEach(errors, id: \.self) { error in
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.circle.fill")
@@ -392,27 +407,49 @@ struct FileClaimScreen: View {
     
     // MARK: - Actions
     
+    private func loadEligibleTasks() async {
+        loadError = nil
+        do {
+            // Load completed tasks from API (tasks eligible for claims)
+            let tasks = try await TaskService.shared.getTaskHistory(role: .hustler)
+            eligibleTasks = tasks.filter { $0.state == .completed }
+            print("✅ FileClaim: Loaded \(eligibleTasks.count) eligible tasks from API")
+        } catch {
+            // v2.5.0: Fall back to mock but log the error
+            print("⚠️ FileClaim: API failed, using cached data - \(error.localizedDescription)")
+            loadError = error
+            eligibleTasks = dataService.getCompletedTasksForClaims()
+        }
+    }
+
     private func submitClaim() {
         focusedField = nil
-        
+
         let request = FileClaimRequest(
             taskId: selectedTaskId,
             incidentDescription: description,
             requestedAmountCents: amountCents
         )
-        
+
         errors = request.validationErrors
-        
+
         guard request.isValid else { return }
-        
+
         isSubmitting = true
-        
-        // Simulate submission delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            _ = dataService.fileClaim(request)
-            isSubmitting = false
-            withAnimation(.spring(response: 0.4)) {
-                showSuccess = true
+
+        Task {
+            do {
+                _ = try await InsuranceService.shared.fileClaim(request: request)
+                print("✅ FileClaim: Claim submitted via API")
+                isSubmitting = false
+                withAnimation(.spring(response: 0.4)) {
+                    showSuccess = true
+                }
+            } catch {
+                // v2.5.0: Show error to user instead of silent fallback
+                print("⚠️ FileClaim: API submit failed - \(error.localizedDescription)")
+                isSubmitting = false
+                submitError = "Could not submit your claim. Please check your connection and try again."
             }
         }
     }
@@ -424,5 +461,5 @@ struct FileClaimScreen: View {
     }
     .environment(AppState())
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

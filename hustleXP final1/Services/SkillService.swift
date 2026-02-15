@@ -105,6 +105,7 @@ final class SkillService: ObservableObject {
         let categories: [APISkillCategory] = try await trpc.call(
             router: "skills",
             procedure: "getCategories",
+            type: .query,
             input: EmptyInput()
         )
 
@@ -121,6 +122,7 @@ final class SkillService: ObservableObject {
         let skills: [APISkill] = try await trpc.call(
             router: "skills",
             procedure: "getSkills",
+            type: .query,
             input: GetSkillsInput(categoryId: categoryId)
         )
 
@@ -136,6 +138,7 @@ final class SkillService: ObservableObject {
         let skills: [WorkerSkillRecord] = try await trpc.call(
             router: "skills",
             procedure: "getMySkills",
+            type: .query,
             input: EmptyInput()
         )
 
@@ -228,6 +231,7 @@ final class SkillService: ObservableObject {
         let submissions: [APILicenseSubmission] = try await trpc.call(
             router: "skills",
             procedure: "getLicenseSubmissions",
+            type: .query,
             input: EmptyInput()
         )
 
@@ -245,6 +249,7 @@ final class SkillService: ObservableObject {
         let eligibility: TaskEligibility = try await trpc.call(
             router: "skills",
             procedure: "checkTaskEligibility",
+            type: .query,
             input: CheckInput(taskId: taskId)
         )
 
@@ -252,29 +257,24 @@ final class SkillService: ObservableObject {
     }
 
     /// Gets tasks user is eligible for
+    /// Note: Backend doesn't have skills.getEligibleTasks; use TaskDiscoveryService.getFeed() instead
+    /// which filters by user's skills automatically
     func getEligibleTasks(
         latitude: Double?,
         longitude: Double?,
         radiusMeters: Double?
     ) async throws -> [HXTask] {
-        struct GetEligibleInput: Codable {
-            let latitude: Double?
-            let longitude: Double?
-            let radiusMeters: Double?
-        }
-
-        let tasks: [HXTask] = try await trpc.call(
-            router: "skills",
-            procedure: "getEligibleTasks",
-            input: GetEligibleInput(
-                latitude: latitude,
-                longitude: longitude,
-                radiusMeters: radiusMeters
-            )
+        // Delegate to TaskDiscovery which handles skill-based filtering server-side
+        let mySkills = self.mySkills.map { $0.skillId }
+        let response = try await TaskDiscoveryService.shared.getFeed(
+            latitude: latitude ?? 0,
+            longitude: longitude ?? 0,
+            radiusMeters: radiusMeters ?? 16093,
+            skills: mySkills.isEmpty ? nil : mySkills
         )
 
-        print("✅ SkillService: Found \(tasks.count) eligible tasks")
-        return tasks
+        print("✅ SkillService: Found \(response.tasks.count) eligible tasks via discovery")
+        return response.tasks
     }
 }
 

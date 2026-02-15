@@ -10,7 +10,7 @@ import SwiftUI
 struct SettingsMainScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     var body: some View {
         List {
@@ -48,6 +48,17 @@ struct SettingsMainScreen: View {
             }
             .listRowBackground(Color.surfaceElevated)
             
+            // Subscription
+            Section {
+                SettingsListItem(icon: "repeat.circle.fill", iconColor: .brandPurple, title: "Subscription") {
+                    router.navigateToSettings(.subscription)
+                }
+            } header: {
+                Text("Plan")
+                    .foregroundStyle(Color.textSecondary)
+            }
+            .listRowBackground(Color.surfaceElevated)
+
             // Privacy & Security
             Section {
                 SettingsListItem(icon: "lock.fill", iconColor: .brandPurple, title: "Privacy") {
@@ -151,5 +162,5 @@ struct SettingsListItem: View {
     }
     .environment(AppState())
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

@@ -9,13 +9,13 @@ import SwiftUI
 
 struct PosterActiveTasksScreen: View {
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     @State private var selectedFilter: PosterTaskFilter = .all
     
     private var myTasks: [HXTask] {
-        let tasks = dataService.availableTasks.filter { $0.posterId == dataService.currentUser.id }
-        
+        let tasks = dataService.postedTasks
+
         switch selectedFilter {
         case .all:
             return tasks
@@ -50,6 +50,9 @@ struct PosterActiveTasksScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .task {
+            await dataService.refreshAll()
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { router.navigateToPoster(.createTask) }) {
@@ -151,5 +154,5 @@ enum PosterTaskFilter: String, CaseIterable {
         PosterActiveTasksScreen()
     }
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

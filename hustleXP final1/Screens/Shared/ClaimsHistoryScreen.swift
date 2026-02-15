@@ -11,11 +11,14 @@ import SwiftUI
 struct ClaimsHistoryScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
-    
+    @Environment(LiveDataService.self) private var dataService
+
     @State private var selectedFilter: ClaimFilter = .all
     @State private var selectedClaim: InsuranceClaim?
     @State private var showClaimDetail = false
+    @State private var claims: [InsuranceClaim] = []
+    @State private var isLoading = true
+    @State private var loadError: Error?
     
     private enum ClaimFilter: String, CaseIterable {
         case all = "All"
@@ -32,16 +35,21 @@ struct ClaimsHistoryScreen: View {
     }
     
     private var filteredClaims: [InsuranceClaim] {
-        dataService.insuranceClaims.filter { claim in
+        claims.filter { claim in
             selectedFilter.statuses.contains(claim.status)
         }
     }
-    
+
     var body: some View {
         ZStack {
             Color.brandBlack.ignoresSafeArea()
-            
-            if dataService.insuranceClaims.isEmpty {
+
+            if isLoading {
+                LoadingState(message: "Loading claims...")
+            } else if let error = loadError {
+                // v2.5.0: Show error state instead of silent fallback
+                apiErrorView(error: error)
+            } else if claims.isEmpty {
                 emptyStateView
             } else {
                 claimsListView
@@ -69,6 +77,70 @@ struct ClaimsHistoryScreen: View {
                     .presentationDragIndicator(.visible)
             }
         }
+        .task {
+            await loadClaims()
+        }
+    }
+
+    private func loadClaims() async {
+        isLoading = true
+        loadError = nil
+        do {
+            claims = try await InsuranceService.shared.getMyClaims()
+            print("✅ ClaimsHistory: Loaded \(claims.count) claims from API")
+        } catch {
+            // v2.5.0: Show error to user instead of silent fallback
+            print("⚠️ ClaimsHistory: API failed - \(error.localizedDescription)")
+            loadError = error
+        }
+        isLoading = false
+    }
+    
+    // MARK: - API Error View (v2.5.0)
+    
+    private func apiErrorView(error: Error) -> some View {
+        VStack(spacing: 24) {
+            ErrorState(
+                icon: "wifi.exclamationmark",
+                title: "Couldn't Load Claims",
+                message: "We couldn't retrieve your claims from the server. Please check your connection and try again.",
+                retryAction: {
+                    Task {
+                        await loadClaims()
+                    }
+                }
+            )
+            
+            // Show offline option if mock data available
+            if !dataService.insuranceClaims.isEmpty {
+                VStack(spacing: 12) {
+                    HXDivider()
+                        .padding(.horizontal, 40)
+                    
+                    Button(action: {
+                        withAnimation {
+                            loadError = nil
+                            claims = dataService.insuranceClaims
+                        }
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14))
+                            Text("Show Cached Claims")
+                                .font(.subheadline.weight(.medium))
+                        }
+                        .foregroundStyle(Color.brandPurple)
+                    }
+                    
+                    HXText(
+                        "(\(dataService.insuranceClaims.count) claims from cache)",
+                        style: .caption,
+                        color: .textMuted
+                    )
+                }
+            }
+        }
+        .padding(24)
     }
     
     // MARK: - Empty State
@@ -153,7 +225,7 @@ struct ClaimsHistoryScreen: View {
     }
     
     private func countForFilter(_ filter: ClaimFilter) -> Int {
-        dataService.insuranceClaims.filter { claim in
+        claims.filter { claim in
             filter.statuses.contains(claim.status)
         }.count
     }
@@ -250,5 +322,5 @@ private struct ClaimDetailSheet: View {
     }
     .environment(AppState())
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

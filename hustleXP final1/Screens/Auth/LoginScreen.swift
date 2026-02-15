@@ -184,7 +184,7 @@ struct LoginScreen: View {
             )
             .focused($focusedField, equals: .email)
             .textContentType(.emailAddress)
-            .autocapitalization(.none)
+            .textInputAutocapitalization(.never)
             .keyboardType(.emailAddress)
             .onChange(of: email) { _, newValue in
                 validateEmail(newValue)

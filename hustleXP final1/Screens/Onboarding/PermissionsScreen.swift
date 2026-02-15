@@ -6,24 +6,37 @@
 //
 
 import SwiftUI
+import CoreLocation
+import UserNotifications
+import Combine
 
 struct PermissionsScreen: View {
     @Environment(Router.self) private var router
-    
+
     @State private var locationEnabled: Bool = false
     @State private var notificationsEnabled: Bool = false
     @State private var showContent = false
-    
+    @StateObject private var locationDelegate = LocationPermissionDelegate()
+
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
-            
+            // Use safe area-adjusted height for compact detection
+            let usableHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = usableHeight < 600
+
             ZStack {
                 Color.brandBlack
                     .ignoresSafeArea()
-                
+
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: isCompact ? 24 : 32) {
+                        // Progress bar
+                        OnboardingProgressBar(
+                            currentStep: OnboardingRoute.permissions.stepIndex,
+                            totalSteps: OnboardingRoute.totalSteps
+                        )
+                        .padding(.top, 8)
+
                         // Header
                         VStack(spacing: isCompact ? 8 : 12) {
                             Text("Enable Permissions")
@@ -38,24 +51,24 @@ struct PermissionsScreen: View {
                         
                         // Permission toggles
                         VStack(spacing: isCompact ? 12 : 16) {
-                    PermissionCard(
-                        icon: "location.fill",
-                        title: "Location",
-                        description: "Find nearby tasks and enable EN_ROUTE tracking for task verification",
-                        benefit: "Required for most tasks",
-                        isEnabled: $locationEnabled
-                    )
-                    .opacity(showContent ? 1 : 0)
-                    .offset(y: showContent ? 0 : 20)
-                    .animation(.easeOut(duration: 0.4).delay(0.1), value: showContent)
-                    
-                    PermissionCard(
-                        icon: "bell.fill",
-                        title: "Notifications",
-                        description: "Get alerts for new tasks, messages, and payment updates",
-                        benefit: "Never miss an opportunity",
-                        isEnabled: $notificationsEnabled
-                    )
+                            PermissionCard(
+                                icon: "location.fill",
+                                title: "Location",
+                                description: "Find nearby tasks and enable EN_ROUTE tracking for task verification",
+                                benefit: "Required for most tasks",
+                                isEnabled: $locationEnabled
+                            )
+                            .opacity(showContent ? 1 : 0)
+                            .offset(y: showContent ? 0 : 20)
+                            .animation(.easeOut(duration: 0.4).delay(0.1), value: showContent)
+                            
+                            PermissionCard(
+                                icon: "bell.fill",
+                                title: "Notifications",
+                                description: "Get alerts for new tasks, messages, and payment updates",
+                                benefit: "Never miss an opportunity",
+                                isEnabled: $notificationsEnabled
+                            )
                             .opacity(showContent ? 1 : 0)
                             .offset(y: showContent ? 0 : 20)
                             .animation(.easeOut(duration: 0.4).delay(0.2), value: showContent)
@@ -144,6 +157,7 @@ private struct PermissionCard: View {
                 Toggle("", isOn: $isEnabled)
                     .labelsHidden()
                     .tint(Color.brandPurple)
+                    .disabled(isEnabled) // Once granted, can't toggle off from here
             }
             
             if isEnabled {
@@ -167,6 +181,34 @@ private struct PermissionCard: View {
                 .stroke(isEnabled ? Color.brandPurple.opacity(0.5) : Color.borderSubtle, lineWidth: 1)
         )
         .animation(.easeInOut(duration: 0.2), value: isEnabled)
+    }
+}
+
+// MARK: - Location Permission Delegate
+
+class LocationPermissionDelegate: NSObject, ObservableObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    @Published var isAuthorized = false
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        checkStatus()
+    }
+
+    func requestPermission() {
+        manager.requestWhenInUseAuthorization()
+    }
+
+    func checkStatus() {
+        let status = manager.authorizationStatus
+        isAuthorized = (status == .authorizedWhenInUse || status == .authorizedAlways)
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        DispatchQueue.main.async {
+            self.checkStatus()
+        }
     }
 }
 

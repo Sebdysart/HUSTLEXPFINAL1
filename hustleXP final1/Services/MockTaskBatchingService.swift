@@ -206,7 +206,7 @@ final class MockTaskBatchingService {
         var toFirstTask = 0
         if let firstTask = tasks.first,
            let taskCoords = firstTask.gpsCoordinates {
-            let distance = MockLocationService.shared.calculateDistance(from: userLocation, to: taskCoords)
+            let distance = LocationService.current.calculateDistance(from: userLocation, to: taskCoords)
             toFirstTask = Int(distance / 1.39 / 60) // Walking at 1.39 m/s
         }
         
@@ -230,7 +230,7 @@ final class MockTaskBatchingService {
             guard let from = tasks[i].gpsCoordinates,
                   let to = tasks[i + 1].gpsCoordinates else { continue }
             
-            totalDistance += MockLocationService.shared.calculateDistance(from: from, to: to)
+            totalDistance += LocationService.current.calculateDistance(from: from, to: to)
         }
         
         // Walking speed: 1.39 m/s

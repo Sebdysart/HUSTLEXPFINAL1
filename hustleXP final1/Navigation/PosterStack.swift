@@ -44,6 +44,12 @@ struct PosterStack: View {
                     case .questTracking(let questId):
                         // Would show poster's view of worker tracking
                         PosterTaskDetailScreen(taskId: questId)
+                    // v2.4.0 Recurring Tasks routes
+                    case .recurringTasks:
+                        RecurringTasksScreen()
+                    case .recurringTaskDetail(_):
+                        // TODO: Build RecurringTaskDetailScreen
+                        RecurringTasksScreen()
                     }
                 }
         }

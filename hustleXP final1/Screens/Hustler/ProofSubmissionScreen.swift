@@ -10,15 +10,20 @@
 
 import SwiftUI
 import CoreLocation
+import PhotosUI
+import Combine
 
 struct ProofSubmissionScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     // v2.2.0: Real API services
     @StateObject private var proofService = ProofService.shared
     @StateObject private var taskService = TaskService.shared
+    
+    // v2.5.0: Real location manager
+    @StateObject private var locationManager = RealLocationManager()
     
     let taskId: String
     
@@ -28,6 +33,8 @@ struct ProofSubmissionScreen: View {
     @State private var capturedImage: UIImage?
     @State private var isSubmitting: Bool = false
     @State private var showCamera: Bool = false
+    @State private var showPhotoPicker: Bool = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var uploadedPhotoUrls: [String] = []
     
     // GPS state (v1.8.0)
@@ -53,6 +60,18 @@ struct ProofSubmissionScreen: View {
     
     private var canSubmit: Bool {
         hasPhoto && gpsCoordinates != nil
+    }
+
+    /// Converts the captured UIImage to a local file URL string for proof submission
+    private var localProofPhotoURL: String {
+        guard let image = capturedImage,
+              let data = image.jpegData(compressionQuality: 0.8) else {
+            return "file://proof-pending-upload"
+        }
+        let filename = "proof_\(taskId)_\(Int(Date().timeIntervalSince1970)).jpg"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try? data.write(to: tempURL)
+        return tempURL.absoluteString
     }
     
     var body: some View {
@@ -359,69 +378,122 @@ struct ProofSubmissionScreen: View {
             }
             HXText("Take a photo showing your completed work", style: .caption, color: .textSecondary)
             
-            Button(action: { 
-                // Simulate photo capture
-                withAnimation {
-                    hasPhoto = true
-                    currentStep = .review
+            // Photo capture options
+            if hasPhoto, let image = capturedImage {
+                // Photo preview with actual image
+                ZStack {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(4/3, contentMode: .fit)
+                        .clipped()
+                        .cornerRadius(12)
                 }
-            }) {
-                if hasPhoto {
-                    // Photo preview
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.surfaceSecondary)
-                            .aspectRatio(4/3, contentMode: .fit)
-                        
-                        VStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 48))
-                                .foregroundStyle(Color.successGreen)
+                .overlay(alignment: .topTrailing) {
+                    Button(action: { 
+                        hasPhoto = false
+                        capturedImage = nil
+                        currentStep = .photo
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white, Color.errorRed)
+                    }
+                    .padding(8)
+                }
+            } else {
+                // Camera and photo picker options
+                VStack(spacing: 16) {
+                    // Camera button (primary)
+                    Button(action: { showCamera = true }) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.brandPurple.opacity(0.1))
+                                    .frame(width: 48, height: 48)
+                                
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color.brandPurple)
+                            }
                             
-                            HXText("Photo added", style: .subheadline, color: .textSecondary)
-                        }
-                    }
-                    .overlay(alignment: .topTrailing) {
-                        Button(action: { 
-                            hasPhoto = false
-                            currentStep = .photo
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(.white, Color.errorRed)
-                        }
-                        .padding(8)
-                    }
-                } else {
-                    // Upload prompt
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.brandPurple.opacity(0.1))
-                                .frame(width: 64, height: 64)
+                            VStack(alignment: .leading, spacing: 2) {
+                                HXText("Take Photo", style: .subheadline)
+                                HXText("Use camera to capture proof", style: .caption, color: .textSecondary)
+                            }
                             
-                            HXIcon(HXIcon.camera, size: .large, color: .brandPurple)
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(Color.textSecondary)
                         }
-                        
-                        HXText("Tap to add photo", style: .subheadline, color: .textSecondary)
+                        .padding()
+                        .background(Color.surfaceElevated)
+                        .cornerRadius(12)
                     }
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(4/3, contentMode: .fit)
-                    .background(Color.surfaceElevated)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(style: StrokeStyle(lineWidth: 2, dash: [8]))
-                            .foregroundStyle(Color.brandPurple.opacity(0.3))
-                    )
+                    .buttonStyle(.plain)
+                    
+                    // Photo picker button (secondary)
+                    PhotosPicker(
+                        selection: $selectedPhotoItem,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.infoBlue.opacity(0.1))
+                                    .frame(width: 48, height: 48)
+                                
+                                Image(systemName: "photo.on.rectangle")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color.infoBlue)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                HXText("Choose from Library", style: .subheadline)
+                                HXText("Select existing photo", style: .caption, color: .textSecondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                        .padding()
+                        .background(Color.surfaceElevated)
+                        .cornerRadius(12)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .buttonStyle(.plain)
         }
         .onAppear {
             if currentStep == .gps && canProceedToPhoto {
                 currentStep = .photo
             }
+        }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            Task {
+                if let newItem = newItem,
+                   let data = try? await newItem.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    capturedImage = image
+                    hasPhoto = true
+                    currentStep = .review
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraView(image: $capturedImage, isPresented: $showCamera)
+                .ignoresSafeArea()
+                .onDisappear {
+                    if capturedImage != nil {
+                        hasPhoto = true
+                        currentStep = .review
+                    }
+                }
         }
     }
     
@@ -760,19 +832,22 @@ struct ProofSubmissionScreen: View {
         
         print("[ProofSubmission] Capturing GPS coordinates...")
         
-        // Use mock location service
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            let mockService = MockLocationService.shared
-            let result = mockService.getCurrentLocation()
-            
+        // v2.5.0: Use real CoreLocation
+        locationManager.requestLocation { result in
             switch result {
-            case .success(let coords):
+            case .success(let location):
+                let coords = GPSCoordinates(
+                    latitude: location.coordinate.latitude,
+                    longitude: location.coordinate.longitude,
+                    accuracyMeters: location.horizontalAccuracy,
+                    timestamp: location.timestamp
+                )
                 withAnimation {
                     gpsCoordinates = coords
                     isCapturingGPS = false
                     currentStep = .photo
                 }
-                print("[ProofSubmission] GPS captured: \(coords.latitude), \(coords.longitude)")
+                print("[ProofSubmission] GPS captured: \(coords.latitude), \(coords.longitude) (±\(Int(coords.accuracyMeters))m)")
                 
             case .failure(let error):
                 gpsError = error.localizedDescription
@@ -815,19 +890,19 @@ struct ProofSubmissionScreen: View {
                 // Submit proof via API
                 _ = try await proofService.submitProof(
                     taskId: taskId,
-                    photoUrls: photoUrls.isEmpty ? ["mock://proof-photo.jpg"] : photoUrls,
+                    photoUrls: photoUrls.isEmpty ? [localProofPhotoURL] : photoUrls,
                     notes: notes.isEmpty ? nil : notes,
                     gpsLatitude: coords.latitude,
                     gpsLongitude: coords.longitude,
                     biometricHash: biometricHash
                 )
-                
+
                 print("✅ ProofSubmission: Proof submitted via API")
-                
+
                 // Also submit via TaskService to update task state
                 _ = try await taskService.submitProof(
                     taskId: taskId,
-                    photoUrls: photoUrls.isEmpty ? ["mock://proof-photo.jpg"] : photoUrls,
+                    photoUrls: photoUrls.isEmpty ? [localProofPhotoURL] : photoUrls,
                     notes: notes.isEmpty ? nil : notes,
                     gpsLatitude: coords.latitude,
                     gpsLongitude: coords.longitude,
@@ -903,11 +978,108 @@ struct ProofSubmissionScreen: View {
     }
 }
 
+// MARK: - Real Location Manager
+
+/// CoreLocation manager for real GPS capture
+final class RealLocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    private var completion: ((Result<CLLocation, Error>) -> Void)?
+    
+    @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        authorizationStatus = manager.authorizationStatus
+    }
+    
+    func requestLocation(completion: @escaping (Result<CLLocation, Error>) -> Void) {
+        self.completion = completion
+        
+        switch manager.authorizationStatus {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .restricted, .denied:
+            completion(.failure(LocationError.permissionDenied))
+        case .authorizedWhenInUse, .authorizedAlways:
+            manager.requestLocation()
+        @unknown default:
+            completion(.failure(LocationError.unknown))
+        }
+    }
+    
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorizationStatus = manager.authorizationStatus
+        
+        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
+            if completion != nil {
+                manager.requestLocation()
+            }
+        } else if manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted {
+            completion?(.failure(LocationError.permissionDenied))
+            completion = nil
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let location = locations.first {
+            completion?(.success(location))
+            completion = nil
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        completion?(.failure(error))
+        completion = nil
+    }
+}
+
+// MARK: - Camera View (UIKit Bridge)
+
+struct CameraView: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Binding var isPresented: Bool
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        picker.allowsEditing = false
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraView
+        
+        init(_ parent: CameraView) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.image = image
+            }
+            parent.isPresented = false
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.isPresented = false
+        }
+    }
+}
+
 #Preview {
     NavigationStack {
         ProofSubmissionScreen(taskId: "task-001")
     }
     .environment(AppState())
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

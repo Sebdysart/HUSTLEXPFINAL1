@@ -41,28 +41,24 @@ final class TaskService: ObservableObject {
 
         struct CreateTaskInput: Codable {
             let title: String
-            let description: String
-            let paymentCents: Int
-            let location: String
-            let latitude: Double?
-            let longitude: Double?
-            let estimatedDuration: String
+            let description: String?
+            let price: Int
+            let location: String?
             let category: String?
-            let requiredTier: String
-            let requiredSkills: [String]?
+            let mode: String
+            let requiresProof: Bool
+            let instantMode: Bool
         }
 
         let input = CreateTaskInput(
             title: title,
             description: description,
-            paymentCents: Int(payment * 100), // Convert to cents
+            price: Int(payment * 100), // Convert to cents
             location: location,
-            latitude: latitude,
-            longitude: longitude,
-            estimatedDuration: estimatedDuration,
             category: category?.rawValue,
-            requiredTier: String(requiredTier.rawValue),
-            requiredSkills: requiredSkills
+            mode: "STANDARD",
+            requiresProof: true,
+            instantMode: false
         )
 
         let task: HXTask = try await trpc.call(
@@ -72,6 +68,7 @@ final class TaskService: ObservableObject {
         )
 
         print("✅ TaskService: Created task - \(task.title)")
+        AnalyticsService.shared.trackTaskEvent(.taskCreated, taskId: task.id, taskTitle: task.title)
         return task
     }
 
@@ -84,6 +81,7 @@ final class TaskService: ObservableObject {
         let task: HXTask = try await trpc.call(
             router: "task",
             procedure: "getById",
+            type: .query,
             input: GetTaskInput(taskId: id)
         )
 
@@ -103,6 +101,7 @@ final class TaskService: ObservableObject {
         let response: StateResponse = try await trpc.call(
             router: "task",
             procedure: "getState",
+            type: .query,
             input: GetStateInput(taskId: id)
         )
 
@@ -127,6 +126,7 @@ final class TaskService: ObservableObject {
         )
 
         print("✅ TaskService: Accepted task - \(task.title)")
+        AnalyticsService.shared.trackTaskEvent(.taskAccepted, taskId: task.id, taskTitle: task.title)
         return task
     }
 
@@ -146,6 +146,7 @@ final class TaskService: ObservableObject {
         )
 
         print("✅ TaskService: Started task - \(task.title)")
+        AnalyticsService.shared.trackTaskEvent(.taskStarted, taskId: task.id, taskTitle: task.title)
         return task
     }
 
@@ -186,26 +187,29 @@ final class TaskService: ObservableObject {
         )
 
         print("✅ TaskService: Submitted proof for task - \(task.title)")
+        AnalyticsService.shared.trackTaskEvent(.proofSubmitted, taskId: task.id, taskTitle: task.title)
         return task
     }
 
     /// Worker cancels their acceptance of a task
+    /// Note: Backend uses 'cancel' for both poster cancellation and worker abandonment
     func abandonTask(taskId: String, reason: String?) async throws -> HXTask {
         isLoading = true
         defer { isLoading = false }
 
-        struct AbandonInput: Codable {
+        struct CancelInput: Codable {
             let taskId: String
             let reason: String?
         }
 
         let task: HXTask = try await trpc.call(
             router: "task",
-            procedure: "abandon",
-            input: AbandonInput(taskId: taskId, reason: reason)
+            procedure: "cancel",
+            input: CancelInput(taskId: taskId, reason: reason)
         )
 
         print("✅ TaskService: Abandoned task - \(task.title)")
+        AnalyticsService.shared.trackTaskEvent(.taskAbandoned, taskId: task.id, taskTitle: task.title)
         return task
     }
 
@@ -229,6 +233,7 @@ final class TaskService: ObservableObject {
         )
 
         print("✅ TaskService: Reviewed proof for task - \(task.title), approved: \(approved)")
+        AnalyticsService.shared.trackTaskEvent(approved ? .proofApproved : .proofRejected, taskId: task.id, taskTitle: task.title)
         return task
     }
 
@@ -249,38 +254,32 @@ final class TaskService: ObservableObject {
         )
 
         print("✅ TaskService: Cancelled task - \(task.title)")
+        AnalyticsService.shared.trackTaskEvent(.taskCancelled, taskId: task.id, taskTitle: task.title)
         return task
     }
 
     // MARK: - Task Listings
 
     /// Gets all open tasks (available for workers)
+    /// Note: For location-based filtering, use TaskDiscoveryService.getFeed() instead
     func listOpenTasks(
-        latitude: Double? = nil,
-        longitude: Double? = nil,
-        radiusMeters: Double? = nil,
-        category: TaskCategory? = nil,
-        limit: Int = 50
+        limit: Int = 50,
+        offset: Int = 0
     ) async throws -> [HXTask] {
         struct ListOpenInput: Codable {
-            let latitude: Double?
-            let longitude: Double?
-            let radiusMeters: Double?
-            let category: String?
             let limit: Int
+            let offset: Int
         }
 
         let input = ListOpenInput(
-            latitude: latitude,
-            longitude: longitude,
-            radiusMeters: radiusMeters,
-            category: category?.rawValue,
-            limit: limit
+            limit: min(limit, 100),
+            offset: offset
         )
 
         let tasks: [HXTask] = try await trpc.call(
             router: "task",
             procedure: "listOpen",
+            type: .query,
             input: input
         )
 
@@ -297,6 +296,7 @@ final class TaskService: ObservableObject {
         let tasks: [HXTask] = try await trpc.call(
             router: "task",
             procedure: "listByPoster",
+            type: .query,
             input: ListByPosterInput(state: state?.rawValue)
         )
 
@@ -313,6 +313,7 @@ final class TaskService: ObservableObject {
         let tasks: [HXTask] = try await trpc.call(
             router: "task",
             procedure: "listByWorker",
+            type: .query,
             input: ListByWorkerInput(state: state?.rawValue)
         )
 
@@ -321,16 +322,19 @@ final class TaskService: ObservableObject {
     }
 
     /// Gets task history for the current user
+    /// Note: Backend has no dedicated getHistory; uses listByWorker/listByPoster instead
     func getTaskHistory(role: UserRole, limit: Int = 50) async throws -> [HXTask] {
+        let procedure = role == .poster ? "listByPoster" : "listByWorker"
+
         struct HistoryInput: Codable {
-            let role: String
-            let limit: Int
+            let state: String?
         }
 
         let tasks: [HXTask] = try await trpc.call(
             router: "task",
-            procedure: "getHistory",
-            input: HistoryInput(role: role.rawValue, limit: limit)
+            procedure: procedure,
+            type: .query,
+            input: HistoryInput(state: nil) // nil state returns all tasks including completed
         )
 
         print("✅ TaskService: Fetched \(tasks.count) history tasks")
@@ -378,6 +382,7 @@ final class TaskDiscoveryService: ObservableObject {
         let response: TaskFeedResponse = try await trpc.call(
             router: "taskDiscovery",
             procedure: "getFeed",
+            type: .query,
             input: input
         )
 
@@ -415,6 +420,7 @@ final class TaskDiscoveryService: ObservableObject {
         let tasks: [HXTask] = try await trpc.call(
             router: "taskDiscovery",
             procedure: "search",
+            type: .query,
             input: input
         )
 
@@ -431,11 +437,142 @@ final class TaskDiscoveryService: ObservableObject {
         let explanation: MatchExplanation = try await trpc.call(
             router: "taskDiscovery",
             procedure: "getExplanation",
+            type: .query,
             input: ExplanationInput(taskId: taskId)
         )
 
         return explanation
     }
+
+    // MARK: - Feed Score Calculation
+
+    /// Pre-calculates matching scores for better feed performance
+    func calculateFeedScores(maxDistanceMiles: Double = 10.0) async throws -> [String: Any] {
+        struct CalcInput: Codable {
+            let maxDistanceMiles: Double
+        }
+
+        struct CalcResponse: Codable {
+            let calculatedCount: Int?
+            let success: Bool?
+        }
+
+        let response: CalcResponse = try await trpc.call(
+            router: "taskDiscovery",
+            procedure: "calculateFeedScores",
+            input: CalcInput(maxDistanceMiles: maxDistanceMiles)
+        )
+
+        print("✅ TaskDiscovery: Calculated feed scores")
+        return ["calculatedCount": response.calculatedCount ?? 0]
+    }
+
+    /// Calculates matching score for a specific task
+    func calculateMatchingScore(taskId: String) async throws -> MatchExplanation {
+        struct MatchInput: Codable {
+            let taskId: String
+        }
+
+        let result: MatchExplanation = try await trpc.call(
+            router: "taskDiscovery",
+            procedure: "calculateMatchingScore",
+            type: .query,
+            input: MatchInput(taskId: taskId)
+        )
+
+        print("✅ TaskDiscovery: Matching score for task \(taskId) = \(result.score)")
+        return result
+    }
+
+    // MARK: - Saved Searches
+
+    /// Saves a search query for quick access
+    func saveSearch(
+        name: String,
+        query: String? = nil,
+        filters: [String: String]? = nil,
+        sortBy: String = "relevance"
+    ) async throws -> SavedSearch {
+        struct SaveInput: Codable {
+            let name: String
+            let query: String?
+            let filters: [String: String]?
+            let sortBy: String
+        }
+
+        let saved: SavedSearch = try await trpc.call(
+            router: "taskDiscovery",
+            procedure: "saveSearch",
+            input: SaveInput(name: name, query: query, filters: filters, sortBy: sortBy)
+        )
+
+        print("✅ TaskDiscovery: Saved search '\(name)'")
+        return saved
+    }
+
+    /// Gets all saved searches for the current user
+    func getSavedSearches() async throws -> [SavedSearch] {
+        struct EmptyInput: Codable {}
+
+        let searches: [SavedSearch] = try await trpc.call(
+            router: "taskDiscovery",
+            procedure: "getSavedSearches",
+            type: .query,
+            input: EmptyInput()
+        )
+
+        print("✅ TaskDiscovery: Fetched \(searches.count) saved searches")
+        return searches
+    }
+
+    /// Deletes a saved search by ID
+    func deleteSavedSearch(searchId: String) async throws {
+        struct DeleteInput: Codable {
+            let searchId: String
+        }
+
+        struct SuccessResponse: Codable {
+            let success: Bool
+        }
+
+        let _: SuccessResponse = try await trpc.call(
+            router: "taskDiscovery",
+            procedure: "deleteSavedSearch",
+            input: DeleteInput(searchId: searchId)
+        )
+
+        print("✅ TaskDiscovery: Deleted saved search \(searchId)")
+    }
+
+    /// Executes a saved search with its stored filters
+    func executeSavedSearch(searchId: String, limit: Int = 20, offset: Int = 0) async throws -> [HXTask] {
+        struct ExecuteInput: Codable {
+            let searchId: String
+            let limit: Int
+            let offset: Int
+        }
+
+        let tasks: [HXTask] = try await trpc.call(
+            router: "taskDiscovery",
+            procedure: "executeSavedSearch",
+            type: .query,
+            input: ExecuteInput(searchId: searchId, limit: limit, offset: offset)
+        )
+
+        print("✅ TaskDiscovery: Executed saved search, returned \(tasks.count) tasks")
+        return tasks
+    }
+}
+
+// MARK: - Saved Search Model
+
+struct SavedSearch: Codable, Identifiable {
+    let id: String
+    let name: String
+    let query: String?
+    let filters: [String: String]?
+    let sortBy: String?
+    let createdAt: Date?
 }
 
 // MARK: - Response Types

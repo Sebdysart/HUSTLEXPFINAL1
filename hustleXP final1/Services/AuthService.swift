@@ -26,6 +26,10 @@ final class AuthService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
+    /// Reference to AppState for bridging auth state
+    /// Set this from the app entry point after initialization
+    var appState: AppState?
+
     private let trpc = TRPCClient.shared
 
     private init() {
@@ -85,6 +89,7 @@ final class AuthService: ObservableObject {
 
             self.currentUser = mockUser
             self.isAuthenticated = true
+            appState?.login(userId: mockUser.id, role: mockUser.role)
 
             print("✅ Auth [DEMO]: User signed up successfully - \(mockUser.name)")
             return
@@ -128,13 +133,16 @@ final class AuthService: ObservableObject {
 
             self.currentUser = user
             self.isAuthenticated = true
+            appState?.login(userId: user.id, role: user.role)
 
             print("✅ Auth: User signed up successfully - \(user.name)")
+            AnalyticsService.shared.track(.signUp, properties: ["method": "email"])
         } catch let error as NSError {
             self.error = error
             print("❌ Auth: Sign up failed - \(error.localizedDescription)")
             print("❌ Auth: Error domain: \(error.domain), code: \(error.code)")
             print("❌ Auth: Full error: \(error)")
+            AnalyticsService.shared.trackError(error.localizedDescription, context: "signUp")
             throw error
         }
     }
@@ -175,6 +183,7 @@ final class AuthService: ObservableObject {
 
             self.currentUser = mockUser
             self.isAuthenticated = true
+            appState?.login(userId: mockUser.id, role: mockUser.role)
 
             print("✅ Auth [DEMO]: User signed in successfully - \(mockUser.name)")
             return
@@ -198,11 +207,13 @@ final class AuthService: ObservableObject {
             await loadCurrentUser()
 
             print("✅ Auth: User signed in successfully")
+            AnalyticsService.shared.track(.signIn, properties: ["method": "email"])
         } catch let error as NSError {
             self.error = error
             print("❌ Auth: Sign in failed - \(error.localizedDescription)")
             print("❌ Auth: Error domain: \(error.domain), code: \(error.code)")
             print("❌ Auth: Full error: \(error)")
+            AnalyticsService.shared.trackError(error.localizedDescription, context: "signIn")
             throw error
         }
     }
@@ -239,8 +250,8 @@ final class AuthService: ObservableObject {
             trpc.setAuthToken(idToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
 
-            // Try to load existing user from backend
-            await loadCurrentUser()
+            // Try to load existing user from backend (silentFail: user may not exist yet)
+            await loadCurrentUser(silentFail: true)
             if isAuthenticated {
                 print("✅ Auth: Apple Sign-In successful (existing user)")
                 return
@@ -279,11 +290,14 @@ final class AuthService: ObservableObject {
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
             self.currentUser = user
             self.isAuthenticated = true
+            appState?.login(userId: user.id, role: user.role)
 
             print("✅ Auth: Apple Sign-In successful (new user) - \(user.name)")
+            AnalyticsService.shared.track(.signUp, properties: ["method": "apple"])
         } catch let error as NSError {
             self.error = error
             print("❌ Auth: Apple Sign-In failed - \(error.localizedDescription)")
+            AnalyticsService.shared.trackError(error.localizedDescription, context: "appleSignIn")
             throw error
         }
     }
@@ -316,8 +330,8 @@ final class AuthService: ObservableObject {
             trpc.setAuthToken(firebaseToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
 
-            // Try to load existing user from backend
-            await loadCurrentUser()
+            // Try to load existing user from backend (silentFail: user may not exist yet)
+            await loadCurrentUser(silentFail: true)
             if isAuthenticated {
                 print("✅ Auth: Google Sign-In successful (existing user)")
                 return
@@ -338,6 +352,8 @@ final class AuthService: ObservableObject {
                 defaultMode: UserRole.hustler.rawValue
             )
 
+            print("🔄 Auth: Registering new Google user - uid: \(authResult.user.uid), email: \(authResult.user.email ?? "nil")")
+
             let user: HXUser = try await trpc.call(
                 router: "user",
                 procedure: "register",
@@ -347,11 +363,14 @@ final class AuthService: ObservableObject {
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
             self.currentUser = user
             self.isAuthenticated = true
+            appState?.login(userId: user.id, role: user.role)
 
             print("✅ Auth: Google Sign-In successful (new user) - \(user.name)")
+            AnalyticsService.shared.track(.signUp, properties: ["method": "google"])
         } catch let error as NSError {
             self.error = error
             print("❌ Auth: Google Sign-In failed - \(error.localizedDescription)")
+            AnalyticsService.shared.trackError(error.localizedDescription, context: "googleSignIn")
             throw error
         }
     }
@@ -364,6 +383,7 @@ final class AuthService: ObservableObject {
         if Self.isDemoMode {
             currentUser = nil
             isAuthenticated = false
+            appState?.logout()
             print("✅ Auth [DEMO]: User signed out successfully")
             return
         }
@@ -377,8 +397,11 @@ final class AuthService: ObservableObject {
 
             currentUser = nil
             isAuthenticated = false
+            appState?.logout()
 
             print("✅ Auth: User signed out successfully")
+            AnalyticsService.shared.track(.signOut)
+            Task { await AnalyticsService.shared.flush() }
         } catch {
             print("⚠️ Auth: Sign out error - \(error.localizedDescription)")
         }
@@ -387,18 +410,23 @@ final class AuthService: ObservableObject {
     // MARK: - Load Current User
 
     /// Loads the current user's profile from the backend
-    private func loadCurrentUser() async {
+    /// - Parameter silentFail: When `true` the method won't call `signOut()` on
+    ///   failure.  This is used during the sign-in / registration flow where a
+    ///   missing backend user is expected (the caller will register instead).
+    private func loadCurrentUser(silentFail: Bool = false) async {
         do {
             struct EmptyInput: Codable {}
 
             let user: HXUser = try await trpc.call(
                 router: "user",
                 procedure: "me",
+                type: .query,
                 input: EmptyInput()
             )
 
             self.currentUser = user
             self.isAuthenticated = true
+            appState?.login(userId: user.id, role: user.role)
 
             // Store user ID
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
@@ -406,6 +434,10 @@ final class AuthService: ObservableObject {
             print("✅ Auth: Loaded current user - \(user.name)")
         } catch {
             print("⚠️ Auth: Failed to load current user - \(error.localizedDescription)")
+            if silentFail {
+                // Caller will handle registration; don't destroy auth token
+                return
+            }
             // Token may be expired or invalid, sign out
             signOut()
         }

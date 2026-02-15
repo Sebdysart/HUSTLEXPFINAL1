@@ -18,10 +18,28 @@ enum AuthRoute: Hashable {
 
 enum OnboardingRoute: Hashable {
     case welcome
+    case howItWorks
     case roleSelection
     case permissions
     case profileSetup
+    case skillSelection
     case complete
+
+    /// Step index for progress indicator (0-based)
+    var stepIndex: Int {
+        switch self {
+        case .welcome: return 0
+        case .howItWorks: return 1
+        case .roleSelection: return 2
+        case .permissions: return 3
+        case .profileSetup: return 4
+        case .skillSelection: return 5
+        case .complete: return 6
+        }
+    }
+
+    /// Total steps (excluding complete screen)
+    static let totalSteps = 6
 }
 
 enum HustlerRoute: Hashable {
@@ -48,6 +66,9 @@ enum HustlerRoute: Hashable {
     case skillSelection
     case licenseUpload(type: LicenseType)
     case lockedQuests
+    // v2.4.0 Squads Mode (Gold-tier unlockable)
+    case squadsHub
+    case squadDetail(squadId: String)
 }
 
 enum PosterRoute: Hashable {
@@ -64,6 +85,9 @@ enum PosterRoute: Hashable {
     // v2.0.0 LIVE Mode routes
     case asapTaskCreation
     case questTracking(questId: String)
+    // v2.4.0 Recurring Tasks (Silver-tier unlockable)
+    case recurringTasks
+    case recurringTaskDetail(seriesId: String)
 }
 
 enum SharedRoute: Hashable {
@@ -81,6 +105,8 @@ enum SettingsRoute: Hashable {
     case privacy
     case verification
     case help
+    case referrals
+    case subscription
 }
 
 enum EdgeRoute: Hashable {

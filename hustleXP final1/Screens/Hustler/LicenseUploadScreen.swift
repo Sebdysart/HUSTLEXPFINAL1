@@ -169,7 +169,7 @@ struct LicenseUploadScreen: View {
                     .padding(14)
                     .background(Color.surfaceSecondary)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .autocapitalization(.allCharacters)
+                    .textInputAutocapitalization(.characters)
             }
             
             // Issuing state
@@ -489,7 +489,22 @@ struct LicenseUploadScreen: View {
         isSubmitting = true
         verificationStatus = .pending
         
-        // Submit to service
+        // v2.2.0: Submit license via real API
+        Task {
+            do {
+                _ = try await SkillService.shared.submitLicense(
+                    skillId: licenseType.rawValue,
+                    licenseType: licenseType.rawValue,
+                    licenseNumber: licenseNumber,
+                    photoUrl: "placeholder://license-upload"
+                )
+                print("✅ LicenseUpload: Submitted via API")
+            } catch {
+                print("⚠️ LicenseUpload: API failed - \(error.localizedDescription)")
+            }
+        }
+
+        // Submit to mock service for status tracking
         _ = licenseService.uploadLicense(
             type: licenseType,
             licenseNumber: licenseNumber,

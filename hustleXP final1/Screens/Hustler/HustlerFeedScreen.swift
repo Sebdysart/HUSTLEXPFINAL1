@@ -11,7 +11,7 @@ import SwiftUI
 struct HustlerFeedScreen: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     // v2.2.0: Real API service
     @StateObject private var taskDiscovery = TaskDiscoveryService.shared
@@ -22,6 +22,7 @@ struct HustlerFeedScreen: View {
     @State private var showFilters: Bool = false
     @State private var apiTasks: [HXTask] = []
     @State private var apiError: Error?
+    @State private var showApiError: Bool = false
     
     // v1.9.0 Spatial Intelligence
     @State private var showMapView: Bool = false
@@ -31,6 +32,9 @@ struct HustlerFeedScreen: View {
     // v2.1.0 Professional Licensing - Eligibility Filtering
     @State private var matchmakerResult: AIMatchmakerResult?
     private let licenseService = MockLicenseVerificationService.shared
+
+    // v2.2.0: API-loaded heat zones
+    @State private var apiHeatZones: [HeatZone]?
     
     // v2.2.0: Use API tasks when available, fall back to mock data
     private var filteredTasks: [HXTask] {
@@ -52,7 +56,7 @@ struct HustlerFeedScreen: View {
         case .nearby:
             // v1.9.0: Implement nearby filter with location service
             if let location = currentLocation {
-                tasks = MockLocationService.shared.sortTasksByDistance(tasks: tasks, from: location)
+                tasks = LocationService.current.sortTasksByDistance(tasks: tasks, from: location)
                 // Limit to top 10 nearest
                 tasks = Array(tasks.prefix(10))
             }
@@ -193,7 +197,7 @@ struct HustlerFeedScreen: View {
     private var mapViewSection: some View {
         VStack(spacing: 0) {
             HeatMapView(
-                heatZones: MockHeatMapService.shared.heatZones,
+                heatZones: apiHeatZones ?? MockHeatMapService.shared.heatZones,
                 tasks: filteredTasks,
                 userLocation: currentLocation,
                 onZoneTapped: { zone in
@@ -218,9 +222,32 @@ struct HustlerFeedScreen: View {
     // MARK: - Location Data Loading
     
     private func loadLocationData() async {
-        let (coords, _) = await MockLocationService.shared.captureLocation()
+        let (coords, _) = await LocationService.current.captureLocation()
         currentLocation = coords
-        
+
+        // v2.2.0: Fetch heat map from real API
+        do {
+            let response = try await HeatMapService.shared.getHeatMap(
+                centerLat: coords.latitude,
+                centerLng: coords.longitude
+            )
+            apiHeatZones = response.zones.map { z in
+                HeatZone(
+                    id: z.identifier,
+                    name: "Zone",
+                    centerLatitude: z.centerLat,
+                    centerLongitude: z.centerLng,
+                    radiusMeters: z.radiusMeters,
+                    intensity: HeatIntensity.from(taskCount: z.taskCount),
+                    taskCount: z.taskCount,
+                    averagePayment: Double(z.averagePaymentCents ?? 0) / 100.0,
+                    lastUpdated: Date()
+                )
+            }
+        } catch {
+            print("⚠️ HustlerFeed: HeatMap API failed - \(error.localizedDescription)")
+        }
+
         // v2.2.0: Fetch tasks from real API
         await loadTasksFromAPI(location: coords)
         
@@ -255,9 +282,10 @@ struct HustlerFeedScreen: View {
             apiError = nil
             print("✅ HustlerFeed: Loaded \(apiTasks.count) tasks from API")
         } catch {
-            // Fall back to mock data silently
+            // v2.5.0: Show error to user instead of silent fallback
             apiError = error
-            print("⚠️ HustlerFeed: API failed, using mock data - \(error.localizedDescription)")
+            showApiError = true
+            print("⚠️ HustlerFeed: API failed - \(error.localizedDescription)")
         }
     }
     
@@ -329,12 +357,67 @@ struct HustlerFeedScreen: View {
         Group {
             if isLoading {
                 LoadingState(variant: .skeleton)
+            } else if showApiError, let error = apiError {
+                // v2.5.0: Show error state instead of silent fallback
+                apiErrorView(error: error)
             } else if filteredTasks.isEmpty {
                 emptyStateView
             } else {
                 taskList
             }
         }
+    }
+    
+    // MARK: - API Error View (v2.5.0)
+    
+    private func apiErrorView(error: Error) -> some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            ErrorState(
+                icon: "wifi.exclamationmark",
+                title: "Connection Issue",
+                message: "We couldn't load tasks from the server. Showing cached data instead.",
+                retryAction: {
+                    Task {
+                        showApiError = false
+                        isLoading = true
+                        await loadTasksFromAPI(location: currentLocation)
+                        isLoading = false
+                    }
+                }
+            )
+            
+            // Show mock data option
+            if !dataService.availableTasks.isEmpty {
+                VStack(spacing: 12) {
+                    HXDivider()
+                    
+                    Button(action: {
+                        withAnimation {
+                            showApiError = false
+                        }
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14))
+                            Text("Show Offline Data")
+                                .font(.subheadline.weight(.medium))
+                        }
+                        .foregroundStyle(Color.brandPurple)
+                    }
+                    
+                    HXText(
+                        "(\(dataService.availableTasks.count) tasks from cache)",
+                        style: .caption,
+                        color: .textMuted
+                    )
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(24)
     }
     
     private var emptyStateView: some View {
@@ -524,5 +607,5 @@ struct FilterChip: View {
         HustlerFeedScreen()
     }
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

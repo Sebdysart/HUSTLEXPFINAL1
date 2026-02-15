@@ -14,23 +14,26 @@ struct ProfileSetupScreen: View {
     
     @State private var displayName: String = ""
     @State private var bio: String = ""
+    @State private var city: String = ""
     @State private var showImagePicker = false
     @State private var avatarImage: UIImage?
     @State private var showContent = false
     @State private var isLoading = false
     @FocusState private var focusedField: Field?
-    
+
     private enum Field {
-        case name, bio
+        case name, bio, city
     }
-    
+
     private var isValid: Bool {
         !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            // Use safe area-adjusted height for compact detection
+            let usableHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = usableHeight < 600
             
             ZStack {
                 // Background
@@ -38,6 +41,13 @@ struct ProfileSetupScreen: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: isCompact ? 20 : 28) {
+                        // Progress bar
+                        OnboardingProgressBar(
+                            currentStep: OnboardingRoute.profileSetup.stepIndex,
+                            totalSteps: OnboardingRoute.totalSteps
+                        )
+                        .padding(.top, 8)
+
                         // Header
                         headerSection(isCompact: isCompact)
                         
@@ -285,13 +295,49 @@ struct ProfileSetupScreen: View {
                     Text("Share your skills, experience, or what you're looking for")
                         .font(.caption)
                         .foregroundStyle(Color.textMuted)
-                    
+
                     Spacer()
-                    
+
                     Text("\(bio.count)/200")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(bio.count > 200 ? Color.errorRed : Color.textMuted)
                 }
+            }
+
+            // City/Location field
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Your City")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.textSecondary)
+
+                HStack(spacing: 12) {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(focusedField == .city ? Color.brandPurple : Color.textMuted)
+                        .frame(width: 20)
+
+                    TextField("", text: $city, prompt: Text("e.g. Austin, TX").foregroundColor(.textMuted))
+                        .font(.body)
+                        .foregroundStyle(Color.textPrimary)
+                        .focused($focusedField, equals: .city)
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.surfaceElevated)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(
+                            focusedField == .city ? Color.brandPurple : Color.white.opacity(0.08),
+                            lineWidth: focusedField == .city ? 2 : 1
+                        )
+                )
+                .animation(.easeInOut(duration: 0.2), value: focusedField)
+
+                Text("Helps us show you nearby tasks and opportunities")
+                    .font(.caption)
+                    .foregroundStyle(Color.textMuted)
             }
         }
         .opacity(showContent ? 1 : 0)
@@ -404,16 +450,22 @@ struct ProfileSetupScreen: View {
     
     private func handleContinue() {
         guard isValid else { return }
-        
+
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
-        
+
         isLoading = true
         focusedField = nil
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             appState.userName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-            router.navigateToOnboarding(.complete)
+
+            // Hustlers go to skill selection; Posters skip to complete
+            if appState.userRole == .hustler {
+                router.navigateToOnboarding(.skillSelection)
+            } else {
+                router.navigateToOnboarding(.complete)
+            }
         }
     }
 }

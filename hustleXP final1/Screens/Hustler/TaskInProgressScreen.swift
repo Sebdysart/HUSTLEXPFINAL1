@@ -10,22 +10,24 @@ import SwiftUI
 
 struct TaskInProgressScreen: View {
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
-    
+    @Environment(LiveDataService.self) private var dataService
+
     let taskId: String
-    
+
     @State private var currentStatus: TaskProgressStatus = .enRoute
     @State private var showMessageSheet: Bool = false
-    
+    @State private var apiTask: HXTask?
+
     // v1.9.0 Spatial Intelligence
     @State private var geofence: GeofenceRegion?
     @State private var currentDistance: Double?
     @State private var isInsideGeofence: Bool = false
     @State private var movementSession: MovementTrackingSession?
     @State private var userLocation: GPSCoordinates?
-    
+
+    // v2.2.0: Use API task when available, fall back to mock
     private var task: HXTask? {
-        dataService.activeTask
+        apiTask ?? dataService.activeTask
     }
     
     var body: some View {
@@ -57,6 +59,13 @@ struct TaskInProgressScreen: View {
                 ConversationScreen(conversationId: task.id)
             }
             .task {
+                // v2.2.0: Load task from real API
+                do {
+                    apiTask = try await TaskService.shared.getTask(id: taskId)
+                    print("✅ TaskInProgress: Loaded task from API")
+                } catch {
+                    print("⚠️ TaskInProgress: API load failed, using mock - \(error.localizedDescription)")
+                }
                 await setupSpatialIntelligence(for: task)
             }
             .onDisappear {
@@ -138,27 +147,41 @@ struct TaskInProgressScreen: View {
     
     private func setupSpatialIntelligence(for task: HXTask) async {
         // Get current location
-        let (coords, _) = await MockLocationService.shared.captureLocation()
+        let (coords, _) = await LocationService.current.captureLocation()
         userLocation = coords
-        
-        // Register geofence for Smart Start
+
+        // v2.2.0: Check proximity via real GeofenceService
+        do {
+            let proximity = try await GeofenceService.shared.checkProximity(
+                taskId: task.id,
+                lat: coords.latitude,
+                lng: coords.longitude
+            )
+            currentDistance = proximity.distanceMeters
+            isInsideGeofence = proximity.isWithinGeofence
+            print("✅ TaskInProgress: Geofence proximity - \(proximity.distanceMeters)m")
+        } catch {
+            print("⚠️ TaskInProgress: Geofence API failed - \(error.localizedDescription)")
+        }
+
+        // Register local geofence for real-time monitoring (mock for now)
         geofence = MockGeofenceService.shared.registerGeofence(for: task)
-        
+
         // Set up geofence callbacks
         MockGeofenceService.shared.onGeofenceEntered = { region in
             withAnimation(.spring(response: 0.3)) {
                 isInsideGeofence = true
             }
         }
-        
+
         MockGeofenceService.shared.onDwellingDetected = { region in
             // Auto-trigger Smart Start
             if MockGeofenceService.shared.smartStartEnabled && currentStatus == .enRoute {
                 handleSmartStart(task)
             }
         }
-        
-        // Simulate distance updates
+
+        // Simulate distance updates (production: real CLLocationManager)
         startDistanceUpdates(for: task)
     }
     
@@ -195,10 +218,20 @@ struct TaskInProgressScreen: View {
     private func handleSmartStart(_ task: HXTask) {
         let impact = UIImpactFeedbackGenerator(style: .heavy)
         impact.impactOccurred()
-        
+
         withAnimation(.spring(response: 0.3)) {
             currentStatus = .arrived
-            dataService.updateTaskState(task.id, to: .inProgress)
+        }
+
+        // v2.2.0: Update state via real API
+        Task {
+            do {
+                apiTask = try await TaskService.shared.startTask(taskId: task.id)
+                print("✅ TaskInProgress: Smart Start - task started via API")
+            } catch {
+                print("⚠️ TaskInProgress: API start failed - \(error.localizedDescription)")
+                dataService.updateTaskState(task.id, to: .inProgress)
+            }
         }
     }
     
@@ -260,7 +293,16 @@ struct TaskInProgressScreen: View {
                 HXButton("I've Arrived", variant: .primary) {
                     withAnimation(.spring(response: 0.3)) {
                         currentStatus = .arrived
-                        dataService.updateTaskState(task.id, to: .inProgress)
+                    }
+                    // v2.2.0: Update state via real API
+                    Task {
+                        do {
+                            apiTask = try await TaskService.shared.startTask(taskId: task.id)
+                            print("✅ TaskInProgress: Arrived - task started via API")
+                        } catch {
+                            print("⚠️ TaskInProgress: API start failed - \(error.localizedDescription)")
+                            dataService.updateTaskState(task.id, to: .inProgress)
+                        }
                     }
                 }
                 
@@ -381,5 +423,5 @@ struct ProgressStepRow: View {
         TaskInProgressScreen(taskId: "task-001")
     }
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

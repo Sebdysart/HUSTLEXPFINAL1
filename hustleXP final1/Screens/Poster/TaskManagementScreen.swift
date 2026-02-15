@@ -78,8 +78,14 @@ struct TaskManagementScreen: View {
     
     private func loadTask() {
         isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            task = MockDataService.shared.getTask(by: taskId)
+        Task {
+            do {
+                task = try await TaskService.shared.getTask(id: taskId)
+                print("✅ TaskManagement: Loaded task from API")
+            } catch {
+                print("⚠️ TaskManagement: API failed - \(error.localizedDescription)")
+                task = LiveDataService.shared.getTask(by: taskId)
+            }
             isLoading = false
         }
     }
@@ -144,11 +150,11 @@ private struct TaskStateBadge: View {
     
     var color: Color {
         switch state {
-        case .posted: return .infoBlue
+        case .posted, .matching: return .infoBlue
         case .claimed, .proofSubmitted: return .warningOrange
         case .inProgress: return .brandPurple
         case .completed: return .successGreen
-        case .cancelled, .disputed: return .errorRed
+        case .cancelled, .disputed, .expired: return .errorRed
         }
     }
     

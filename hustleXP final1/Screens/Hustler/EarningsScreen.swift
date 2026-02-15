@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct EarningsScreen: View {
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     var body: some View {
         ZStack {
@@ -163,5 +163,5 @@ struct EarningsTransactionRow: View {
     NavigationStack {
         EarningsScreen()
     }
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

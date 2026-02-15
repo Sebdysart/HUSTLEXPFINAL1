@@ -11,7 +11,7 @@ struct BatchDetailsScreen: View {
     let batchId: String
     
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     @State private var batch: BatchRecommendation?
     @State private var isAcceptingBatch: Bool = false
@@ -578,5 +578,5 @@ struct BatchTaskRow: View {
         BatchDetailsScreen(batchId: "batch_1")
     }
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

@@ -60,6 +60,12 @@ struct HustlerStack: View {
                         LicenseUploadScreen(licenseType: type)
                     case .lockedQuests:
                         LockedQuestsScreen()
+                    // v2.4.0 Squads Mode routes
+                    case .squadsHub:
+                        SquadsHubScreen()
+                    case .squadDetail(_):
+                        // TODO: Build SquadDetailScreen
+                        SquadsHubScreen()
                     }
                 }
         }

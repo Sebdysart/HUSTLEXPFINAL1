@@ -11,7 +11,7 @@ import SwiftUI
 struct HustlerHomeScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     @State private var showGreeting = false
     @State private var statsAnimated = false
@@ -69,6 +69,9 @@ struct HustlerHomeScreen: View {
             withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                 glowPulse = 0.8
             }
+        }
+        .task {
+            await dataService.refreshAll()
         }
     }
     
@@ -694,5 +697,5 @@ struct ActiveTaskCard: View {
     }
     .environment(AppState())
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

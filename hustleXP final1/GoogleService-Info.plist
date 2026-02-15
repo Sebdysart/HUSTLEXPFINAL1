@@ -1,34 +1,34 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>809490755123-s6vb7d09if2v8mtcpf4oeh3rsfcnqfml.apps.googleusercontent.com</string>
+	<string>56493453814-eprb6s25r2hhf8uphdb53e2q3fe3uius.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.809490755123-s6vb7d09if2v8mtcpf4oeh3rsfcnqfml</string>
+	<string>com.googleusercontent.apps.56493453814-eprb6s25r2hhf8uphdb53e2q3fe3uius</string>
 	<key>API_KEY</key>
-	<string>AIzaSyCD2e6MEYS2_-FPS118wgrKrjAfWZZGR8k</string>
+	<string>AIzaSyA4RFW23zLvDr2c2Ddd6IwWZNRaTpJuNWE</string>
 	<key>GCM_SENDER_ID</key>
-	<string>809490755123</string>
+	<string>56493453814</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>taskme.hustleXP-final1</string>
 	<key>PROJECT_ID</key>
-	<string>hustlexp22</string>
+	<string>hustlexpbackendapi</string>
 	<key>STORAGE_BUCKET</key>
-	<string>hustlexp22.firebasestorage.app</string>
+	<string>hustlexpbackendapi.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_APPINVITE_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_GCM_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_SIGNIN_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:809490755123:ios:4a1393752a30760ba4fd46</string>
+	<string>1:56493453814:ios:67192553b04d9a927c97d7</string>
 </dict>
 </plist>

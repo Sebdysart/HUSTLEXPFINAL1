@@ -10,7 +10,7 @@ import SwiftUI
 struct PosterProfileScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     var body: some View {
         ZStack {
@@ -318,5 +318,5 @@ private struct TipRow: View {
     }
     .environment(AppState())
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

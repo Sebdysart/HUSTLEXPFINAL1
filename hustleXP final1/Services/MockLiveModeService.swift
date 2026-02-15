@@ -508,7 +508,7 @@ final class MockLiveModeService {
     // MARK: - Helpers
     
     private func calculateDistance(from: GPSCoordinates, to: GPSCoordinates) -> Double {
-        MockLocationService.shared.calculateDistance(from: from, to: to)
+        LocationService.current.calculateDistance(from: from, to: to)
     }
     
     private func calculateETA(from: GPSCoordinates, to: GPSCoordinates) -> Int {
@@ -521,7 +521,7 @@ final class MockLiveModeService {
     
     private func generateMockQuests() {
         let categories: [LiveTaskCategory] = [.lockout, .jumpstart, .lifting, .delivery]
-        let locations = MockLocationService.shared.sfNeighborhoods
+        let locations = LocationService.current.sfNeighborhoods
         
         // Generate 2-3 active quests
         for i in 0..<2 {

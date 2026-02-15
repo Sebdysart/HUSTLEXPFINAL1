@@ -89,16 +89,31 @@ struct ProofReviewScreen: View {
         .sheet(isPresented: $showRejectSheet) {
             RequestChangesSheet(taskId: taskId)
         }
-        .onAppear {
-            task = MockDataService.shared.getTask(by: taskId)
+        .task {
+            do {
+                task = try await TaskService.shared.getTask(id: taskId)
+                print("✅ ProofReview: Loaded task from API")
+            } catch {
+                print("⚠️ ProofReview: API failed - \(error.localizedDescription)")
+                task = LiveDataService.shared.getTask(by: taskId)
+            }
         }
     }
     
     private func approveAndPay() {
         isProcessing = true
-        
-        // Simulate payment processing
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+
+        Task {
+            do {
+                _ = try await TaskService.shared.reviewProof(
+                    taskId: taskId,
+                    approved: true,
+                    feedback: rating > 0 ? "Rated \(rating)/5" : nil
+                )
+                print("✅ ProofReview: Approved via API")
+            } catch {
+                print("⚠️ ProofReview: API approve failed - \(error.localizedDescription)")
+            }
             isProcessing = false
             withAnimation(.spring(response: 0.5)) {
                 showSuccess = true
@@ -497,6 +512,20 @@ private struct RequestChangesSheet: View {
                         }
                         
                         HXButton("Send Request", variant: .primary) {
+                            // v2.2.0: Reject proof via real API
+                            let feedback = "\(selectedReason ?? ""): \(instructions)"
+                            Task {
+                                do {
+                                    _ = try await TaskService.shared.reviewProof(
+                                        taskId: taskId,
+                                        approved: false,
+                                        feedback: feedback
+                                    )
+                                    print("✅ ProofReview: Changes requested via API")
+                                } catch {
+                                    print("⚠️ ProofReview: API reject failed - \(error.localizedDescription)")
+                                }
+                            }
                             dismiss()
                         }
                         .disabled(selectedReason == nil || instructions.isEmpty)

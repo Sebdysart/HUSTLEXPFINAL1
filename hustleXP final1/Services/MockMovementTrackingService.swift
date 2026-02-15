@@ -93,7 +93,7 @@ final class MockMovementTrackingService {
         var speed: Double? = nil
         if let lastLocation = session.locations.last {
             let lastCoords = GPSCoordinates(latitude: lastLocation.latitude, longitude: lastLocation.longitude)
-            let distance = MockLocationService.shared.calculateDistance(from: lastCoords, to: location)
+            let distance = LocationService.current.calculateDistance(from: lastCoords, to: location)
             let timeDiff = location.timestamp.timeIntervalSince(lastLocation.timestamp)
             if timeDiff > 0 {
                 speed = distance / timeDiff
@@ -285,7 +285,7 @@ final class MockMovementTrackingService {
                 try? await Task.sleep(nanoseconds: UInt64(trackingIntervalSeconds * 1_000_000_000))
                 
                 // Simulate getting current location
-                let (coords, _) = await MockLocationService.shared.captureLocation()
+                let (coords, _) = await LocationService.current.captureLocation()
                 recordLocation(coords)
             }
         }

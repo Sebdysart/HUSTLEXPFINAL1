@@ -47,7 +47,7 @@ struct HXInput: View {
                     TextField(placeholder, text: $text)
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
+                        .textInputAutocapitalization(.never)
                     
                 case .password:
                     SecureField(placeholder, text: $text)

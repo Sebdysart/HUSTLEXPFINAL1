@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AccountSettingsScreen: View {
     @Environment(AppState.self) private var appState
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     @State private var showDeleteConfirmation: Bool = false
     
@@ -118,5 +118,5 @@ struct AccountInfoRow: View {
         AccountSettingsScreen()
     }
     .environment(AppState())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

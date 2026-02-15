@@ -71,14 +71,13 @@ final class MessagingService: ObservableObject {
     ) async throws -> [HXMessage] {
         struct GetMessagesInput: Codable {
             let taskId: String
-            let limit: Int
-            let before: Date?
         }
 
         let messages: [HXMessage] = try await trpc.call(
             router: "messaging",
             procedure: "getTaskMessages",
-            input: GetMessagesInput(taskId: taskId, limit: limit, before: before)
+            type: .query,
+            input: GetMessagesInput(taskId: taskId)
         )
 
         print("✅ MessagingService: Fetched \(messages.count) messages for task \(taskId)")
@@ -94,6 +93,7 @@ final class MessagingService: ObservableObject {
         let conversations: [APIConversationSummary] = try await trpc.call(
             router: "messaging",
             procedure: "getConversations",
+            type: .query,
             input: EmptyInput()
         )
 
@@ -137,6 +137,7 @@ final class MessagingService: ObservableObject {
         let response: CountResponse = try await trpc.call(
             router: "messaging",
             procedure: "getUnreadCount",
+            type: .query,
             input: EmptyInput()
         )
 
@@ -152,96 +153,53 @@ final class MessagingService: ObservableObject {
             print("⚠️ MessagingService: Failed to refresh unread count")
         }
     }
-}
 
-// MARK: - Rating Service
+    // MARK: - Photo Messages
 
-/// Handles post-task ratings
-@MainActor
-final class RatingService: ObservableObject {
-    static let shared = RatingService()
-
-    private let trpc = TRPCClient.shared
-
-    @Published var isLoading = false
-
-    private init() {}
-
-    /// Submits a rating for a completed task
-    func submitRating(
+    /// Sends a photo message in a task conversation
+    func sendPhotoMessage(
         taskId: String,
-        rating: Int, // 1-5
-        review: String?,
-        tags: [String]? = nil
-    ) async throws {
+        photoUrls: [String],
+        caption: String? = nil
+    ) async throws -> HXMessage {
         isLoading = true
         defer { isLoading = false }
 
-        struct RatingInput: Codable {
+        struct PhotoInput: Codable {
             let taskId: String
-            let stars: Int
-            let comment: String?
-            let tags: [String]?
+            let photoUrls: [String]
+            let caption: String?
+        }
+
+        let message: HXMessage = try await trpc.call(
+            router: "messaging",
+            procedure: "sendPhotoMessage",
+            input: PhotoInput(taskId: taskId, photoUrls: photoUrls, caption: caption)
+        )
+
+        print("✅ MessagingService: Sent photo message in task \(taskId)")
+        return message
+    }
+
+    // MARK: - Single Message Read
+
+    /// Marks a single message as read by message ID
+    func markMessageAsRead(messageId: String) async throws {
+        struct MarkReadInput: Codable {
+            let messageId: String
         }
 
         struct EmptyResponse: Codable {}
 
         let _: EmptyResponse = try await trpc.call(
-            router: "rating",
-            procedure: "submitRating",
-            input: RatingInput(taskId: taskId, stars: rating, comment: review, tags: tags)
+            router: "messaging",
+            procedure: "markAsRead",
+            input: MarkReadInput(messageId: messageId)
         )
 
-        print("✅ RatingService: Submitted \(rating)-star rating for task \(taskId)")
-    }
-
-    /// Gets rating summary for a user
-    func getUserRatingSummary(userId: String) async throws -> RatingSummary {
-        struct GetSummaryInput: Codable {
-            let userId: String
-        }
-
-        let summary: RatingSummary = try await trpc.call(
-            router: "rating",
-            procedure: "getUserRatingSummary",
-            input: GetSummaryInput(userId: userId)
-        )
-
-        return summary
-    }
-
-    /// Gets ratings received by current user
-    func getMyRatings(limit: Int = 50) async throws -> [UserRating] {
-        struct GetRatingsInput: Codable {
-            let limit: Int
-        }
-
-        let ratings: [UserRating] = try await trpc.call(
-            router: "rating",
-            procedure: "getMyRatings",
-            input: GetRatingsInput(limit: limit)
-        )
-
-        print("✅ RatingService: Fetched \(ratings.count) ratings")
-        return ratings
+        print("✅ MessagingService: Marked message \(messageId) as read")
+        await refreshUnreadCount()
     }
 }
 
-// MARK: - Rating Types
-
-struct RatingSummary: Codable {
-    let averageRating: Double
-    let totalRatings: Int
-    let ratingDistribution: [String: Int] // star count as string -> number of ratings
-}
-
-struct UserRating: Codable, Identifiable {
-    let id: String
-    let taskId: String
-    let taskTitle: String
-    let fromUserId: String
-    let fromUserName: String
-    let rating: Int
-    let review: String?
-    let createdAt: Date
-}
+// NOTE: RatingService has been moved to its own file: RatingService.swift

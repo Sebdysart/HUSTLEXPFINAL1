@@ -7,20 +7,25 @@
 //
 
 import SwiftUI
+import StripePaymentSheet
 
 struct TaxPaymentScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
-    
-    @State private var showPaymentSheet = false
+    @Environment(LiveDataService.self) private var dataService
+
+    // v2.2.0: Real API services
+    @StateObject private var taxService = TaxService.shared
+
+    @State private var isProcessingPayment = false
     @State private var showSuccess = false
     @State private var paymentResult: TaxPaymentResult?
-    
+    @State private var paymentError: String?
+
     var body: some View {
         ZStack {
             Color.brandBlack.ignoresSafeArea()
-            
+
             if showSuccess, let result = paymentResult {
                 successView(result: result)
             } else {
@@ -32,16 +37,6 @@ struct TaxPaymentScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .sheet(isPresented: $showPaymentSheet) {
-            MockStripePaymentSheet(
-                amount: dataService.taxStatus.unpaidTaxCents
-            ) { success in
-                if success {
-                    processPayment()
-                }
-            }
-            .presentationDetents([.large])
-        }
     }
     
     // MARK: - Payment View
@@ -197,23 +192,35 @@ struct TaxPaymentScreen: View {
     }
     
     // MARK: - Pay Button
-    
+
     private var payButton: some View {
         VStack(spacing: 8) {
             HXButton(
-                "Pay \(dataService.taxStatus.formattedUnpaidAmount)",
+                isProcessingPayment ? "Processing..." : "Pay \(dataService.taxStatus.formattedUnpaidAmount)",
                 icon: "creditcard.fill",
-                variant: .primary
+                variant: .primary,
+                isLoading: isProcessingPayment
             ) {
-                showPaymentSheet = true
+                presentStripePayment()
             }
-            
+            .disabled(isProcessingPayment)
+
+            if let error = paymentError {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.caption)
+                    Text(error)
+                        .font(.caption)
+                }
+                .foregroundStyle(Color.errorRed)
+            }
+
             HXText("Secure payment powered by Stripe", style: .caption, color: .textMuted)
         }
         .padding(20)
         .background(.ultraThinMaterial)
     }
-    
+
     // MARK: - Success View
     
     private func successView(result: TaxPaymentResult) -> some View {
@@ -270,13 +277,75 @@ struct TaxPaymentScreen: View {
     }
     
     // MARK: - Actions
-    
-    private func processPayment() {
-        let result = dataService.payTax()
-        
-        withAnimation(.spring(response: 0.4)) {
-            paymentResult = result
-            showSuccess = true
+
+    private func presentStripePayment() {
+        isProcessingPayment = true
+        paymentError = nil
+
+        Task {
+            do {
+                // 1. Create payment intent via TaxService
+                let paymentIntent = try await taxService.createTaxPaymentIntent()
+                print("✅ TaxPayment: Payment intent created - \(paymentIntent.paymentIntentId)")
+
+                // 2. Prepare and present real Stripe PaymentSheet
+                let stripeManager = StripePaymentManager.shared
+                stripeManager.preparePaymentSheet(clientSecret: paymentIntent.clientSecret)
+
+                let result = await stripeManager.presentPaymentSheet()
+
+                switch result {
+                case .completed:
+                    // 3. Payment succeeded - confirm with backend
+                    print("✅ TaxPayment: Stripe payment completed")
+
+                    do {
+                        let taxResult = try await taxService.payTax(paymentIntentId: paymentIntent.paymentIntentId)
+                        print("✅ TaxPayment: Tax payment confirmed, released \(taxResult.xpReleased) XP")
+
+                        // Also update mock data for consistency
+                        let mockResult = dataService.payTax()
+                        _ = mockResult // Keep mock data in sync
+
+                        stripeManager.reset()
+                        isProcessingPayment = false
+
+                        withAnimation(.spring(response: 0.4)) {
+                            paymentResult = taxResult
+                            showSuccess = true
+                        }
+                    } catch {
+                        print("⚠️ TaxPayment: Backend confirm failed - \(error.localizedDescription)")
+                        // Payment went through but backend confirm failed
+                        // Webhook will reconcile; show success with mock data
+                        let mockResult = dataService.payTax()
+
+                        stripeManager.reset()
+                        isProcessingPayment = false
+
+                        withAnimation(.spring(response: 0.4)) {
+                            paymentResult = mockResult
+                            showSuccess = true
+                        }
+                    }
+
+                case .canceled:
+                    print("⚠️ TaxPayment: Payment canceled by user")
+                    stripeManager.reset()
+                    isProcessingPayment = false
+
+                case .failed(error: let error):
+                    print("⚠️ TaxPayment: Stripe payment failed - \(error.localizedDescription)")
+                    stripeManager.reset()
+                    isProcessingPayment = false
+                    paymentError = "Payment failed. Please try again."
+                }
+
+            } catch {
+                print("⚠️ TaxPayment: Failed to create payment intent - \(error.localizedDescription)")
+                isProcessingPayment = false
+                paymentError = "Could not start payment. Please try again."
+            }
         }
     }
 }
@@ -352,5 +421,5 @@ private struct TaxEntryRow: View {
     }
     .environment(AppState())
     .environment(Router())
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

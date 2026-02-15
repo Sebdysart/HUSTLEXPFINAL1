@@ -32,7 +32,7 @@ enum LocationError: Error, LocalizedError {
 
 @MainActor
 @Observable
-final class MockLocationService {
+final class MockLocationService: LocationServiceProtocol {
     static let shared = MockLocationService()
     
     // MARK: - Mock State

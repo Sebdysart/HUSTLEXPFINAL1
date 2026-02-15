@@ -9,9 +9,15 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.809490755123-s6vb7d09if2v8mtcpf4oeh3rsfcnqfml</string>
+				<string>com.googleusercontent.apps.56493453814-eprb6s25r2hhf8uphdb53e2q3fe3uius</string>
 			</array>
 		</dict>
+	</array>
+	<key>Launch​Background</key>
+	<string></string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>

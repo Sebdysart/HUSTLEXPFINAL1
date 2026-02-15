@@ -10,7 +10,7 @@ import SwiftUI
 struct LockedQuestsScreen: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     @Environment(\.dismiss) private var dismiss
     
     @State private var lockedQuests: [LockedQuest] = []
@@ -193,7 +193,7 @@ struct LockedQuestsScreen: View {
     
     private func loadData() async {
         // Get current location
-        let (coords, _) = await MockLocationService.shared.captureLocation()
+        let (coords, _) = await LocationService.current.captureLocation()
         currentLocation = coords
         
         // Initialize service
@@ -215,5 +215,5 @@ struct LockedQuestsScreen: View {
     LockedQuestsScreen()
         .environment(Router())
         .environment(AppState())
-        .environment(MockDataService())
+        .environment(LiveDataService.shared)
 }

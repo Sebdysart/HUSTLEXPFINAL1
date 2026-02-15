@@ -485,19 +485,34 @@ struct AITaskCreationScreen: View {
     
     private func postTask() {
         isPosting = true
-        
-        let newTask = taskDraft.toHXTask(
-            posterId: "current-user",
-            posterName: "You",
-            posterRating: 4.8
-        )
-        
-        MockDataService.shared.postTask(newTask)
-        
+
         let impact = UIImpactFeedbackGenerator(style: .heavy)
         impact.impactOccurred()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+
+        // v2.2.0: Create task via real API with mock fallback
+        Task {
+            do {
+                _ = try await TaskService.shared.createTask(
+                    title: taskDraft.title,
+                    description: taskDraft.description,
+                    payment: taskDraft.payment ?? 25.0,
+                    location: taskDraft.location,
+                    latitude: nil,
+                    longitude: nil,
+                    estimatedDuration: taskDraft.duration.isEmpty ? "1 hr" : taskDraft.duration,
+                    category: taskDraft.category,
+                    requiredTier: taskDraft.requiredTier
+                )
+                print("✅ AITaskCreation: Task posted via API")
+            } catch {
+                print("⚠️ AITaskCreation: API failed, using mock - \(error.localizedDescription)")
+                let newTask = taskDraft.toHXTask(
+                    posterId: "current-user",
+                    posterName: "You",
+                    posterRating: 4.8
+                )
+                LiveDataService.shared.postTask(newTask)
+            }
             isPosting = false
             dismiss()
         }

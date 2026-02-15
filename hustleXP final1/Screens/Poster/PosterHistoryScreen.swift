@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct PosterHistoryScreen: View {
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     @State private var selectedFilter: HistoryFilter = .all
     @State private var completedTasks: [HXTask] = []
@@ -269,5 +269,5 @@ private struct DetailItem: View {
     NavigationStack {
         PosterHistoryScreen()
     }
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
 }

@@ -10,12 +10,15 @@ import SwiftUI
 struct PosterTaskDetailScreen: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
-    
+
     let taskId: String
-    
+
     @State private var task: HXTask?
     @State private var isLoading = true
     @State private var showCancelConfirmation = false
+    @State private var showTipSheet = false
+    @State private var tipSent = false
+    @State private var loadError: Error?
     
     var body: some View {
         ZStack {
@@ -113,7 +116,49 @@ struct PosterTaskDetailScreen: View {
                         
                         // Timeline section
                         TaskTimelineSection(task: task)
-                        
+
+                        // Tip prompt (shown when task is completed)
+                        if task.state == .completed && !tipSent {
+                            VStack(spacing: 16) {
+                                HStack(spacing: 12) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.brandPurple.opacity(0.15))
+                                            .frame(width: 44, height: 44)
+
+                                        Image(systemName: "heart.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(Color.brandPurple)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HXText("Task Completed!", style: .headline, color: .successGreen)
+                                        HXText("Would you like to leave a tip for the hustler?", style: .subheadline, color: .textSecondary)
+                                    }
+
+                                    Spacer()
+                                }
+
+                                HXButton("Leave a Tip", icon: "heart.fill", variant: .primary) {
+                                    showTipSheet = true
+                                }
+                            }
+                            .padding(20)
+                            .background(Color.surfaceElevated)
+                            .cornerRadius(16)
+                        }
+
+                        if tipSent {
+                            HStack(spacing: 10) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.successGreen)
+                                HXText("Tip sent! Thank you for your generosity.", style: .subheadline, color: .successGreen)
+                            }
+                            .padding(16)
+                            .background(Color.successGreen.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+
                         Spacer(minLength: 120)
                     }
                     .padding(24)
@@ -167,6 +212,23 @@ struct PosterTaskDetailScreen: View {
         } message: {
             Text("This will cancel the task and notify any assigned hustler. This action cannot be undone.")
         }
+        .sheet(isPresented: $showTipSheet) {
+            if let task = task {
+                TipSheet(
+                    taskId: task.id,
+                    taskPrice: Int(task.payment * 100),
+                    workerName: "Hustler",
+                    onTip: { amountCents in
+                        sendTip(taskId: task.id, amountCents: amountCents)
+                    },
+                    onDismiss: {
+                        showTipSheet = false
+                    }
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+        }
         .onAppear {
             loadTask()
         }
@@ -174,15 +236,58 @@ struct PosterTaskDetailScreen: View {
     
     private func loadTask() {
         isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            task = MockDataService.shared.getTask(by: taskId)
+        Task {
+            do {
+                task = try await TaskService.shared.getTask(id: taskId)
+                print("✅ PosterTaskDetail: Loaded task from API")
+            } catch {
+                loadError = error
+                print("⚠️ PosterTaskDetail: API failed - \(error.localizedDescription)")
+                // Fall back to mock data
+                task = LiveDataService.shared.getTask(by: taskId)
+            }
             isLoading = false
         }
     }
     
+    private func sendTip(taskId: String, amountCents: Int) {
+        Task {
+            struct TipInput: Codable {
+                let taskId: String
+                let amountCents: Int
+            }
+            struct TipResponse: Codable {
+                let success: Bool?
+            }
+
+            do {
+                let _: TipResponse = try await TRPCClient.shared.call(
+                    router: "tipping",
+                    procedure: "createTip",
+                    input: TipInput(taskId: taskId, amountCents: amountCents)
+                )
+                showTipSheet = false
+                tipSent = true
+                let haptic = UINotificationFeedbackGenerator()
+                haptic.notificationOccurred(.success)
+                print("✅ PosterTaskDetail: Tip of \(amountCents) cents sent")
+            } catch {
+                print("⚠️ PosterTaskDetail: Tip failed - \(error.localizedDescription)")
+                showTipSheet = false
+            }
+        }
+    }
+
     private func cancelTask() {
-        // Handle cancellation
-        router.posterPath.removeLast()
+        Task {
+            do {
+                _ = try await TaskService.shared.cancelTask(taskId: taskId, reason: nil)
+                print("✅ PosterTaskDetail: Task cancelled via API")
+            } catch {
+                print("⚠️ PosterTaskDetail: Cancel API failed - \(error.localizedDescription)")
+            }
+            router.posterPath.removeLast()
+        }
     }
 }
 
@@ -192,12 +297,12 @@ private struct TaskStatusBadge: View {
     
     var color: Color {
         switch state {
-        case .posted: return .infoBlue
+        case .posted, .matching: return .infoBlue
         case .claimed: return .warningOrange
         case .inProgress: return .brandPurple
         case .proofSubmitted: return .warningOrange
         case .completed: return .successGreen
-        case .cancelled: return .errorRed
+        case .cancelled, .expired: return .errorRed
         case .disputed: return .errorRed
         }
     }

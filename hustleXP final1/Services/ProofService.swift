@@ -179,6 +179,7 @@ final class ProofService: ObservableObject {
         let proof: ProofSubmission = try await trpc.call(
             router: "task",
             procedure: "getProof",
+            type: .query,
             input: GetInput(taskId: taskId)
         )
 

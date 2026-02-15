@@ -9,12 +9,13 @@ import SwiftUI
 
 struct HeatMapFullscreenScreen: View {
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     
     @State private var selectedZone: HeatZone?
     @State private var showFilters: Bool = false
     @State private var userLocation: GPSCoordinates?
     @State private var minPaymentFilter: Double = 0
+    @State private var apiZones: [HeatZone]?
     
     var body: some View {
         ZStack {
@@ -103,18 +104,41 @@ struct HeatMapFullscreenScreen: View {
         }
         .navigationBarHidden(true)
         .task {
-            let (coords, _) = await MockLocationService.shared.captureLocation()
+            let (coords, _) = await LocationService.current.captureLocation()
             userLocation = coords
+            // v2.2.0: Load heat zones from real API
+            do {
+                let response = try await HeatMapService.shared.getHeatMap(
+                    centerLat: coords.latitude,
+                    centerLng: coords.longitude
+                )
+                // Convert API zones to local HeatZone model
+                apiZones = response.zones.map { z in
+                    HeatZone(
+                        id: z.identifier,
+                        name: "Zone",
+                        centerLatitude: z.centerLat,
+                        centerLongitude: z.centerLng,
+                        radiusMeters: z.radiusMeters,
+                        intensity: HeatIntensity.from(taskCount: z.taskCount),
+                        taskCount: z.taskCount,
+                        averagePayment: Double(z.averagePaymentCents ?? 0) / 100.0,
+                        lastUpdated: Date()
+                    )
+                }
+                print("✅ HeatMapFullscreen: Loaded \(response.zones.count) zones from API")
+            } catch {
+                print("⚠️ HeatMapFullscreen: API failed, using mock - \(error.localizedDescription)")
+            }
         }
     }
     
     private var filteredZones: [HeatZone] {
+        let zones = apiZones ?? MockHeatMapService.shared.heatZones
         if minPaymentFilter > 0 {
-            return MockHeatMapService.shared.heatZones.filter {
-                $0.averagePayment >= minPaymentFilter
-            }
+            return zones.filter { $0.averagePayment >= minPaymentFilter }
         }
-        return MockHeatMapService.shared.heatZones
+        return zones
     }
 }
 
@@ -332,5 +356,5 @@ struct FilterSheet: View {
 #Preview {
     HeatMapFullscreenScreen()
         .environment(Router())
-        .environment(MockDataService.shared)
+        .environment(LiveDataService.shared)
 }

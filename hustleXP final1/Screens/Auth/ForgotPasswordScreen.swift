@@ -78,7 +78,7 @@ struct ForgotPasswordScreen: View {
                                             .font(.system(size: isCompact ? 15 : 16))
                                             .foregroundStyle(Color.textPrimary)
                                             .textContentType(.emailAddress)
-                                            .autocapitalization(.none)
+                                            .textInputAutocapitalization(.never)
                                             .keyboardType(.emailAddress)
                                             .focused($isEmailFocused)
                                     }

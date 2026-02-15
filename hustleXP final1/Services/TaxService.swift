@@ -34,6 +34,7 @@ final class TaxService: ObservableObject {
         let status: TaxStatus = try await trpc.call(
             router: "xpTax",
             procedure: "getTaxStatus",
+            type: .query,
             input: EmptyInput()
         )
 
@@ -94,6 +95,7 @@ final class TaxService: ObservableObject {
         let entries: [TaxLedgerEntry] = try await trpc.call(
             router: "xpTax",
             procedure: "getTaxHistory",
+            type: .query,
             input: HistoryInput(limit: limit)
         )
 
@@ -127,6 +129,7 @@ final class InsuranceService: ObservableObject {
         let status: InsurancePoolStatus = try await trpc.call(
             router: "insurance",
             procedure: "getPoolStatus",
+            type: .query,
             input: EmptyInput()
         )
 
@@ -177,6 +180,7 @@ final class InsuranceService: ObservableObject {
         let claims: [InsuranceClaim] = try await trpc.call(
             router: "insurance",
             procedure: "getMyClaims",
+            type: .query,
             input: GetClaimsInput(limit: limit)
         )
 
@@ -185,17 +189,12 @@ final class InsuranceService: ObservableObject {
     }
 
     /// Gets claim by ID
+    /// Note: Backend doesn't have insurance.getById; filters getMyClaims locally
     func getClaim(claimId: String) async throws -> InsuranceClaim {
-        struct GetClaimInput: Codable {
-            let claimId: String
+        let claims = try await getMyClaims()
+        guard let claim = claims.first(where: { $0.id == claimId }) else {
+            throw InsuranceError.invalidRequest("Claim not found: \(claimId)")
         }
-
-        let claim: InsuranceClaim = try await trpc.call(
-            router: "insurance",
-            procedure: "getById",
-            input: GetClaimInput(claimId: claimId)
-        )
-
         return claim
     }
 }

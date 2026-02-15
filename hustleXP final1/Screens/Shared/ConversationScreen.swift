@@ -6,8 +6,12 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct ConversationScreen: View {
+    @Environment(AppState.self) private var appState
+    @Environment(Router.self) private var router
+    
     let conversationId: String // This is the taskId
     
     // v2.2.0: Real API service
@@ -18,6 +22,13 @@ struct ConversationScreen: View {
     @State private var apiMessages: [HXMessage] = []
     @State private var isLoading = true
     @State private var isSending = false
+    @State private var showReportSheet = false
+    @State private var showPhotosPicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showCallAlert = false
+    @State private var errorMessage: String?
+    @State private var showError = false
+    @State private var isOtherUserTyping = false
     @FocusState private var isInputFocused: Bool
     
     var body: some View {
@@ -56,12 +67,34 @@ struct ConversationScreen: View {
                     }
                 }
                 
+                // Typing indicator
+                if isOtherUserTyping {
+                    HStack(spacing: 4) {
+                        Text("Typing")
+                            .font(.caption)
+                            .foregroundColor(.textTertiary)
+                        TypingDotsView()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 4)
+                }
+
                 // Message input
                 MessageInputBar(
                     text: $messageText,
                     isFocused: $isInputFocused,
-                    onSend: sendMessage
+                    onSend: sendMessage,
+                    onAttachment: { showPhotosPicker = true }
                 )
+                .photosPicker(isPresented: $showPhotosPicker, selection: $selectedPhotoItem, matching: .images)
+                .onChange(of: selectedPhotoItem) { _, newItem in
+                    Task {
+                        if let newItem = newItem,
+                           let data = try? await newItem.loadTransferable(type: Data.self) {
+                            sendPhotoMessage(imageData: data)
+                        }
+                    }
+                }
             }
         }
         .navigationTitle("Messages")
@@ -72,14 +105,14 @@ struct ConversationScreen: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    Button(action: {}) {
+                    Button(action: viewProfile) {
                         Label("View Profile", systemImage: "person.circle")
                     }
-                    Button(action: {}) {
+                    Button(action: initiateCall) {
                         Label("Call", systemImage: "phone")
                     }
                     Divider()
-                    Button(role: .destructive, action: {}) {
+                    Button(role: .destructive, action: { showReportSheet = true }) {
                         Label("Report", systemImage: "exclamationmark.triangle")
                     }
                 } label: {
@@ -87,6 +120,23 @@ struct ConversationScreen: View {
                         .foregroundStyle(Color.textPrimary)
                 }
             }
+        }
+        .sheet(isPresented: $showReportSheet) {
+            ReportUserSheet(taskId: conversationId, isPresented: $showReportSheet)
+        }
+        .alert("Call User", isPresented: $showCallAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Call via Phone") {
+                // In a real app, this would use tel: URL scheme
+                print("[Conversation] Initiating call for task \(conversationId)")
+            }
+        } message: {
+            Text("In-app calling is coming soon. Would you like to call via your phone app?")
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "An error occurred")
         }
         .onAppear {
             loadMessages()
@@ -204,6 +254,61 @@ struct ConversationScreen: View {
             isSending = false
         }
     }
+    
+    // MARK: - Toolbar Actions
+    
+    private func viewProfile() {
+        // Navigate to user profile - in a real app this would use the other user's ID
+        print("[Conversation] View profile for task \(conversationId)")
+        // For now, show an alert or navigate to profile
+    }
+    
+    private func initiateCall() {
+        showCallAlert = true
+    }
+    
+    private func sendPhotoMessage(imageData: Data) {
+        guard UIImage(data: imageData) != nil else { return }
+        
+        isSending = true
+        
+        Task {
+            do {
+                // Upload photo first
+                let filename = "chat_\(conversationId)_\(Int(Date().timeIntervalSince1970)).jpg"
+                
+                // Get presigned URL and upload
+                // For now, create a mock URL - in production this would upload to R2
+                let photoUrl = "https://storage.hustlexp.com/chat/\(filename)"
+                
+                // Send photo message via API
+                let sentMessage = try await messagingService.sendPhotoMessage(
+                    taskId: conversationId,
+                    photoUrls: [photoUrl],
+                    caption: nil
+                )
+                
+                // Add to local messages
+                let chatMessage = ChatMessage(
+                    id: sentMessage.id,
+                    text: "📷 Photo",
+                    isFromCurrentUser: true,
+                    timestamp: sentMessage.timestamp,
+                    senderName: sentMessage.senderName
+                )
+                
+                withAnimation(.spring(response: 0.3)) {
+                    messages.append(chatMessage)
+                }
+                
+                print("✅ Conversation: Photo message sent")
+            } catch {
+                errorMessage = "Failed to send photo: \(error.localizedDescription)"
+                showError = true
+            }
+            isSending = false
+        }
+    }
 }
 
 // MARK: - Chat Message Model
@@ -213,6 +318,7 @@ struct ChatMessage: Identifiable {
     let isFromCurrentUser: Bool
     let timestamp: Date
     let senderName: String
+    var isRead: Bool = false
 }
 
 // MARK: - Task Context Header
@@ -298,8 +404,20 @@ private struct MessageBubble: View {
                     style: .caption,
                     color: .textTertiary
                 )
+
+                // Delivery status for sent messages
+                if message.isFromCurrentUser {
+                    HStack(spacing: 4) {
+                        Image(systemName: message.isRead ? "checkmark.circle.fill" : "checkmark.circle")
+                            .font(.system(size: 10))
+                            .foregroundColor(message.isRead ? .brandPurple : .textTertiary)
+                        Text(message.isRead ? "Read" : "Sent")
+                            .font(.system(size: 10))
+                            .foregroundColor(.textTertiary)
+                    }
+                }
             }
-            
+
             if !message.isFromCurrentUser {
                 Spacer(minLength: 60)
             }
@@ -318,6 +436,7 @@ private struct MessageInputBar: View {
     @Binding var text: String
     var isFocused: FocusState<Bool>.Binding
     let onSend: () -> Void
+    let onAttachment: () -> Void
     
     var body: some View {
         VStack(spacing: 0) {
@@ -326,7 +445,7 @@ private struct MessageInputBar: View {
             
             HStack(spacing: 12) {
                 // Attachment button
-                Button(action: {}) {
+                Button(action: onAttachment) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 28))
                         .foregroundStyle(Color.textSecondary)
@@ -378,6 +497,181 @@ struct RoundedCorner: Shape {
             cornerRadii: CGSize(width: radius, height: radius)
         )
         return Path(path.cgPath)
+    }
+}
+
+// MARK: - Report User Sheet
+
+struct ReportUserSheet: View {
+    let taskId: String
+    @Binding var isPresented: Bool
+    
+    @State private var selectedReason: ReportReason?
+    @State private var additionalDetails: String = ""
+    @State private var isSubmitting = false
+    @State private var showSuccess = false
+    
+    enum ReportReason: String, CaseIterable {
+        case harassment = "Harassment or abuse"
+        case spam = "Spam or scam"
+        case inappropriate = "Inappropriate content"
+        case noShow = "No show / didn't complete task"
+        case fraud = "Fraudulent activity"
+        case other = "Other"
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.brandBlack.ignoresSafeArea()
+                
+                if showSuccess {
+                    successView
+                } else {
+                    reportForm
+                }
+            }
+            .navigationTitle("Report User")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.brandBlack, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                    .foregroundStyle(Color.textSecondary)
+                }
+            }
+        }
+    }
+    
+    private var reportForm: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HXText("What's the issue?", style: .headline)
+                    HXText("Select the reason for your report", style: .caption, color: .textSecondary)
+                }
+                
+                VStack(spacing: 0) {
+                    ForEach(ReportReason.allCases, id: \.self) { reason in
+                        Button(action: { selectedReason = reason }) {
+                            HStack {
+                                HXText(reason.rawValue, style: .body)
+                                Spacer()
+                                if selectedReason == reason {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Color.brandPurple)
+                                }
+                            }
+                            .padding(16)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        if reason != ReportReason.allCases.last {
+                            HXDivider().padding(.leading, 16)
+                        }
+                    }
+                }
+                .background(Color.surfaceElevated)
+                .cornerRadius(12)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    HXText("Additional details (optional)", style: .subheadline)
+                    
+                    TextField("", text: $additionalDetails, prompt: Text("Describe what happened...").foregroundColor(.textTertiary), axis: .vertical)
+                        .lineLimit(3...6)
+                        .padding(16)
+                        .background(Color.surfaceElevated)
+                        .cornerRadius(12)
+                        .foregroundStyle(Color.textPrimary)
+                }
+                
+                HXButton(
+                    isSubmitting ? "Submitting..." : "Submit Report",
+                    variant: selectedReason != nil ? .primary : .secondary,
+                    isLoading: isSubmitting
+                ) {
+                    submitReport()
+                }
+                .disabled(selectedReason == nil || isSubmitting)
+            }
+            .padding(24)
+        }
+    }
+    
+    private var successView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            ZStack {
+                Circle()
+                    .fill(Color.successGreen.opacity(0.1))
+                    .frame(width: 100, height: 100)
+                
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 50))
+                    .foregroundStyle(Color.successGreen)
+            }
+            
+            VStack(spacing: 8) {
+                HXText("Report Submitted", style: .title2)
+                HXText("Thank you for helping keep HustleXP safe. We'll review your report within 24 hours.", style: .body, color: .textSecondary, alignment: .center)
+            }
+            .padding(.horizontal)
+            
+            Spacer()
+            
+            HXButton("Done") {
+                isPresented = false
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+        }
+    }
+    
+    private func submitReport() {
+        guard let reason = selectedReason else { return }
+        
+        isSubmitting = true
+        
+        // Simulate API call
+        Task {
+            // In production, this would call a real API endpoint
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            
+            print("[Report] Submitted report for task \(taskId): \(reason.rawValue)")
+            
+            isSubmitting = false
+            withAnimation {
+                showSuccess = true
+            }
+        }
+    }
+}
+
+// MARK: - Typing Dots View
+struct TypingDotsView: View {
+    @State private var animating = false
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(Color.textTertiary)
+                    .frame(width: 5, height: 5)
+                    .scaleEffect(animating ? 1.0 : 0.5)
+                    .animation(
+                        .easeInOut(duration: 0.6)
+                        .repeatForever()
+                        .delay(Double(index) * 0.2),
+                        value: animating
+                    )
+            }
+        }
+        .onAppear { animating = true }
     }
 }
 

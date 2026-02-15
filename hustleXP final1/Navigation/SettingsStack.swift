@@ -32,6 +32,10 @@ struct SettingsStack: View {
                         VerificationSettingsScreen()
                     case .help:
                         HelpScreen()
+                    case .referrals:
+                        ReferralScreen()
+                    case .subscription:
+                        SubscriptionScreen()
                     }
                 }
         }

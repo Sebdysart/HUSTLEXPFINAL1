@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		71AAAA012F3C000100000001 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 71AAAA042F3C000100000004 /* FirebaseMessaging */; };
+		71AAAA032F3C000100000003 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 71AAAA052F3C000100000005 /* StripePaymentSheet */; };
 		71B48DD12F38067200782AA2 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 71B48DD02F38067200782AA2 /* FirebaseAuth */; };
 		71B48DD32F38067200782AA2 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 71B48DD22F38067200782AA2 /* FirebaseCore */; };
 		71F70B822F3B0710000ACBA0 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 71F70B812F3B0710000ACBA0 /* GoogleSignIn */; };
@@ -34,6 +36,8 @@
 				71B48DD12F38067200782AA2 /* FirebaseAuth in Frameworks */,
 				71F70B822F3B0710000ACBA0 /* GoogleSignIn in Frameworks */,
 				71F70B842F3B0710000ACBA0 /* GoogleSignInSwift in Frameworks */,
+				71AAAA012F3C000100000001 /* FirebaseMessaging in Frameworks */,
+				71AAAA032F3C000100000003 /* StripePaymentSheet in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,6 +84,8 @@
 				71B48DD22F38067200782AA2 /* FirebaseCore */,
 				71F70B812F3B0710000ACBA0 /* GoogleSignIn */,
 				71F70B832F3B0710000ACBA0 /* GoogleSignInSwift */,
+				71AAAA042F3C000100000004 /* FirebaseMessaging */,
+				71AAAA052F3C000100000005 /* StripePaymentSheet */,
 			);
 			productName = "hustleXP final1";
 			productReference = 71972DFC2F359FB900F03F8E /* hustleXP final1.app */;
@@ -112,6 +118,7 @@
 			packageReferences = (
 				71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				71F70B802F3B0710000ACBA0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				71AAAA022F3C000100000002 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 71972DFD2F359FB900F03F8E /* Products */;
@@ -277,6 +284,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "hustleXP-final1-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "HustleXP uses the camera for proof-of-completion photos.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HustleXP uses your location to find nearby tasks and verify task completion.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HustleXP needs photo library access for uploading task proof images.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -311,6 +321,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "hustleXP-final1-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "HustleXP uses the camera for proof-of-completion photos.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HustleXP uses your location to find nearby tasks and verify task completion.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HustleXP needs photo library access for uploading task proof images.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -357,6 +370,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		71AAAA022F3C000100000002 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stripe/stripe-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 24.0.0;
+			};
+		};
 		71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -376,6 +397,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		71AAAA042F3C000100000004 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		71AAAA052F3C000100000005 /* StripePaymentSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 71AAAA022F3C000100000002 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
+			productName = StripePaymentSheet;
+		};
 		71B48DD02F38067200782AA2 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

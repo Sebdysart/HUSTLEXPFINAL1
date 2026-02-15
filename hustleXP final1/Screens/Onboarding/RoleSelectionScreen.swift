@@ -13,32 +13,45 @@ struct RoleSelectionScreen: View {
     @Environment(Router.self) private var router
     
     @State private var selectedRole: UserRole?
-    @State private var showContent = true
+    @State private var showContent = false
     @State private var hasAnimated = false
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            // Use safe area-adjusted height for compact detection
+            let usableHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = usableHeight < 600
             
             ZStack {
                 // Background
                 backgroundLayer
                 
-                VStack(spacing: 0) {
-                    // Header
-                    headerSection(isCompact: isCompact)
-                        .padding(.top, isCompact ? 8 : 16)
-                    
-                    Spacer()
-                    
-                    // Role cards
-                    roleCardsSection(isCompact: isCompact)
-                    
-                    Spacer()
-                    
-                    // Continue button
-                    continueSection(isCompact: isCompact)
-                        .padding(.bottom, max(16, geometry.safeAreaInsets.bottom + 8))
+                // Wrap in ScrollView to prevent cutoff on small devices
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        // Progress bar
+                        OnboardingProgressBar(
+                            currentStep: OnboardingRoute.roleSelection.stepIndex,
+                            totalSteps: OnboardingRoute.totalSteps
+                        )
+                        .padding(.top, 8)
+
+                        // Header
+                        headerSection(isCompact: isCompact)
+                            .padding(.top, isCompact ? 4 : 8)
+
+                        Spacer(minLength: isCompact ? 16 : 24)
+
+                        // Role cards
+                        roleCardsSection(isCompact: isCompact)
+                        
+                        Spacer(minLength: isCompact ? 16 : 24)
+                        
+                        // Continue button
+                        continueSection(isCompact: isCompact)
+                            .padding(.bottom, max(20, geometry.safeAreaInsets.bottom + 12))
+                    }
+                    .frame(minHeight: geometry.size.height)
                 }
             }
         }
@@ -194,13 +207,14 @@ struct RoleSelectionScreen: View {
     // MARK: - Animations
     
     private func animateIn() {
-        showContent = false
+        guard !hasAnimated else { return }
+        hasAnimated = true
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            withAnimation(.easeOut(duration: 0.5)) {
+        // Delay animation slightly to avoid conflict with navigation transition
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeOut(duration: 0.4)) {
                 showContent = true
             }
-            hasAnimated = true
         }
     }
     

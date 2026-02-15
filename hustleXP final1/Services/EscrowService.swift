@@ -121,6 +121,7 @@ final class EscrowService: ObservableObject {
         let escrow: Escrow = try await trpc.call(
             router: "escrow",
             procedure: "getByTaskId",
+            type: .query,
             input: GetInput(taskId: taskId)
         )
 
@@ -140,6 +141,7 @@ final class EscrowService: ObservableObject {
         let response: StateResponse = try await trpc.call(
             router: "escrow",
             procedure: "getState",
+            type: .query,
             input: GetStateInput(escrowId: escrowId)
         )
 
@@ -150,18 +152,19 @@ final class EscrowService: ObservableObject {
 
     /// Releases escrow funds to worker after task completion
     /// Called automatically by backend when poster approves proof
-    func releaseToWorker(escrowId: String) async throws -> Escrow {
+    func releaseToWorker(escrowId: String, stripeTransferId: String? = nil) async throws -> Escrow {
         isLoading = true
         defer { isLoading = false }
 
         struct ReleaseInput: Codable {
             let escrowId: String
+            let stripeTransferId: String?
         }
 
         let escrow: Escrow = try await trpc.call(
             router: "escrow",
             procedure: "release",
-            input: ReleaseInput(escrowId: escrowId)
+            input: ReleaseInput(escrowId: escrowId, stripeTransferId: stripeTransferId)
         )
 
         print("✅ EscrowService: Released escrow \(escrow.id) to worker")
@@ -171,19 +174,18 @@ final class EscrowService: ObservableObject {
     // MARK: - Refund (Poster receives back)
 
     /// Refunds escrow to poster (e.g., task cancelled)
-    func refundToPoster(escrowId: String, reason: String) async throws -> Escrow {
+    func refundToPoster(escrowId: String) async throws -> Escrow {
         isLoading = true
         defer { isLoading = false }
 
         struct RefundInput: Codable {
             let escrowId: String
-            let reason: String
         }
 
         let escrow: Escrow = try await trpc.call(
             router: "escrow",
             procedure: "refund",
-            input: RefundInput(escrowId: escrowId, reason: reason)
+            input: RefundInput(escrowId: escrowId)
         )
 
         print("✅ EscrowService: Refunded escrow \(escrow.id) to poster")
@@ -201,12 +203,86 @@ final class EscrowService: ObservableObject {
         let escrows: [Escrow] = try await trpc.call(
             router: "escrow",
             procedure: "getHistory",
+            type: .query,
             input: HistoryInput(limit: limit)
         )
 
         print("✅ EscrowService: Fetched \(escrows.count) payment records")
         return escrows
     }
+
+    // MARK: - Get By ID
+
+    /// Gets escrow details by escrow ID
+    /// Only poster or worker of the associated task can view
+    func getById(escrowId: String) async throws -> Escrow {
+        struct GetByIdInput: Codable {
+            let escrowId: String
+        }
+
+        let escrow: Escrow = try await trpc.call(
+            router: "escrow",
+            procedure: "getById",
+            type: .query,
+            input: GetByIdInput(escrowId: escrowId)
+        )
+
+        return escrow
+    }
+
+    // MARK: - Dispute Lock
+
+    /// Locks escrow for dispute resolution
+    func lockForDispute(escrowId: String) async throws -> Escrow {
+        isLoading = true
+        defer { isLoading = false }
+
+        struct LockInput: Codable {
+            let escrowId: String
+        }
+
+        let escrow: Escrow = try await trpc.call(
+            router: "escrow",
+            procedure: "lockForDispute",
+            input: LockInput(escrowId: escrowId)
+        )
+
+        print("✅ EscrowService: Locked escrow \(escrow.id) for dispute")
+        return escrow
+    }
+
+    // MARK: - XP Award
+
+    /// Awards XP after escrow release
+    /// INV-1: Will fail if escrow is not RELEASED
+    /// INV-5: Will fail if XP already awarded for this escrow
+    func awardXP(taskId: String, escrowId: String, baseXP: Int) async throws -> XPAwardResult {
+        isLoading = true
+        defer { isLoading = false }
+
+        struct AwardXPInput: Codable {
+            let taskId: String
+            let escrowId: String
+            let baseXP: Int
+        }
+
+        let result: XPAwardResult = try await trpc.call(
+            router: "escrow",
+            procedure: "awardXP",
+            input: AwardXPInput(taskId: taskId, escrowId: escrowId, baseXP: baseXP)
+        )
+
+        print("✅ EscrowService: Awarded XP for escrow \(escrowId)")
+        return result
+    }
+}
+
+/// XP award result from escrow
+struct XPAwardResult: Codable {
+    let xpAwarded: Int
+    let newTotalXP: Int
+    let bonusXP: Int?
+    let tierUp: Bool?
 }
 
 // MARK: - Stripe Integration Helper

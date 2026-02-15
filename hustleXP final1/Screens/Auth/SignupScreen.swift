@@ -289,7 +289,7 @@ struct SignupScreen: View {
                 TextField("", text: text, prompt: Text(placeholder).foregroundColor(.textMuted))
                     .font(.subheadline)
                     .textContentType(contentType)
-                    .autocapitalization(keyboardType == .emailAddress ? .none : .words)
+                    .textInputAutocapitalization(keyboardType == .emailAddress ? .never : .words)
                     .keyboardType(keyboardType)
                     .foregroundStyle(Color.textPrimary)
                     .focused($focusedField, equals: field)
@@ -639,7 +639,7 @@ struct AuthTextField: View {
                 .textFieldStyle(BrandTextFieldStyle())
                 .textContentType(contentType)
                 .keyboardType(keyboardType)
-                .autocapitalization(keyboardType == .emailAddress ? .none : .words)
+                .textInputAutocapitalization(keyboardType == .emailAddress ? .never : .words)
             
             if let error = error {
                 Text(error)

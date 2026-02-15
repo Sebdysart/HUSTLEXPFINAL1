@@ -11,7 +11,7 @@ import SwiftUI
 struct ASAPTaskCreationScreen: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     @Environment(\.dismiss) private var dismiss
     
     @State private var title: String = ""
@@ -34,13 +34,21 @@ struct ASAPTaskCreationScreen: View {
     
     private let liveModeService = MockLiveModeService.shared
     
+    @State private var apiPrice: PriceCalculation?
+
     // Pricing calculation
     private var urgencyPremium: Double {
-        basePayment * 0.25 // 25% surge
+        if let apiPrice = apiPrice {
+            return Double(apiPrice.asapPremiumCents ?? 0) / 100.0
+        }
+        return basePayment * 0.25 // 25% surge fallback
     }
-    
+
     private var totalPayment: Double {
-        basePayment + urgencyPremium
+        if let apiPrice = apiPrice {
+            return Double(apiPrice.finalPriceCents) / 100.0
+        }
+        return basePayment + urgencyPremium
     }
     
     private var estimatedETA: String {
@@ -388,6 +396,21 @@ struct ASAPTaskCreationScreen: View {
                 // Slider
                 Slider(value: $basePayment, in: 20...150, step: 5)
                     .tint(Color.moneyGreen)
+                    .onChange(of: basePayment) { _, newValue in
+                        // v2.2.0: Recalculate price via API
+                        Task {
+                            do {
+                                apiPrice = try await PricingService.shared.calculatePrice(
+                                    basePriceCents: Int(newValue * 100),
+                                    mode: "LIVE",
+                                    category: selectedCategory.rawValue,
+                                    isASAP: true
+                                )
+                            } catch {
+                                apiPrice = nil
+                            }
+                        }
+                    }
                 
                 // Quick amounts
                 HStack(spacing: 10) {
@@ -608,7 +631,7 @@ struct ASAPTaskCreationScreen: View {
     }
     
     private func loadLocation() async {
-        let (coords, _) = await MockLocationService.shared.captureLocation()
+        let (coords, _) = await LocationService.current.captureLocation()
         userLocation = coords
         nearbyWorkerCount = Int.random(in: 2...6)
     }
@@ -751,5 +774,5 @@ private struct QuestCreatedConfirmation: View {
 #Preview {
     ASAPTaskCreationScreen()
         .environment(Router())
-        .environment(MockDataService())
+        .environment(LiveDataService.shared)
 }

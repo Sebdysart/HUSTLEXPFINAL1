@@ -16,7 +16,10 @@ struct WelcomeScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompactHeight = geometry.size.height < 700
+            // Use safe area-adjusted height for compact detection
+            // iPhone SE: ~553 usable, iPhone 14 Pro: ~759 usable, iPhone 14 Pro Max: ~818 usable
+            let usableHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompactHeight = usableHeight < 600
             
             ZStack {
                 // Background
@@ -40,35 +43,42 @@ struct WelcomeScreen: View {
                     .blur(radius: 60)
                     .ignoresSafeArea()
                 
-                // Main content in ScrollView for smaller screens
+                // Main content in ScrollView - ALWAYS scrollable to prevent cutoff
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        // Top spacing
+                        // Progress bar
+                        OnboardingProgressBar(
+                            currentStep: OnboardingRoute.welcome.stepIndex,
+                            totalSteps: OnboardingRoute.totalSteps
+                        )
+                        .padding(.top, 8)
+
+                        // Top spacing - reduced for compact
                         Spacer()
-                            .frame(height: isCompactHeight ? 40 : 60)
+                            .frame(height: isCompactHeight ? 20 : 40)
                         
                         // Logo section
                         logoSection(isCompact: isCompactHeight)
                         
-                        // Spacing between logo and features
+                        // Spacing between logo and features - reduced for compact
                         Spacer()
-                            .frame(height: isCompactHeight ? 24 : 40)
+                            .frame(height: isCompactHeight ? 16 : 32)
                         
                         // Features
                         featuresSection(isCompact: isCompactHeight)
                             .padding(.horizontal, 20)
                         
-                        // Spacing before CTA
+                        // Spacing before CTA - reduced for compact
                         Spacer()
-                            .frame(height: isCompactHeight ? 24 : 40)
+                            .frame(height: isCompactHeight ? 16 : 32)
                         
                         // CTA section
                         ctaSection
                             .padding(.horizontal, 20)
                         
-                        // Bottom spacing
+                        // Bottom spacing - ensure content doesn't get cut off
                         Spacer()
-                            .frame(height: max(geometry.safeAreaInsets.bottom + 16, 32))
+                            .frame(height: max(geometry.safeAreaInsets.bottom + 20, 36))
                     }
                     .frame(minHeight: geometry.size.height)
                 }
@@ -167,7 +177,7 @@ struct WelcomeScreen: View {
             HXButton("Get Started", icon: "arrow.right", variant: .primary) {
                 let impact = UIImpactFeedbackGenerator(style: .medium)
                 impact.impactOccurred()
-                router.navigateToOnboarding(.roleSelection)
+                router.navigateToOnboarding(.howItWorks)
             }
             
             Text("Join thousands of hustlers")

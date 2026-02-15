@@ -10,7 +10,7 @@ import SwiftUI
 
 struct LiveRadarScreen: View {
     @Environment(Router.self) private var router
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     @Environment(AppState.self) private var appState
     
     @State private var isLiveMode = false
@@ -428,12 +428,22 @@ struct LiveRadarScreen: View {
         
         guard let location = userLocation else { return }
         
+        // v2.2.0: Toggle live mode via real API first
+        Task {
+            do {
+                let status = try await LiveModeService.shared.toggle(enabled: true)
+                print("✅ LiveRadar: Live mode toggled via API - \(status.state.rawValue)")
+            } catch {
+                print("⚠️ LiveRadar: API toggle failed - \(error.localizedDescription)")
+            }
+        }
+
         session = liveModeService.startLiveMode(
             workerId: appState.userId ?? "mock-worker",
             location: location,
             categories: Array(selectedCategories)
         )
-        
+
         // Load visible quests
         visibleQuests = liveModeService.getVisibleQuests(at: location, isLiveMode: true)
         
@@ -443,6 +453,15 @@ struct LiveRadarScreen: View {
     }
     
     private func endLiveMode() {
+        // v2.2.0: Toggle off via real API
+        Task {
+            do {
+                _ = try await LiveModeService.shared.toggle(enabled: false)
+                print("✅ LiveRadar: Live mode ended via API")
+            } catch {
+                print("⚠️ LiveRadar: API end failed - \(error.localizedDescription)")
+            }
+        }
         liveModeService.endLiveMode()
         session = nil
         visibleQuests = []
@@ -452,7 +471,7 @@ struct LiveRadarScreen: View {
     private func acceptQuest(_ quest: QuestAlert) {
         guard let location = userLocation else { return }
         
-        if let tracking = liveModeService.acceptQuest(quest.id, workerId: appState.userId ?? "mock", workerLocation: location) {
+        if let tracking = liveModeService.acceptQuest(quest.id, workerId: appState.userId ?? "unknown-worker", workerLocation: location) {
             // Navigate to on-the-way tracking
             router.navigateToHustler(.onTheWayTracking(trackingId: tracking.id))
             selectedQuest = nil
@@ -464,7 +483,7 @@ struct LiveRadarScreen: View {
     }
     
     private func loadLocation() async {
-        let (coords, _) = await MockLocationService.shared.captureLocation()
+        let (coords, _) = await LocationService.current.captureLocation()
         userLocation = coords
     }
 }
@@ -527,6 +546,6 @@ private struct MiniQuestCard: View {
         LiveRadarScreen()
     }
     .environment(Router())
-    .environment(MockDataService())
+    .environment(LiveDataService.shared)
     .environment(AppState())
 }

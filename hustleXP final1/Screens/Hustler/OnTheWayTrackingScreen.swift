@@ -501,7 +501,7 @@ struct OnTheWayTrackingScreen: View {
         tracking = OnTheWaySession(
             id: trackingId,
             questId: "quest-1",
-            workerId: appState.userId ?? "mock",
+            workerId: appState.userId ?? "unknown-worker",
             acceptedAt: Date(),
             navigationStartedAt: nil,
             arrivedAt: nil,
@@ -556,10 +556,26 @@ struct OnTheWayTrackingScreen: View {
     
     private func markArrived() {
         liveModeService.markArrived(trackingId: trackingId)
-        
+
+        // v2.2.0: Notify API of arrival via geofence check
+        let taskId = tracking?.questId ?? ""
+        Task {
+            do {
+                let (coords, _) = await LocationService.current.captureLocation()
+                _ = try await GeofenceService.shared.checkProximity(
+                    taskId: taskId,
+                    lat: coords.latitude,
+                    lng: coords.longitude
+                )
+                print("✅ OnTheWay: Arrival confirmed via API")
+            } catch {
+                print("⚠️ OnTheWay: API arrival check failed - \(error.localizedDescription)")
+            }
+        }
+
         // Navigate to task in progress
-        router.navigateToHustler(.taskInProgress(taskId: tracking?.questId ?? ""))
-        
+        router.navigateToHustler(.taskInProgress(taskId: taskId))
+
         let impact = UINotificationFeedbackGenerator()
         impact.notificationOccurred(.success)
     }

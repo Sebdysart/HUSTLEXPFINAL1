@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HustlerHistoryScreen: View {
-    @Environment(MockDataService.self) private var dataService
+    @Environment(LiveDataService.self) private var dataService
     @Environment(Router.self) private var router
     
     var body: some View {
@@ -143,6 +143,6 @@ struct CompletedTaskCard: View {
     NavigationStack {
         HustlerHistoryScreen()
     }
-    .environment(MockDataService.shared)
+    .environment(LiveDataService.shared)
     .environment(Router())
 }
