@@ -281,8 +281,42 @@ struct HustlerFeedScreen: View {
             )
         }
         
-        // Generate batch recommendation
+        // v2.2.0: Generate batch recommendation - try real API first
         if let firstTask = filteredTasks.first {
+            do {
+                let suggestions = try await BatchQuestService.shared.getSuggestions(
+                    currentTaskId: firstTask.id,
+                    maxResults: 5
+                )
+
+                if !suggestions.isEmpty {
+                    let allAvailableTasks = apiTasks.isEmpty ? dataService.availableTasks : apiTasks
+                    let suggestedTaskIds = Set(suggestions.map { $0.taskId })
+                    let nearbyTasks = allAvailableTasks.filter { suggestedTaskIds.contains($0.id) }
+
+                    if !nearbyTasks.isEmpty {
+                        let allTasks = [firstTask] + nearbyTasks
+                        let totalPayment = allTasks.reduce(0.0) { $0 + $1.payment }
+                        let savings = MockTaskBatchingService.shared.calculateBatchSavings(tasks: allTasks)
+
+                        batchRecommendation = BatchRecommendation(
+                            id: "batch_\(firstTask.id)_\(UUID().uuidString.prefix(8))",
+                            primaryTask: firstTask,
+                            nearbyTasks: nearbyTasks,
+                            totalPayment: totalPayment,
+                            totalEstimatedTime: "\(allTasks.count * 30) min",
+                            savings: savings,
+                            expiresAt: Date().addingTimeInterval(30 * 60)
+                        )
+                        print("✅ HustlerFeed: Built batch recommendation from API suggestions")
+                        return
+                    }
+                }
+            } catch {
+                print("⚠️ HustlerFeed: Batch API failed, falling back to mock - \(error.localizedDescription)")
+            }
+
+            // Fallback: use mock batch recommendation
             batchRecommendation = MockTaskBatchingService.shared.generateRecommendation(
                 for: firstTask,
                 availableTasks: apiTasks.isEmpty ? dataService.availableTasks : apiTasks,

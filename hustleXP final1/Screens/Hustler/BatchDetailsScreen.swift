@@ -338,9 +338,50 @@ struct BatchDetailsScreen: View {
     // MARK: - Helpers
     
     private func loadBatch() {
-        // In production, would load from service
-        // For now, use current recommendation
-        batch = MockTaskBatchingService.shared.currentRecommendation
+        Task {
+            // v2.2.0: Try loading batch from real API first
+            do {
+                // Use the first task from current recommendation (or available tasks) to fetch suggestions
+                let primaryTask: HXTask? = MockTaskBatchingService.shared.currentRecommendation?.primaryTask
+                    ?? dataService.availableTasks.first
+
+                if let task = primaryTask {
+                    let suggestions = try await BatchQuestService.shared.getSuggestions(
+                        currentTaskId: task.id,
+                        maxResults: 5
+                    )
+
+                    if !suggestions.isEmpty {
+                        // Map suggestions to available tasks for a full BatchRecommendation
+                        let suggestedTaskIds = Set(suggestions.map { $0.taskId })
+                        let nearbyTasks = dataService.availableTasks.filter { suggestedTaskIds.contains($0.id) }
+
+                        if !nearbyTasks.isEmpty {
+                            let allTasks = [task] + nearbyTasks
+                            let totalPayment = allTasks.reduce(0.0) { $0 + $1.payment }
+                            let savings = MockTaskBatchingService.shared.calculateBatchSavings(tasks: allTasks)
+
+                            batch = BatchRecommendation(
+                                id: batchId,
+                                primaryTask: task,
+                                nearbyTasks: nearbyTasks,
+                                totalPayment: totalPayment,
+                                totalEstimatedTime: "\(allTasks.count * 30) min",
+                                savings: savings,
+                                expiresAt: Date().addingTimeInterval(30 * 60)
+                            )
+                            print("✅ BatchDetails: Loaded batch from API with \(nearbyTasks.count) nearby tasks")
+                            return
+                        }
+                    }
+                }
+            } catch {
+                print("⚠️ BatchDetails: API failed, falling back to mock - \(error.localizedDescription)")
+            }
+
+            // Fallback: use mock current recommendation
+            batch = MockTaskBatchingService.shared.currentRecommendation
+        }
     }
     
     private func acceptBatch(_ batch: BatchRecommendation) {

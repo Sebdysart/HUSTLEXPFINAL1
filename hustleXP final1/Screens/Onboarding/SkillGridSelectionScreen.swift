@@ -20,8 +20,10 @@ struct SkillGridSelectionScreen: View {
     @State private var showLicensePrompt: Bool = false
     @State private var selectedLicenseType: LicenseType? = nil
     @State private var searchText: String = ""
-    
-    private let licenseService = MockLicenseVerificationService.shared
+    @State private var verifiedSkills: [WorkerSkillRecord] = []
+    @State private var isLoadingSkills: Bool = false
+
+    private let skillService = SkillService.shared
     
     var body: some View {
         ZStack {
@@ -79,12 +81,19 @@ struct SkillGridSelectionScreen: View {
                 )
             }
         }
-        .onAppear {
-            licenseService.initializeProfile(for: appState.userId ?? "worker")
-            // Load existing selected skills
-            if let profile = licenseService.workerProfile {
-                selectedSkills = profile.selectedSkills
+        .task {
+            // Load existing skills from real backend
+            isLoadingSkills = true
+            do {
+                let records = try await skillService.getMySkills()
+                verifiedSkills = records
+                // Pre-select skills the user already has
+                selectedSkills = Set(records.map { $0.skillId })
+                print("SkillGrid: Loaded \(records.count) skills from backend")
+            } catch {
+                print("SkillGrid: Failed to load skills - \(error.localizedDescription)")
             }
+            isLoadingSkills = false
         }
     }
     
@@ -222,7 +231,7 @@ struct SkillGridSelectionScreen: View {
     
     private func skillCard(_ skill: WorkerSkill) -> some View {
         let isSelected = selectedSkills.contains(skill.id)
-        let isUnlocked = licenseService.isSkillUnlocked(skill.id)
+        let isUnlocked = isSkillUnlocked(skill.id)
         let needsLicense = skill.type == .licensed && !isUnlocked
         
         return Button {
@@ -286,7 +295,7 @@ struct SkillGridSelectionScreen: View {
     
     @ViewBuilder
     private func statusBadge(for skill: WorkerSkill, isSelected: Bool) -> some View {
-        let isUnlocked = licenseService.isSkillUnlocked(skill.id)
+        let isUnlocked = isSkillUnlocked(skill.id)
         
         switch skill.type {
         case .basic:
@@ -349,11 +358,11 @@ struct SkillGridSelectionScreen: View {
     private var bottomButton: some View {
         VStack(spacing: 12) {
             // Stats
-            let stats = licenseService.getSkillStats()
+            let verifiedCount = verifiedSkills.filter { $0.licenseVerified }.count
             HStack(spacing: 20) {
-                statItem(value: "\(stats.selected)", label: "Selected")
-                statItem(value: "\(stats.unlocked)", label: "Unlocked")
-                statItem(value: "\(stats.licensed)", label: "Licensed")
+                statItem(value: "\(selectedSkills.count)", label: "Selected")
+                statItem(value: "\(verifiedSkills.count)", label: "Unlocked")
+                statItem(value: "\(verifiedCount)", label: "Licensed")
             }
             .padding(.horizontal, 20)
             
@@ -415,33 +424,27 @@ struct SkillGridSelectionScreen: View {
     
     private func handleSkillTap(_ skill: WorkerSkill) {
         // Check if it's a licensed skill that needs verification
-        if skill.type == .licensed && !licenseService.isSkillUnlocked(skill.id) {
+        if skill.type == .licensed && !isSkillUnlocked(skill.id) {
             selectedLicenseType = skill.licenseType
             showLicensePrompt = true
             return
         }
-        
-        // Toggle selection
+
+        // Toggle selection (local state only; saved to backend on "Save Skills")
         if selectedSkills.contains(skill.id) {
             selectedSkills.remove(skill.id)
-            licenseService.deselectSkill(skill.id)
         } else {
             selectedSkills.insert(skill.id)
-            licenseService.selectSkill(skill.id)
         }
     }
     
     private func saveAndContinue() {
-        // Save selections to mock (for local UI state)
-        for skillId in selectedSkills {
-            licenseService.selectSkill(skillId)
-        }
-
-        // v2.2.0: Also save to real backend
+        // Save selected skills to real backend
         Task {
             do {
-                _ = try await SkillService.shared.addSkills(skillIds: Array(selectedSkills))
-                print("SkillGrid: Skills saved to backend")
+                let saved = try await skillService.addSkills(skillIds: Array(selectedSkills))
+                verifiedSkills = saved
+                print("SkillGrid: \(saved.count) skills saved to backend")
             } catch {
                 print("SkillGrid: Backend save failed - \(error.localizedDescription)")
             }
@@ -449,6 +452,20 @@ struct SkillGridSelectionScreen: View {
 
         // Navigate to onboarding complete (or dismiss if accessed from settings)
         router.navigateToOnboarding(.complete)
+    }
+
+    // MARK: - Skill Unlock Check
+
+    /// Checks if a skill is unlocked using real backend data.
+    /// Basic skills are always considered unlocked.
+    /// Licensed/experience-based skills require backend verification.
+    private func isSkillUnlocked(_ skillId: String) -> Bool {
+        // Basic skills are always unlocked
+        if let skill = SkillCatalog.skill(byId: skillId), skill.type == .basic {
+            return true
+        }
+        // Check real backend records for license/experience verification
+        return verifiedSkills.contains { $0.skillId == skillId && $0.licenseVerified }
     }
 }
 

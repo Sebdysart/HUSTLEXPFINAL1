@@ -15,8 +15,7 @@ struct LockedQuestsScreen: View {
     
     @State private var lockedQuests: [LockedQuest] = []
     @State private var currentLocation: GPSCoordinates?
-    
-    private let licenseService = MockLicenseVerificationService.shared
+    @State private var myVerifiedSkills: [WorkerSkillRecord] = []
     
     var body: some View {
         ZStack {
@@ -199,6 +198,7 @@ struct LockedQuestsScreen: View {
         // v2.2.0: Try real API first
         do {
             let mySkills = try await SkillService.shared.getMySkills()
+            myVerifiedSkills = mySkills
             print("LockedQuests: Got \(mySkills.count) skills from API")
 
             // Check eligibility for each available task
@@ -254,8 +254,9 @@ struct LockedQuestsScreen: View {
             print("LockedQuests: API failed, using mock - \(error.localizedDescription)")
 
             // Fallback to mock
-            licenseService.initializeProfile(for: appState.userId ?? "worker")
-            let result = licenseService.filterEligibleTasks(
+            let mockService = MockLicenseVerificationService.shared
+            mockService.initializeProfile(for: appState.userId ?? "worker")
+            let result = mockService.filterEligibleTasks(
                 allTasks: dataService.availableTasks,
                 location: coords
             )
