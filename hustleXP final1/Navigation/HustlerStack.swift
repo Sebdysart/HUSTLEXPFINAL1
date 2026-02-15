@@ -63,9 +63,8 @@ struct HustlerStack: View {
                     // v2.4.0 Squads Mode routes
                     case .squadsHub:
                         SquadsHubScreen()
-                    case .squadDetail(_):
-                        // TODO: Build SquadDetailScreen
-                        SquadsHubScreen()
+                    case .squadDetail(let squadId):
+                        SquadDetailScreen(squadId: squadId)
                     }
                 }
         }

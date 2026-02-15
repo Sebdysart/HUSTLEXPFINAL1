@@ -428,13 +428,28 @@ struct LiveRadarScreen: View {
         
         guard let location = userLocation else { return }
         
-        // v2.2.0: Toggle live mode via real API first
+        // v2.2.0: Toggle live mode via real API first, then load broadcasts
         Task {
             do {
                 let status = try await LiveModeService.shared.toggle(enabled: true)
                 print("✅ LiveRadar: Live mode toggled via API - \(status.state.rawValue)")
             } catch {
                 print("⚠️ LiveRadar: API toggle failed - \(error.localizedDescription)")
+            }
+
+            // v2.2.0: Try to load live broadcasts from real API
+            if let location = userLocation {
+                do {
+                    let broadcasts = try await LiveModeService.shared.listBroadcasts(
+                        latitude: location.latitude,
+                        longitude: location.longitude
+                    )
+                    print("✅ LiveRadar: Loaded \(broadcasts.count) live broadcasts from API")
+                    // Broadcasts are stored on LiveModeService.shared.broadcasts
+                    // Keep mock quests for UI since QuestAlert format differs from LiveBroadcast
+                } catch {
+                    print("⚠️ LiveRadar: Broadcast API failed - \(error.localizedDescription)")
+                }
             }
         }
 

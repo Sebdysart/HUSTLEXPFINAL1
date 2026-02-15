@@ -47,9 +47,8 @@ struct PosterStack: View {
                     // v2.4.0 Recurring Tasks routes
                     case .recurringTasks:
                         RecurringTasksScreen()
-                    case .recurringTaskDetail(_):
-                        // TODO: Build RecurringTaskDetailScreen
-                        RecurringTasksScreen()
+                    case .recurringTaskDetail(let seriesId):
+                        RecurringTaskDetailScreen(seriesId: seriesId)
                     }
                 }
         }

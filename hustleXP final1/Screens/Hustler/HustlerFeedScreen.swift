@@ -33,6 +33,9 @@ struct HustlerFeedScreen: View {
     @State private var matchmakerResult: AIMatchmakerResult?
     private let licenseService = MockLicenseVerificationService.shared
 
+    // v2.2.0: Real skill data for filtering
+    @State private var userSkills: [WorkerSkillRecord] = []
+
     // v2.2.0: API-loaded heat zones
     @State private var apiHeatZones: [HeatZone]?
     
@@ -65,8 +68,18 @@ struct HustlerFeedScreen: View {
         case .quickTask:
             tasks = tasks.filter { $0.estimatedDuration.contains("min") || $0.estimatedDuration.contains("30") }
         case .mySkills:
-            // v2.1.0: Already filtered by matchmaker based on skills
-            break
+            // v2.2.0: Filter by real skills when available, fall back to matchmaker
+            if !userSkills.isEmpty {
+                let skillNames = Set(userSkills.map { $0.skillName.lowercased() })
+                tasks = tasks.filter { task in
+                    // Check if task category or title matches any user skill
+                    if let category = task.category?.rawValue {
+                        return skillNames.contains(category.lowercased())
+                    }
+                    return skillNames.contains(where: { task.title.lowercased().contains($0) })
+                }
+            }
+            // else: Already filtered by matchmaker based on skills
         }
         
         return tasks
@@ -248,15 +261,25 @@ struct HustlerFeedScreen: View {
             print("⚠️ HustlerFeed: HeatMap API failed - \(error.localizedDescription)")
         }
 
-        // v2.2.0: Fetch tasks from real API
-        await loadTasksFromAPI(location: coords)
-        
-        // v2.1.0: Initialize license service and run matchmaker
-        licenseService.initializeProfile(for: appState.userId ?? "worker")
-        matchmakerResult = licenseService.filterEligibleTasks(
-            allTasks: apiTasks.isEmpty ? dataService.availableTasks : apiTasks,
-            location: coords
-        )
+        // v2.2.0: Load real skills from API, then fetch tasks with skill filtering
+        do {
+            let skills = try await SkillService.shared.getMySkills()
+            userSkills = skills
+            let skillIds = skills.map { $0.skillId }
+            print("✅ HustlerFeed: Loaded \(skills.count) skills from API")
+
+            // Fetch tasks with skill-based filtering via the discovery feed
+            await loadTasksFromAPI(location: coords, skills: skillIds.isEmpty ? nil : skillIds)
+        } catch {
+            print("⚠️ HustlerFeed: Skills API failed, falling back to mock - \(error.localizedDescription)")
+            // Fall back to mock license filtering and standard task load
+            await loadTasksFromAPI(location: coords)
+            licenseService.initializeProfile(for: appState.userId ?? "worker")
+            matchmakerResult = licenseService.filterEligibleTasks(
+                allTasks: apiTasks.isEmpty ? dataService.availableTasks : apiTasks,
+                location: coords
+            )
+        }
         
         // Generate batch recommendation
         if let firstTask = filteredTasks.first {
@@ -268,14 +291,14 @@ struct HustlerFeedScreen: View {
         }
     }
     
-    // v2.2.0: Load tasks from real API
-    private func loadTasksFromAPI(location: GPSCoordinates?) async {
+    // v2.2.0: Load tasks from real API with optional skill filtering
+    private func loadTasksFromAPI(location: GPSCoordinates?, skills: [String]? = nil) async {
         do {
             let response = try await taskDiscovery.getFeed(
                 latitude: location?.latitude ?? 37.7749,
                 longitude: location?.longitude ?? -122.4194,
                 radiusMeters: 16093, // 10 miles
-                skills: nil,
+                skills: skills,
                 limit: 50
             )
             apiTasks = response.tasks

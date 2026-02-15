@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct LicenseUploadScreen: View {
     @Environment(Router.self) private var router
@@ -20,6 +21,8 @@ struct LicenseUploadScreen: View {
     @State private var licenseNumber: String = ""
     @State private var issuingState: String = ""
     @State private var hasUploadedDocument: Bool = false
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var capturedImage: UIImage? = nil
     @State private var isSubmitting: Bool = false
     @State private var verificationStatus: LicenseVerificationStatus? = nil
     @State private var showStateSelector: Bool = false
@@ -207,45 +210,65 @@ struct LicenseUploadScreen: View {
             Text("License Photo (Optional)")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.textSecondary)
-            
-            Button {
-                // Mock document upload
-                withAnimation {
-                    hasUploadedDocument = true
-                }
-            } label: {
+
+            PhotosPicker(
+                selection: $selectedPhotoItem,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
                 VStack(spacing: 12) {
-                    if hasUploadedDocument {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 40))
-                            .foregroundStyle(Color.successGreen)
-                        
-                        Text("Document Uploaded")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Color.successGreen)
+                    if let capturedImage {
+                        ZStack(alignment: .bottom) {
+                            Image(uiImage: capturedImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 200)
+                                .clipped()
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                            Text("Change Photo")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.brandPurple.opacity(0.85))
+                                .clipShape(Capsule())
+                                .padding(.bottom, 12)
+                        }
                     } else {
                         Image(systemName: "camera.fill")
                             .font(.system(size: 32))
                             .foregroundStyle(Color.textMuted)
-                        
+
                         Text("Tap to upload license photo")
                             .font(.system(size: 15))
                             .foregroundStyle(Color.textSecondary)
-                        
+
                         Text("Speeds up verification")
                             .font(.system(size: 13))
                             .foregroundStyle(Color.textMuted)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
+                .padding(.vertical, capturedImage == nil ? 32 : 0)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
                         .strokeBorder(
-                            hasUploadedDocument ? Color.successGreen : Color.borderSubtle,
-                            style: StrokeStyle(lineWidth: 2, dash: hasUploadedDocument ? [] : [8])
+                            capturedImage != nil ? Color.successGreen : Color.borderSubtle,
+                            style: StrokeStyle(lineWidth: 2, dash: capturedImage != nil ? [] : [8])
                         )
                 )
+            }
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                guard let newItem else { return }
+                Task {
+                    if let data = try? await newItem.loadTransferable(type: Data.self),
+                       let uiImage = UIImage(data: data) {
+                        capturedImage = uiImage
+                        hasUploadedDocument = true
+                    }
+                }
             }
         }
     }
@@ -489,19 +512,28 @@ struct LicenseUploadScreen: View {
         isSubmitting = true
         verificationStatus = .pending
 
-        // v2.2.0: Submit license via real API (primary path)
+        // v2.3.0: Submit license via real API with image upload
         Task {
             do {
-                let photoUrl = hasUploadedDocument
-                    ? "uploaded://license-\(licenseType.rawValue)-\(Int(Date().timeIntervalSince1970))"
-                    : "no-photo"
+                let submission: APILicenseSubmission
 
-                let submission = try await SkillService.shared.submitLicense(
-                    skillId: licenseType.rawValue,
-                    licenseType: licenseType.rawValue,
-                    licenseNumber: licenseNumber,
-                    photoUrl: photoUrl
-                )
+                if let capturedImage {
+                    // Real image upload path: upload to R2 then submit
+                    submission = try await SkillService.shared.uploadAndSubmitLicense(
+                        image: capturedImage,
+                        skillId: licenseType.rawValue,
+                        licenseType: licenseType.rawValue,
+                        licenseNumber: licenseNumber
+                    )
+                } else {
+                    // No image selected - submit without photo
+                    submission = try await SkillService.shared.submitLicense(
+                        skillId: licenseType.rawValue,
+                        licenseType: licenseType.rawValue,
+                        licenseNumber: licenseNumber,
+                        photoUrl: "no-photo"
+                    )
+                }
                 print("LicenseUpload: Submitted via API - \(submission.id)")
 
                 // Map API status to local status

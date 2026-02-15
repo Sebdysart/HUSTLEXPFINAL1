@@ -497,24 +497,50 @@ struct OnTheWayTrackingScreen: View {
     // MARK: - Actions
     
     private func loadTracking() {
-        // Mock tracking data
-        tracking = OnTheWaySession(
-            id: trackingId,
-            questId: "quest-1",
-            workerId: appState.userId ?? "unknown-worker",
-            acceptedAt: Date(),
-            navigationStartedAt: nil,
-            arrivedAt: nil,
-            destinationLocation: GPSCoordinates(latitude: 37.76, longitude: -122.42),
-            workerLocation: GPSCoordinates(latitude: 37.77, longitude: -122.43),
-            pathPoints: [],
-            currentETA: 420, // 7 minutes
-            distanceRemaining: 850,
-            averageSpeed: 1.4,
-            status: .accepted,
-            navigationDeadline: Date().addingTimeInterval(60),
-            movementDeadline: Date().addingTimeInterval(120)
-        )
+        // v2.2.0: Try to load real task data for tracking
+        Task {
+            do {
+                let task = try await TaskService.shared.getTask(id: trackingId)
+                tracking = OnTheWaySession(
+                    id: trackingId,
+                    questId: task.id,
+                    workerId: appState.userId ?? "unknown-worker",
+                    acceptedAt: task.claimedAt ?? Date(),
+                    navigationStartedAt: nil,
+                    arrivedAt: nil,
+                    destinationLocation: GPSCoordinates(latitude: task.latitude ?? 37.76, longitude: task.longitude ?? -122.42),
+                    workerLocation: GPSCoordinates(latitude: 37.77, longitude: -122.43),
+                    pathPoints: [],
+                    currentETA: 420,
+                    distanceRemaining: 850,
+                    averageSpeed: 1.4,
+                    status: .accepted,
+                    navigationDeadline: Date().addingTimeInterval(60),
+                    movementDeadline: Date().addingTimeInterval(120)
+                )
+                print("✅ OnTheWay: Loaded real task data for tracking")
+            } catch {
+                print("⚠️ OnTheWay: API load failed, using mock - \(error.localizedDescription)")
+                // Fall back to mock tracking data
+                tracking = OnTheWaySession(
+                    id: trackingId,
+                    questId: "quest-1",
+                    workerId: appState.userId ?? "unknown-worker",
+                    acceptedAt: Date(),
+                    navigationStartedAt: nil,
+                    arrivedAt: nil,
+                    destinationLocation: GPSCoordinates(latitude: 37.76, longitude: -122.42),
+                    workerLocation: GPSCoordinates(latitude: 37.77, longitude: -122.43),
+                    pathPoints: [],
+                    currentETA: 420,
+                    distanceRemaining: 850,
+                    averageSpeed: 1.4,
+                    status: .accepted,
+                    navigationDeadline: Date().addingTimeInterval(60),
+                    movementDeadline: Date().addingTimeInterval(120)
+                )
+            }
+        }
     }
     
     private func startCountdown() {
