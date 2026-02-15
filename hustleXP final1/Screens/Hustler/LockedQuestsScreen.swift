@@ -195,17 +195,72 @@ struct LockedQuestsScreen: View {
         // Get current location
         let (coords, _) = await LocationService.current.captureLocation()
         currentLocation = coords
-        
-        // Initialize service
-        licenseService.initializeProfile(for: appState.userId ?? "worker")
-        
-        // Get filtered results
-        let result = licenseService.filterEligibleTasks(
-            allTasks: dataService.availableTasks,
-            location: coords
-        )
-        
-        lockedQuests = result.lockedQuests
+
+        // v2.2.0: Try real API first
+        do {
+            let mySkills = try await SkillService.shared.getMySkills()
+            print("LockedQuests: Got \(mySkills.count) skills from API")
+
+            // Check eligibility for each available task
+            var locked: [LockedQuest] = []
+            for task in dataService.availableTasks {
+                do {
+                    let eligibility = try await SkillService.shared.checkTaskEligibility(taskId: task.id)
+                    if !eligibility.isEligible {
+                        let blockReason: TaskEligibilityResult.EligibilityBlockReason
+                        if eligibility.requiresLicense && !eligibility.licenseVerified {
+                            blockReason = .licenseRequired
+                        } else if let reqLevel = eligibility.requiredLevel,
+                                  let curLevel = eligibility.currentLevel,
+                                  curLevel < reqLevel {
+                            blockReason = .levelTooLow
+                        } else {
+                            blockReason = .skillNotSelected
+                        }
+
+                        // Create a WorkerSkill for display
+                        let skill = WorkerSkill(
+                            id: eligibility.requiredSkill ?? "unknown",
+                            name: eligibility.requiredSkill ?? "Required Skill",
+                            category: .generalLabor,
+                            type: eligibility.requiresLicense ? .licensed : .basic,
+                            icon: "questionmark.circle",
+                            licenseType: nil,
+                            requiredLevel: eligibility.requiredLevel ?? 1,
+                            xpToUnlock: 0,
+                            tasksToUnlock: 0
+                        )
+
+                        locked.append(LockedQuest(
+                            id: task.id,
+                            task: task,
+                            requiredSkill: skill,
+                            blockReason: blockReason,
+                            unlockAction: blockReason == .licenseRequired ? nil : .selectSkill(skill),
+                            distanceMeters: nil,
+                            potentialEarnings: task.payment
+                        ))
+                    }
+                } catch {
+                    // If individual check fails, skip this task
+                    continue
+                }
+            }
+
+            lockedQuests = locked
+            print("LockedQuests: Found \(locked.count) locked quests via API")
+
+        } catch {
+            print("LockedQuests: API failed, using mock - \(error.localizedDescription)")
+
+            // Fallback to mock
+            licenseService.initializeProfile(for: appState.userId ?? "worker")
+            let result = licenseService.filterEligibleTasks(
+                allTasks: dataService.availableTasks,
+                location: coords
+            )
+            lockedQuests = result.lockedQuests
+        }
     }
 }
 

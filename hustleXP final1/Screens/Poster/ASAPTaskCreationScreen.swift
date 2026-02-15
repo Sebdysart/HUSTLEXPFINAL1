@@ -139,7 +139,7 @@ struct ASAPTaskCreationScreen: View {
                             endRadius: 200
                         )
                     )
-                    .frame(width: 400, height: 400)
+                    .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width)
                     .offset(y: -100)
                 
                 Spacer()

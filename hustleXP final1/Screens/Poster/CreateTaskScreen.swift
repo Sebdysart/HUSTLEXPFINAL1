@@ -133,9 +133,11 @@ struct CreateTaskScreen: View {
     // MARK: - Background
     
     private var backgroundLayer: some View {
-        ZStack {
+        let screenWidth = UIScreen.main.bounds.width
+
+        return ZStack {
             Color.brandBlack.ignoresSafeArea()
-            
+
             VStack {
                 Circle()
                     .fill(
@@ -146,12 +148,12 @@ struct CreateTaskScreen: View {
                             ],
                             center: .center,
                             startRadius: 0,
-                            endRadius: 180
+                            endRadius: screenWidth * 0.46
                         )
                     )
-                    .frame(width: 360, height: 360)
+                    .frame(width: screenWidth * 0.92, height: screenWidth * 0.92)
                     .offset(y: -100)
-                
+
                 Spacer()
             }
             .ignoresSafeArea()

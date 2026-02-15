@@ -78,9 +78,11 @@ struct HustlerHomeScreen: View {
     // MARK: - Neon Background
     
     private var neonBackground: some View {
-        ZStack {
+        let screenWidth = UIScreen.main.bounds.width
+
+        return ZStack {
             Color.brandBlack.ignoresSafeArea()
-            
+
             // Animated gradient orbs
             Circle()
                 .fill(
@@ -88,24 +90,24 @@ struct HustlerHomeScreen: View {
                         colors: [Color.brandPurple.opacity(0.15), Color.clear],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 200
+                        endRadius: screenWidth * 0.5
                     )
                 )
-                .frame(width: 400, height: 400)
-                .offset(x: -50, y: -150)
+                .frame(width: screenWidth, height: screenWidth)
+                .offset(x: -screenWidth * 0.13, y: -150)
                 .blur(radius: 60)
-            
+
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [Color.aiPurple.opacity(0.1), Color.clear],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 150
+                        endRadius: screenWidth * 0.38
                     )
                 )
-                .frame(width: 300, height: 300)
-                .offset(x: 100, y: 400)
+                .frame(width: screenWidth * 0.75, height: screenWidth * 0.75)
+                .offset(x: screenWidth * 0.25, y: 400)
                 .blur(radius: 50)
         }
         .ignoresSafeArea()
@@ -283,7 +285,7 @@ struct HustlerHomeScreen: View {
             // XP display
             HStack(alignment: .bottom, spacing: 4) {
                 Text("\(dataService.currentUser.xp)")
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .font(.system(size: isCompact ? 36 : 48, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("XP")
@@ -534,7 +536,7 @@ struct HustlerHomeScreen: View {
                             ) {
                                 router.navigateToHustler(.taskDetail(taskId: task.id))
                             }
-                            .frame(width: index == 0 ? 300 : 260)
+                            .frame(width: index == 0 ? min(300, UIScreen.main.bounds.width * 0.77) : min(260, UIScreen.main.bounds.width * 0.67))
                         }
                     }
                     .padding(.horizontal, 20)
@@ -571,6 +573,8 @@ struct NeonStatCard: View {
             Text(value)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .opacity(isAnimated ? 1 : 0)
                 .scaleEffect(isAnimated ? 1 : 0.8)
             
@@ -647,6 +651,8 @@ struct ActiveTaskCard: View {
                     Text("$\(String(format: "%.0f", task.payment))")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.moneyGreen)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                     
                     Spacer()
                     

@@ -485,42 +485,112 @@ struct LicenseUploadScreen: View {
     
     private func submitVerification() {
         guard isValid else { return }
-        
+
         isSubmitting = true
         verificationStatus = .pending
-        
-        // v2.2.0: Submit license via real API
+
+        // v2.2.0: Submit license via real API (primary path)
         Task {
             do {
-                _ = try await SkillService.shared.submitLicense(
+                let photoUrl = hasUploadedDocument
+                    ? "uploaded://license-\(licenseType.rawValue)-\(Int(Date().timeIntervalSince1970))"
+                    : "no-photo"
+
+                let submission = try await SkillService.shared.submitLicense(
                     skillId: licenseType.rawValue,
                     licenseType: licenseType.rawValue,
                     licenseNumber: licenseNumber,
-                    photoUrl: "placeholder://license-upload"
+                    photoUrl: photoUrl
                 )
-                print("✅ LicenseUpload: Submitted via API")
+                print("LicenseUpload: Submitted via API - \(submission.id)")
+
+                // Map API status to local status
+                await MainActor.run {
+                    switch submission.status {
+                    case .approved:
+                        verificationStatus = .verified
+                        isSubmitting = false
+                        showSuccess = true
+                    case .rejected:
+                        verificationStatus = .rejected
+                        isSubmitting = false
+                    case .pending:
+                        verificationStatus = .processing
+                        pollLicenseStatus()
+                    case .expired:
+                        verificationStatus = .expired
+                        isSubmitting = false
+                    }
+                }
             } catch {
-                print("⚠️ LicenseUpload: API failed - \(error.localizedDescription)")
+                print("LicenseUpload: API failed, using mock - \(error.localizedDescription)")
+
+                // Fallback to mock service
+                await MainActor.run {
+                    _ = licenseService.uploadLicense(
+                        type: licenseType,
+                        licenseNumber: licenseNumber,
+                        issuingState: issuingState,
+                        documentURL: nil
+                    )
+                }
+
+                // Poll mock for status
+                pollMockStatus()
             }
         }
+    }
 
-        // Submit to mock service for status tracking
-        _ = licenseService.uploadLicense(
-            type: licenseType,
-            licenseNumber: licenseNumber,
-            issuingState: issuingState,
-            documentURL: nil
-        )
-        
-        // Poll for status updates
+    private func pollLicenseStatus() {
+        Task {
+            // Poll API for status updates (max 30 seconds = 60 x 500ms)
+            for _ in 0..<60 {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+
+                do {
+                    let submissions = try await SkillService.shared.getLicenseSubmissions()
+                    if let latest = submissions.first(where: { $0.licenseType == licenseType.rawValue }) {
+                        await MainActor.run {
+                            switch latest.status {
+                            case .approved:
+                                verificationStatus = .verified
+                                isSubmitting = false
+                                showSuccess = true
+                            case .rejected:
+                                verificationStatus = .rejected
+                                isSubmitting = false
+                            case .expired:
+                                verificationStatus = .expired
+                                isSubmitting = false
+                            case .pending:
+                                verificationStatus = .processing
+                            }
+                        }
+                        if latest.status == .approved || latest.status == .rejected || latest.status == .expired {
+                            return
+                        }
+                    }
+                } catch {
+                    // Continue polling on error
+                }
+            }
+            // Timeout - move to manual review
+            await MainActor.run {
+                verificationStatus = .manualReview
+                isSubmitting = false
+            }
+        }
+    }
+
+    private func pollMockStatus() {
         Task {
             while verificationStatus != .verified && verificationStatus != .rejected {
                 try? await Task.sleep(nanoseconds: 500_000_000)
-                
+
                 if let status = licenseService.getLicenseStatus(for: licenseType) {
                     await MainActor.run {
                         verificationStatus = status
-                        
+
                         if status == .verified {
                             isSubmitting = false
                             showSuccess = true

@@ -77,9 +77,11 @@ struct PosterHomeScreen: View {
     // MARK: - Neon Background
     
     private var neonBackground: some View {
-        ZStack {
+        let screenWidth = UIScreen.main.bounds.width
+
+        return ZStack {
             Color.brandBlack.ignoresSafeArea()
-            
+
             // Animated gradient orbs
             Circle()
                 .fill(
@@ -87,24 +89,24 @@ struct PosterHomeScreen: View {
                         colors: [Color.aiPurple.opacity(0.12), Color.clear],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 200
+                        endRadius: screenWidth * 0.5
                     )
                 )
-                .frame(width: 400, height: 400)
-                .offset(x: -80, y: -100)
+                .frame(width: screenWidth, height: screenWidth)
+                .offset(x: -screenWidth * 0.2, y: -100)
                 .blur(radius: 60)
-            
+
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [Color.brandPurple.opacity(0.08), Color.clear],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 150
+                        endRadius: screenWidth * 0.38
                     )
                 )
-                .frame(width: 300, height: 300)
-                .offset(x: 120, y: 350)
+                .frame(width: screenWidth * 0.75, height: screenWidth * 0.75)
+                .offset(x: screenWidth * 0.3, y: 350)
                 .blur(radius: 50)
         }
         .ignoresSafeArea()
@@ -521,6 +523,8 @@ struct NeonPosterStatCard: View {
             Text(value)
                 .font(.system(size: isCompact ? 18 : 22, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             
             // Label
             Text(title)

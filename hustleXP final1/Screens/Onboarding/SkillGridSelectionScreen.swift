@@ -432,10 +432,21 @@ struct SkillGridSelectionScreen: View {
     }
     
     private func saveAndContinue() {
-        // Save selections
+        // Save selections to mock (for local UI state)
         for skillId in selectedSkills {
             licenseService.selectSkill(skillId)
         }
+
+        // v2.2.0: Also save to real backend
+        Task {
+            do {
+                _ = try await SkillService.shared.addSkills(skillIds: Array(selectedSkills))
+                print("SkillGrid: Skills saved to backend")
+            } catch {
+                print("SkillGrid: Backend save failed - \(error.localizedDescription)")
+            }
+        }
+
         // Navigate to onboarding complete (or dismiss if accessed from settings)
         router.navigateToOnboarding(.complete)
     }
