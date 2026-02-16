@@ -66,6 +66,13 @@ enum QuestStatus: String, Codable {
     case expired        // No one accepted in time
     case cancelled      // Poster cancelled
     case ghosted        // Worker accepted but didn't show (penalty applied)
+
+    /// Safe decode — unknown values default to .broadcasting
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = QuestStatus(rawValue: raw) ?? .broadcasting
+    }
 }
 
 // MARK: - Live Mode Session
@@ -110,7 +117,14 @@ enum SignalStrength: String, Codable {
     case good = "good"
     case fair = "fair"
     case poor = "poor"
-    
+
+    /// Safe decode — unknown values default to .good
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = SignalStrength(rawValue: raw) ?? .good
+    }
+
     var icon: String {
         switch self {
         case .excellent: return "wifi"
@@ -139,7 +153,14 @@ enum LiveTaskCategory: String, Codable, CaseIterable {
     case delivery = "Urgent Delivery"
     case emergency = "Emergency Assist"
     case other = "Other"
-    
+
+    /// Safe decode — unknown values default to .other
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = LiveTaskCategory(rawValue: raw) ?? .other
+    }
+
     var icon: String {
         switch self {
         case .lifting: return "figure.strengthtraining.traditional"
@@ -245,6 +266,13 @@ enum OnTheWayStatus: String, Codable {
     case arriving       // Within 100m of destination
     case arrived        // At destination
     case ghosting       // Flagged for not moving (penalty incoming)
+
+    /// Safe decode — unknown values default to .accepted
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = OnTheWayStatus(rawValue: raw) ?? .accepted
+    }
 }
 
 // MARK: - Price Surge

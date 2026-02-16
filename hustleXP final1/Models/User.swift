@@ -127,6 +127,7 @@ struct HXUser: Identifiable, Codable {
 extension HXUser {
     var xpToNextTier: Int {
         switch trustTier {
+        case .unranked: return 100
         case .rookie: return 100
         case .verified: return 300
         case .trusted: return 600
@@ -134,11 +135,12 @@ extension HXUser {
         case .master: return 0 // Max level
         }
     }
-    
+
     var xpProgress: Double {
         guard xpToNextTier > 0 else { return 1.0 }
         let tierStartXP: Int
         switch trustTier {
+        case .unranked: tierStartXP = 0
         case .rookie: tierStartXP = 0
         case .verified: tierStartXP = 100
         case .trusted: tierStartXP = 300

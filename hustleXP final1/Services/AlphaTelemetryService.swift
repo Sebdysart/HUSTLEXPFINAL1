@@ -24,6 +24,13 @@ enum EdgeState: String, Codable, CaseIterable {
     case noTasksAvailable = "E1_NO_TASKS_AVAILABLE"
     case eligibilityMismatch = "E2_ELIGIBILITY_MISMATCH"
     case trustTierLocked = "E3_TRUST_TIER_LOCKED"
+
+    /// Safe decode — unknown values default to .noTasksAvailable
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = EdgeState(rawValue: raw) ?? .noTasksAvailable
+    }
 }
 
 /// Exit types for edge state exit events
@@ -32,12 +39,26 @@ enum EdgeStateExitType: String, Codable {
     case back = "back"
     case appBackground = "app_background"
     case sessionEnd = "session_end"
+
+    /// Safe decode — unknown values default to .back
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = EdgeStateExitType(rawValue: raw) ?? .back
+    }
 }
 
 /// User role for telemetry
 enum TelemetryRole: String, Codable {
     case hustler = "hustler"
     case poster = "poster"
+
+    /// Safe decode — unknown values default to .hustler
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = TelemetryRole(rawValue: raw) ?? .hustler
+    }
 }
 
 /// Trust delta type for tier movement
@@ -45,6 +66,13 @@ enum TrustDeltaType: String, Codable {
     case xp = "xp"
     case tier = "tier"
     case streak = "streak"
+
+    /// Safe decode — unknown values default to .xp
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = TrustDeltaType(rawValue: raw) ?? .xp
+    }
 }
 
 // MARK: - Response Types

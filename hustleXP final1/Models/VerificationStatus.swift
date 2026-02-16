@@ -71,7 +71,14 @@ enum VerificationSubmissionStatus: String, Codable {
     case pending = "pending"
     case approved = "approved"
     case rejected = "rejected"
-    
+
+    /// Safe decode — unknown values default to .notStarted
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = VerificationSubmissionStatus(rawValue: raw) ?? .notStarted
+    }
+
     var displayName: String {
         switch self {
         case .notStarted: return "Not Started"

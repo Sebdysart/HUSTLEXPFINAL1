@@ -43,7 +43,14 @@ enum ClaimStatus: String, Codable, CaseIterable {
     case approved
     case denied
     case paid
-    
+
+    /// Safe decode — unknown values default to .filed
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = ClaimStatus(rawValue: raw) ?? .filed
+    }
+
     var displayName: String {
         switch self {
         case .filed: return "Filed"

@@ -38,7 +38,14 @@ enum HeatIntensity: String, Codable, CaseIterable {
     case medium = "MEDIUM"     // 3-4 tasks
     case high = "HIGH"         // 5-7 tasks
     case hot = "HOT"           // 8+ tasks
-    
+
+    /// Safe decode — unknown values default to .low
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = HeatIntensity(rawValue: raw) ?? .low
+    }
+
     var color: Color {
         switch self {
         case .low: return Color.heatLow
@@ -119,6 +126,13 @@ enum GeofenceEvent: String, Codable {
     case entered = "ENTERED"
     case exited = "EXITED"
     case dwelling = "DWELLING"   // Inside for > 30 seconds
+
+    /// Safe decode — unknown values default to .entered
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = GeofenceEvent(rawValue: raw) ?? .entered
+    }
 }
 
 // MARK: - Task Cluster
@@ -222,7 +236,14 @@ enum MovementStatus: String, Codable {
     case stationary = "STATIONARY"
     case suspicious = "SUSPICIOUS"
     case completed = "COMPLETED"
-    
+
+    /// Safe decode — unknown values default to .active
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = MovementStatus(rawValue: raw) ?? .active
+    }
+
     var color: Color {
         switch self {
         case .active: return .successGreen
@@ -239,7 +260,14 @@ enum MovementFlag: String, Codable, CaseIterable {
     case impossibleSpeed = "IMPOSSIBLE_SPEED"          // > 100 km/h on foot
     case locationJump = "LOCATION_JUMP"                // Teleportation detected
     case lowAccuracy = "LOW_ACCURACY"                  // Consistent poor GPS
-    
+
+    /// Safe decode — unknown values default to .lowAccuracy
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = MovementFlag(rawValue: raw) ?? .lowAccuracy
+    }
+
     var displayName: String {
         switch self {
         case .stationaryTooLong: return "No Movement"

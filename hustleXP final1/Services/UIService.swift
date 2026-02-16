@@ -49,12 +49,26 @@ enum UIViolationType: String, Codable {
     case copy = "COPY"
     case accessibility = "ACCESSIBILITY"
     case state = "STATE"
+
+    /// Safe decode — unknown values default to .state
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = UIViolationType(rawValue: raw) ?? .state
+    }
 }
 
 /// UI violation severity
 enum UIViolationSeverity: String, Codable {
     case error = "ERROR"
     case warning = "WARNING"
+
+    /// Safe decode — unknown values default to .warning
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = UIViolationSeverity(rawValue: raw) ?? .warning
+    }
 }
 
 /// Response from reporting a violation

@@ -18,6 +18,13 @@ enum AnalyticsEventCategory: String, Codable {
     case systemEvent = "system_event"
     case error = "error"
     case performance = "performance"
+
+    /// Safe decode — unknown values default to .systemEvent
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = AnalyticsEventCategory(rawValue: raw) ?? .systemEvent
+    }
 }
 
 /// Standard analytics event - internal storage only

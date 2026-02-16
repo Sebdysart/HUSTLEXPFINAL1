@@ -200,7 +200,7 @@ struct HXBadge: View {
     
     private func tierIcon(for tier: TrustTier) -> String {
         switch tier {
-        case .rookie: return "star"
+        case .unranked, .rookie: return "star"
         case .verified: return "checkmark.seal.fill"
         case .trusted: return "shield.fill"
         case .elite: return "crown.fill"
@@ -210,7 +210,7 @@ struct HXBadge: View {
     
     private func tierColor(for tier: TrustTier) -> Color {
         switch tier {
-        case .rookie: return .textSecondary
+        case .unranked, .rookie: return .textSecondary
         case .verified: return .infoBlue
         case .trusted: return .successGreen
         case .elite: return .brandPurple

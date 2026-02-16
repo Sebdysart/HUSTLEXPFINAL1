@@ -22,6 +22,13 @@ enum TutorialAction: String, Codable {
     case declineTask = "decline_task"
     case requestDetails = "request_details"
     case acceptTask = "accept_task"
+
+    /// Safe decode — unknown values default to .requestDetails
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = TutorialAction(rawValue: raw) ?? .requestDetails
+    }
 }
 
 /// A single answer to a tutorial scenario

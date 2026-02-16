@@ -19,6 +19,13 @@ enum GDPRRequestType: String, Codable, CaseIterable {
     case rectification = "RECTIFICATION"
     case restriction = "RESTRICTION"
 
+    /// Safe decode — unknown values default to .export
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = GDPRRequestType(rawValue: raw) ?? .export
+    }
+
     var displayName: String {
         switch self {
         case .export: return "Export My Data"
@@ -45,6 +52,13 @@ enum GDPRRequestStatus: String, Codable {
     case completed = "COMPLETED"
     case cancelled = "CANCELLED"
     case failed = "FAILED"
+
+    /// Safe decode — unknown values default to .pending
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = GDPRRequestStatus(rawValue: raw) ?? .pending
+    }
 
     var displayName: String {
         switch self {
@@ -79,6 +93,13 @@ enum ConsentType: String, Codable, CaseIterable {
     case thirdParty = "THIRD_PARTY"
     case locationTracking = "LOCATION_TRACKING"
     case pushNotifications = "PUSH_NOTIFICATIONS"
+
+    /// Safe decode — unknown values default to .analytics
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = ConsentType(rawValue: raw) ?? .analytics
+    }
 
     var displayName: String {
         switch self {

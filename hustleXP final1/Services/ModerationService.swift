@@ -38,6 +38,13 @@ enum ReportReason: String, Codable, CaseIterable {
     case unsafe = "UNSAFE"
     case other = "OTHER"
 
+    /// Safe decode — unknown values default to .other
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = ReportReason(rawValue: raw) ?? .other
+    }
+
     var displayName: String {
         switch self {
         case .spam: return "Spam"
@@ -58,6 +65,13 @@ enum ReportStatus: String, Codable {
     case reviewed = "REVIEWED"
     case actionTaken = "ACTION_TAKEN"
     case dismissed = "DISMISSED"
+
+    /// Safe decode — unknown values default to .pending
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = ReportStatus(rawValue: raw) ?? .pending
+    }
 }
 
 // MARK: - Appeal Types
@@ -80,6 +94,13 @@ enum AppealStatus: String, Codable {
     case pending = "PENDING"
     case approved = "APPROVED"
     case rejected = "REJECTED"
+
+    /// Safe decode — unknown values default to .pending
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = AppealStatus(rawValue: raw) ?? .pending
+    }
 }
 
 // MARK: - Moderation Service

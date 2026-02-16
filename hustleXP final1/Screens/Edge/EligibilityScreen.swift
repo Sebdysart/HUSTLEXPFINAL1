@@ -144,7 +144,7 @@ struct EligibilityScreen: View {
     private var xpToNextTier: Int {
         // Mock calculation
         switch currentTier {
-        case .rookie: return 500
+        case .unranked, .rookie: return 500
         case .verified: return 2000
         case .trusted: return 5000
         case .elite: return 10000

@@ -17,6 +17,13 @@ enum SkillType: String, Codable {
     case licensed = "licensed"      // Requires verified license (HARD GATE)
     case experienceBased = "experience"  // Unlocked via XP/task completion
     case basic = "basic"            // Available to all workers
+
+    /// Safe decode — unknown values default to .basic
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = SkillType(rawValue: raw) ?? .basic
+    }
 }
 
 // MARK: - Skill Category (100+ Skills organized into categories)
@@ -33,7 +40,14 @@ enum SkillCategory: String, Codable, CaseIterable {
     case trades = "Licensed Trades"
     case automotive = "Automotive"
     case personal = "Personal Services"
-    
+
+    /// Safe decode — unknown values default to .generalLabor
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = SkillCategory(rawValue: raw) ?? .generalLabor
+    }
+
     var icon: String {
         switch self {
         case .generalLabor: return "figure.walk"
@@ -129,7 +143,14 @@ enum LicenseType: String, Codable, CaseIterable {
     case foodHandler = "Food Handler"
     case cdl = "CDL (Commercial Driver)"
     case securityGuard = "Security Guard"
-    
+
+    /// Safe decode — unknown values default to .cpr (least restrictive)
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = LicenseType(rawValue: raw) ?? .cpr
+    }
+
     var icon: String {
         switch self {
         case .electrician: return "bolt.fill"
@@ -209,7 +230,14 @@ enum LicenseVerificationStatus: String, Codable {
     case rejected = "rejected"
     case expired = "expired"
     case manualReview = "manual_review"
-    
+
+    /// Safe decode — unknown values default to .pending
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = LicenseVerificationStatus(rawValue: raw) ?? .pending
+    }
+
     var color: Color {
         switch self {
         case .pending: return .textMuted
@@ -338,6 +366,13 @@ struct FeedFilterSettings: Codable, Sendable {
         case highestPay = "Highest Pay"
         case newest = "Newest"
         case endingSoon = "Ending Soon"
+
+        /// Safe decode — unknown values default to .bestMatch
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let raw = try container.decode(String.self)
+            self = FeedPrioritySort(rawValue: raw) ?? .bestMatch
+        }
     }
 }
 

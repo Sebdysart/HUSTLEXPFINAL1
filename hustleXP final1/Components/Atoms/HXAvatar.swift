@@ -219,7 +219,7 @@ struct HXTierAvatar: View {
     
     private var tierColor: Color {
         switch tier {
-        case .rookie: return .textSecondary
+        case .unranked, .rookie: return .textSecondary
         case .verified: return .infoBlue
         case .trusted: return .successGreen
         case .elite: return .brandPurple

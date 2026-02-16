@@ -72,7 +72,7 @@ struct SquadMember: Identifiable, Codable {
 
     var tierColor: Color {
         switch trustTier {
-        case .rookie: return .tierRookie
+        case .unranked, .rookie: return .tierRookie
         case .verified: return .tierVerified
         case .trusted: return .tierTrusted
         case .elite: return .tierElite
@@ -84,6 +84,13 @@ struct SquadMember: Identifiable, Codable {
 enum SquadRole: String, Codable {
     case organizer = "organizer"
     case member = "member"
+
+    /// Safe decode — unknown values default to .member
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = SquadRole(rawValue: raw) ?? .member
+    }
 
     var label: String {
         switch self {
@@ -104,6 +111,13 @@ enum SquadStatus: String, Codable {
     case active = "active"
     case paused = "paused"
     case disbanded = "disbanded"
+
+    /// Safe decode — unknown values default to .active
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = SquadStatus(rawValue: raw) ?? .active
+    }
 }
 
 // MARK: - Squad Task (Multi-Worker Task)
@@ -135,6 +149,13 @@ enum PaymentSplitMode: String, Codable {
     case equal = "equal"
     case weighted = "weighted"  // Based on contribution
 
+    /// Safe decode — unknown values default to .equal
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = PaymentSplitMode(rawValue: raw) ?? .equal
+    }
+
     var label: String {
         switch self {
         case .equal: return "Equal Split"
@@ -156,6 +177,13 @@ enum SquadTaskStatus: String, Codable {
     case inProgress = "in_progress"
     case completed = "completed"
     case cancelled = "cancelled"
+
+    /// Safe decode — unknown values default to .recruiting
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = SquadTaskStatus(rawValue: raw) ?? .recruiting
+    }
 }
 
 // MARK: - Squad Invite
@@ -182,6 +210,13 @@ enum InviteStatus: String, Codable {
     case accepted = "accepted"
     case declined = "declined"
     case expired = "expired"
+
+    /// Safe decode — unknown values default to .pending
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = InviteStatus(rawValue: raw) ?? .pending
+    }
 }
 
 // MARK: - Squad Tier Gate

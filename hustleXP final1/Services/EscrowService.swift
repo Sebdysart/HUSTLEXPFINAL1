@@ -17,6 +17,13 @@ enum EscrowState: String, Codable {
     case released = "released"
     case refunded = "refunded"
     case disputed = "disputed"
+
+    /// Safe decode — unknown values default to .pending
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = EscrowState(rawValue: raw) ?? .pending
+    }
 }
 
 /// Escrow record from backend

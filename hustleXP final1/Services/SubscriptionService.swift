@@ -36,6 +36,13 @@ final class SubscriptionService {
         case premium
         case pro
 
+        /// Safe decode — unknown values default to .free
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let raw = try container.decode(String.self)
+            self = SubscriptionPlan(rawValue: raw) ?? .free
+        }
+
         var displayName: String {
             switch self {
             case .free:    return "Free"

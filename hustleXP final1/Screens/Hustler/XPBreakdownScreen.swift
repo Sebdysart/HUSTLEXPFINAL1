@@ -152,7 +152,7 @@ struct XPBreakdownScreen: View {
     
     private var nextTierName: String {
         switch user.trustTier {
-        case .rookie: return "Verified"
+        case .unranked, .rookie: return "Verified"
         case .verified: return "Trusted"
         case .trusted: return "Elite"
         case .elite: return "Master"

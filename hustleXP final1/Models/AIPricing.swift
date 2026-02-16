@@ -53,7 +53,14 @@ enum PricingConfidence: String, Codable {
     case high
     case medium
     case low
-    
+
+    /// Safe decode — unknown values default to .medium
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = PricingConfidence(rawValue: raw) ?? .medium
+    }
+
     var displayName: String {
         rawValue.capitalized
     }
@@ -87,7 +94,14 @@ enum FactorImpact: String, Codable {
     case positive
     case negative
     case neutral
-    
+
+    /// Safe decode — unknown values default to .neutral
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = FactorImpact(rawValue: raw) ?? .neutral
+    }
+
     var icon: String {
         switch self {
         case .positive: return "arrow.up.circle.fill"
@@ -109,7 +123,14 @@ enum TaskCategory: String, Codable, CaseIterable {
     case shopping = "shopping"
     case tech = "tech"
     case other = "other"
-    
+
+    /// Safe decode — unknown categories default to .other
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = TaskCategory(rawValue: raw) ?? .other
+    }
+
     var displayName: String {
         switch self {
         case .delivery: return "Delivery"

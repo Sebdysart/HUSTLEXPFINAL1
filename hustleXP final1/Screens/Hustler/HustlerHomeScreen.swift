@@ -228,7 +228,7 @@ struct HustlerHomeScreen: View {
     
     private var tierColor: Color {
         switch dataService.currentUser.trustTier {
-        case .rookie: return Color.textMuted
+        case .unranked, .rookie: return Color.textMuted
         case .verified: return Color.infoBlue
         case .trusted: return Color.successGreen
         case .elite: return Color.aiPurple
@@ -238,7 +238,7 @@ struct HustlerHomeScreen: View {
     
     private var tierIcon: String {
         switch dataService.currentUser.trustTier {
-        case .rookie: return "star"
+        case .unranked, .rookie: return "star"
         case .verified: return "checkmark.shield.fill"
         case .trusted: return "shield.fill"
         case .elite: return "crown.fill"
@@ -248,7 +248,7 @@ struct HustlerHomeScreen: View {
     
     private var trustTierLevel: Int {
         switch dataService.currentUser.trustTier {
-        case .rookie: return 1
+        case .unranked, .rookie: return 1
         case .verified: return 2
         case .trusted: return 3
         case .elite: return 4
@@ -366,7 +366,7 @@ struct HustlerHomeScreen: View {
     
     private var nextTierXP: Int {
         switch dataService.currentUser.trustTier {
-        case .rookie: return 100
+        case .unranked, .rookie: return 100
         case .verified: return 250
         case .trusted: return 500
         case .elite: return 1000
@@ -376,7 +376,7 @@ struct HustlerHomeScreen: View {
     
     private var nextTierName: String {
         switch dataService.currentUser.trustTier {
-        case .rookie: return "Verified"
+        case .unranked, .rookie: return "Verified"
         case .verified: return "Trusted"
         case .trusted: return "Elite"
         case .elite: return "Master"

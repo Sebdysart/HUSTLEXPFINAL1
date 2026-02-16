@@ -45,6 +45,13 @@ enum NotificationCategory: String, Codable, CaseIterable {
     case insuranceClaim = "INSURANCE_CLAIM"
     case general = "GENERAL"
 
+    /// Safe decode — unknown values default to .general
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = NotificationCategory(rawValue: raw) ?? .general
+    }
+
     var iconName: String {
         switch self {
         case .taskAccepted, .taskCompleted: return "checkmark.circle.fill"

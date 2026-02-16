@@ -17,6 +17,13 @@ enum LiveModeState: String, Codable {
     case active = "ACTIVE"
     case off = "OFF"
     case cooldown = "COOLDOWN"
+
+    /// Safe decode — unknown values default to .off
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = LiveModeState(rawValue: raw) ?? .off
+    }
 }
 
 /// Live mode status response

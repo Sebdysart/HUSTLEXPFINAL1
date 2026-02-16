@@ -60,7 +60,14 @@ enum PaymentMethod: String, Codable, CaseIterable {
     case offlineVenmo = "offline_venmo"
     case offlineCashApp = "offline_cashapp"
     case escrow
-    
+
+    /// Safe decode — unknown values default to .escrow
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = PaymentMethod(rawValue: raw) ?? .escrow
+    }
+
     var displayName: String {
         switch self {
         case .offlineCash: return "Cash"

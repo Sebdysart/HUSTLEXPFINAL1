@@ -15,6 +15,13 @@ enum JuryVote: String, Codable {
     case workerComplete = "worker_complete"
     case workerIncomplete = "worker_incomplete"
     case inconclusive = "inconclusive"
+
+    /// Safe decode — unknown values default to .inconclusive
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = JuryVote(rawValue: raw) ?? .inconclusive
+    }
 }
 
 struct VoteResult: Codable {

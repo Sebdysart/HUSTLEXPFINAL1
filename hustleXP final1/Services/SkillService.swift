@@ -55,6 +55,13 @@ enum APILicenseVerificationStatus: String, Codable {
     case approved = "approved"
     case rejected = "rejected"
     case expired = "expired"
+
+    /// Safe decode — unknown values default to .pending
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = APILicenseVerificationStatus(rawValue: raw) ?? .pending
+    }
 }
 
 /// License submission record (API response type)

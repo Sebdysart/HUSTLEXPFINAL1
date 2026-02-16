@@ -768,7 +768,7 @@ struct HustlerTaskDetailScreen: View {
     
     private func tierColor(_ tier: TrustTier) -> Color {
         switch tier {
-        case .rookie: return Color.textSecondary
+        case .unranked, .rookie: return Color.textSecondary
         case .verified: return Color.brandPurple
         case .trusted: return Color.infoBlue
         case .elite: return Color.moneyGreen

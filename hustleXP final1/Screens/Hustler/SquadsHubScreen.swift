@@ -765,7 +765,7 @@ struct SquadsLockedView: View {
 
     private func tierColor(for tier: TrustTier) -> Color {
         switch tier {
-        case .rookie: return .tierRookie
+        case .unranked, .rookie: return .tierRookie
         case .verified: return .tierVerified
         case .trusted: return .tierTrusted
         case .elite: return .tierElite

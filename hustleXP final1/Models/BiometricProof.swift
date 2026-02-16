@@ -70,7 +70,14 @@ enum ValidationRecommendation: String, Codable {
     case approve
     case manualReview = "manual_review"
     case reject
-    
+
+    /// Safe decode — unknown values default to .manualReview
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = ValidationRecommendation(rawValue: raw) ?? .manualReview
+    }
+
     var displayName: String {
         switch self {
         case .approve: return "Approved"
@@ -95,7 +102,14 @@ enum RiskLevel: String, Codable, CaseIterable {
     case medium = "MEDIUM"
     case high = "HIGH"
     case critical = "CRITICAL"
-    
+
+    /// Safe decode — unknown values default to .medium
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = RiskLevel(rawValue: raw) ?? .medium
+    }
+
     var displayName: String {
         rawValue.capitalized
     }

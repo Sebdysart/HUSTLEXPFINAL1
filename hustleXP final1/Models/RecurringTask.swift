@@ -114,6 +114,13 @@ enum RecurrencePattern: String, Codable, CaseIterable {
     case biweekly = "biweekly"
     case monthly = "monthly"
 
+    /// Safe decode — unknown values default to .weekly
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = RecurrencePattern(rawValue: raw) ?? .weekly
+    }
+
     var label: String {
         switch self {
         case .daily: return "Daily"
@@ -149,6 +156,13 @@ enum RecurringSeriesStatus: String, Codable {
     case paused = "paused"
     case completed = "completed"  // End date reached
     case cancelled = "cancelled"
+
+    /// Safe decode — unknown values default to .active
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = RecurringSeriesStatus(rawValue: raw) ?? .active
+    }
 }
 
 // MARK: - Recurring Task Occurrence
@@ -176,6 +190,13 @@ enum OccurrenceStatus: String, Codable {
     case completed = "completed"
     case skipped = "skipped"     // Poster skipped this one
     case cancelled = "cancelled"
+
+    /// Safe decode — unknown values default to .scheduled
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = OccurrenceStatus(rawValue: raw) ?? .scheduled
+    }
 }
 
 // MARK: - Recurring Task Tier Gate

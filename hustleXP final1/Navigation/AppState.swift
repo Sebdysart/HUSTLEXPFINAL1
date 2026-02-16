@@ -8,27 +8,49 @@
 import SwiftUI
 
 // MARK: - User Role
+// Backend may return "worker" instead of "hustler" in some endpoints
 enum UserRole: String, CaseIterable, Codable {
     case hustler = "hustler"
     case poster = "poster"
+
+    /// Safely decode — treat "worker" as "hustler", unknown values default to "hustler"
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        switch rawValue {
+        case "hustler", "worker": self = .hustler
+        case "poster": self = .poster
+        default: self = .hustler
+        }
+    }
 }
 
 // MARK: - Trust Tier (5 tiers as per spec)
+// Backend sends 0 for brand-new users (unranked), 1-5 for ranked tiers
 enum TrustTier: Int, CaseIterable, Codable {
+    case unranked = 0
     case rookie = 1
     case verified = 2
     case trusted = 3
     case elite = 4
     case master = 5
-    
+
     var name: String {
         switch self {
+        case .unranked: return "Rookie"  // Display as Rookie until first tier-up
         case .rookie: return "Rookie"
         case .verified: return "Verified"
         case .trusted: return "Trusted"
         case .elite: return "Elite"
         case .master: return "Master"
         }
+    }
+
+    /// Safely decode from backend — unknown values default to .unranked
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(Int.self)
+        self = TrustTier(rawValue: rawValue) ?? .unranked
     }
 }
 
