@@ -27,6 +27,7 @@ final class TRPCClient: ObservableObject {
     private let baseURL: URL
     private let session: URLSession
     private var authToken: String?
+    private var isRefreshingToken = false
 
     init() {
         // Railway production backend
@@ -63,6 +64,17 @@ final class TRPCClient: ObservableObject {
         procedure: String,
         type: ProcedureType = .mutation,
         input: Input
+    ) async throws -> Output {
+        try await performCall(router: router, procedure: procedure, type: type, input: input, isRetry: false)
+    }
+
+    /// Internal call implementation with automatic 401 token refresh + retry
+    private func performCall<Input: Encodable, Output: Decodable>(
+        router: String,
+        procedure: String,
+        type: ProcedureType,
+        input: Input,
+        isRetry: Bool
     ) async throws -> Output {
         let path = "\(router).\(procedure)"
         var request: URLRequest
@@ -114,6 +126,22 @@ final class TRPCClient: ObservableObject {
             HXLogger.error("tRPC HTTP \(httpResponse.statusCode) for \(path)", category: "Network")
             if let body = String(data: data, encoding: .utf8) {
                 HXLogger.error("tRPC error body: \(body.prefix(500))", category: "Network")
+            }
+
+            // 401 auto-refresh: If token expired, refresh and retry once
+            if httpResponse.statusCode == 401 && !isRetry && !isRefreshingToken {
+                HXLogger.info("tRPC: 401 received for \(path) — attempting token refresh", category: "Network")
+                isRefreshingToken = true
+                do {
+                    try await AuthService.shared.refreshToken()
+                    isRefreshingToken = false
+                    HXLogger.info("tRPC: Token refreshed — retrying \(path)", category: "Network")
+                    return try await performCall(router: router, procedure: procedure, type: type, input: input, isRetry: true)
+                } catch {
+                    isRefreshingToken = false
+                    HXLogger.error("tRPC: Token refresh failed — \(error.localizedDescription)", category: "Network")
+                    throw APIError.unauthorized
+                }
             }
 
             // Try to decode tRPC error with HX error code support
