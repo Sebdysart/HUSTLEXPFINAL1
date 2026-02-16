@@ -328,6 +328,7 @@ struct TaskInProgressScreen: View {
                     HXText("Message Poster", style: .subheadline, color: .brandPurple)
                 }
             }
+            .accessibilityLabel("Message task poster")
         }
         .padding(24)
         .background(.ultraThinMaterial)

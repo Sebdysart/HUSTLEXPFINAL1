@@ -122,10 +122,12 @@ struct RoleSelectionScreen: View {
             VStack(spacing: 6) {
                 Text("Choose Your Role")
                     .font(.system(size: isCompact ? 24 : 28, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Select how you want to use HustleXP")
                     .font(.system(size: isCompact ? 14 : 15))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -186,6 +188,7 @@ struct RoleSelectionScreen: View {
             ) {
                 handleContinue()
             }
+            .accessibilityLabel("Continue with selected role")
             .opacity(selectedRole != nil ? 1 : 0.5)
             .disabled(selectedRole == nil)
             
@@ -272,6 +275,7 @@ private struct PremiumRoleCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.system(size: 20, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(isSelected ? .white : Color.textPrimary)
                     
                     Text(subtitle)

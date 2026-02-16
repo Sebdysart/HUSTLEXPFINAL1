@@ -68,6 +68,7 @@ struct ClaimsHistoryScreen: View {
                     Image(systemName: "plus")
                         .foregroundStyle(Color.brandPurple)
                 }
+                .accessibilityLabel("File new claim")
             }
         }
         .sheet(isPresented: $showClaimDetail) {
@@ -173,6 +174,7 @@ struct ClaimsHistoryScreen: View {
             HXButton("File a Claim", icon: "plus.circle.fill", variant: .primary) {
                 // Navigate to file claim
             }
+            .accessibilityLabel("File a claim")
             .padding(.horizontal, 40)
             
             Spacer()

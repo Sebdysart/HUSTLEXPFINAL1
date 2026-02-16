@@ -27,7 +27,44 @@ struct SkillGridSelectionScreen: View {
     
     var body: some View {
         ZStack {
+            // Premium dark background
             Color.brandBlack.ignoresSafeArea()
+            
+            // Animated gradient orbs for premium feel
+            VStack {
+                HStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color.brandPurple.opacity(0.15), Color.clear],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 150
+                            )
+                        )
+                        .frame(width: 300, height: 300)
+                        .blur(radius: 60)
+                        .offset(x: -100, y: -80)
+                    Spacer()
+                }
+                Spacer()
+                HStack {
+                    Spacer()
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color.accentViolet.opacity(0.1), Color.clear],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 120
+                            )
+                        )
+                        .frame(width: 250, height: 250)
+                        .blur(radius: 50)
+                        .offset(x: 80, y: 100)
+                }
+            }
+            .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Progress bar (shown during onboarding)
@@ -114,10 +151,12 @@ struct SkillGridSelectionScreen: View {
             VStack(spacing: 4) {
                 Text("What can you do?")
                     .font(.system(size: 28, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Select skills to see matching quests")
                     .font(.system(size: 15))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textSecondary)
             }
             .padding(.vertical, 8)
@@ -272,6 +311,7 @@ struct SkillGridSelectionScreen: View {
                     .foregroundStyle(isSelected ? Color.textPrimary : Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
+                    .minimumScaleFactor(0.8)
                     .frame(height: 32)
                 
                 // Status indicator
@@ -373,6 +413,7 @@ struct SkillGridSelectionScreen: View {
                 HStack(spacing: 8) {
                     Text("Save Skills")
                         .font(.system(size: 17, weight: .semibold))
+                        .minimumScaleFactor(0.7)
                     
                     if selectedSkills.count > 0 {
                         Text("(\(selectedSkills.count))")
@@ -386,6 +427,7 @@ struct SkillGridSelectionScreen: View {
                 .background(selectedSkills.isEmpty ? Color.textMuted : Color.brandPurple)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
+            .accessibilityLabel("Save selected skills")
             .disabled(selectedSkills.isEmpty)
             .padding(.horizontal, 20)
         }
@@ -403,6 +445,7 @@ struct SkillGridSelectionScreen: View {
         VStack(spacing: 2) {
             Text(value)
                 .font(.system(size: 18, weight: .bold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.textPrimary)
             Text(label)
                 .font(.system(size: 11))
@@ -494,6 +537,7 @@ struct LicensePromptSheet: View {
             VStack(spacing: 8) {
                 Text("\(licenseType.rawValue)")
                     .font(.system(size: 24, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("is a Regulated Trade")
@@ -531,6 +575,7 @@ struct LicensePromptSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.seal.fill")
                         Text("Verify License Now")
+                            .minimumScaleFactor(0.7)
                     }
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Color.brandBlack)
@@ -539,6 +584,7 @@ struct LicensePromptSheet: View {
                     .background(Color.instantYellow)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
+                .accessibilityLabel("Verify your license now")
                 
                 Button {
                     onSkip()

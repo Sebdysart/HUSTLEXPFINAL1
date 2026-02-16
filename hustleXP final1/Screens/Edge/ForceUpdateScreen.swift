@@ -16,7 +16,8 @@ struct ForceUpdateScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
                 Color.brandBlack
@@ -132,6 +133,7 @@ struct ForceUpdateScreen: View {
                                 ) {
                                     openAppStore()
                                 }
+                                .accessibilityLabel("Update app now")
                                 .padding(.horizontal, isCompact ? 20 : 24)
                             }
                             

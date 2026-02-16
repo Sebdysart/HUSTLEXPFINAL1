@@ -69,6 +69,7 @@ struct RecurringTasksScreen: View {
                         Image(systemName: "plus.circle.fill")
                             .foregroundStyle(Color.recurringBlue)
                     }
+                    .accessibilityLabel("Create recurring task")
                 }
             }
         }
@@ -163,6 +164,7 @@ struct RecurringTasksScreen: View {
             VStack(spacing: 8) {
                 Text(selectedFilter == .active ? "No Active Recurring Tasks" : "No Recurring Tasks")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
 
                 Text("Schedule tasks that repeat automatically.\nPerfect for lawn care, cleaning, dog walking, and more.")
@@ -211,6 +213,7 @@ struct RecurringTasksScreen: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
@@ -307,6 +310,7 @@ private struct RecurringSeriesCard: View {
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.8)
 
                         HStack(spacing: 8) {
                             Text(series.patternDescription)
@@ -330,6 +334,7 @@ private struct RecurringSeriesCard: View {
                     VStack(alignment: .trailing, spacing: 4) {
                         Text(series.formattedPayment)
                             .font(.system(size: 17, weight: .bold))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.moneyGreen)
 
                         Text("each")
@@ -392,6 +397,7 @@ private struct RecurringSeriesCard: View {
                             .font(.system(size: 13))
                             .foregroundStyle(Color.textSecondary)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.8)
 
                         Spacer()
                     }
@@ -466,6 +472,7 @@ private struct RecurringSeriesCard: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             Text(label)
                 .font(.system(size: 10))
@@ -534,6 +541,7 @@ struct RecurringLockedView: View {
                 VStack(spacing: 12) {
                     Text("Recurring Tasks")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textPrimary)
 
                     Text("Schedule tasks that repeat automatically.\nPerfect for regular help you need on a cadence.")
@@ -619,6 +627,7 @@ struct RecurringLockedView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 Text(description)
                     .font(.system(size: 13))
@@ -676,6 +685,7 @@ private struct CreateRecurringTaskSheet: View {
                                                 .font(.system(size: 13, weight: .semibold))
                                                 .foregroundStyle(Color.textPrimary)
                                                 .lineLimit(1)
+                                                .minimumScaleFactor(0.8)
 
                                             Spacer()
                                         }
@@ -750,6 +760,7 @@ private struct CreateRecurringTaskSheet: View {
                                 Spacer()
                                 Text("$\(Int(payment))")
                                     .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    .minimumScaleFactor(0.7)
                                     .foregroundStyle(Color.moneyGreen)
                             }
 
@@ -845,6 +856,7 @@ private struct CreateRecurringTaskSheet: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }
                         .foregroundStyle(Color.textSecondary)
+                        .accessibilityLabel("Cancel creating recurring task")
                 }
             }
         }

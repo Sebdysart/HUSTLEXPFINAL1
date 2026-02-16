@@ -120,10 +120,12 @@ struct WelcomeScreen: View {
             VStack(spacing: 6) {
                 Text("HustleXP")
                     .font(.system(size: isCompact ? 34 : 40, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Your hustle. Rewarded.")
                     .font(.system(size: isCompact ? 15 : 17, weight: .medium))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textSecondary)
             }
             .opacity(showContent ? 1 : 0)
@@ -179,6 +181,7 @@ struct WelcomeScreen: View {
                 impact.impactOccurred()
                 router.navigateToOnboarding(.howItWorks)
             }
+            .accessibilityLabel("Get started with onboarding")
             
             Text("Join thousands of hustlers")
                 .font(.footnote)
@@ -215,6 +218,7 @@ private struct FeatureRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: isCompact ? 14 : 15, weight: .semibold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text(description)

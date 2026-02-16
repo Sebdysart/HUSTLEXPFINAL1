@@ -42,34 +42,40 @@ struct SignupScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
                 // Background
                 backgroundLayer
                 
-                // Content - use VStack for non-scrolling layout
-                VStack(spacing: isCompact ? 12 : 18) {
-                    // Logo and header
-                    headerSection(isCompact: isCompact)
-                        .padding(.top, isCompact ? 4 : 12)
-                    
-                    // Signup form
-                    formSection(isCompact: isCompact)
-                    
-                    Spacer(minLength: 0)
-                    
-                    // Divider with "or"
-                    dividerSection
-                    
-                    // Social signup options
-                    socialSignupSection(isCompact: isCompact)
-                    
-                    // Sign in link
-                    signInSection
-                        .padding(.bottom, isCompact ? 8 : 16)
+                // Scrollable content for all screen sizes
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: isCompact ? 12 : 18) {
+                        // Logo and header
+                        headerSection(isCompact: isCompact)
+                            .padding(.top, isCompact ? 8 : 16)
+                        
+                        // Signup form
+                        formSection(isCompact: isCompact)
+                        
+                        // Divider with "or"
+                        dividerSection
+                            .padding(.top, isCompact ? 8 : 16)
+                        
+                        // Social signup options
+                        socialSignupSection(isCompact: isCompact)
+                        
+                        // Sign in link
+                        signInSection
+                            .padding(.top, 4)
+                        
+                        // Bottom safe area padding
+                        Spacer(minLength: max(20, geometry.safeAreaInsets.bottom + 16))
+                    }
+                    .padding(.horizontal, isCompact ? 16 : 24)
                 }
-                .padding(.horizontal, isCompact ? 16 : 24)
+                .scrollDismissesKeyboard(.interactively)
             }
         }
         .navigationBarBackButtonHidden(false)
@@ -137,10 +143,12 @@ struct SignupScreen: View {
             VStack(spacing: 4) {
                 Text("Join HustleXP")
                     .font(.system(size: isCompact ? 22 : 28, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Start your hustle journey today")
                     .font(.system(size: isCompact ? 13 : 15))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textSecondary)
             }
             .opacity(showContent ? 1 : 0)
@@ -231,6 +239,7 @@ struct SignupScreen: View {
             HXButton("Create Account", icon: isLoading ? nil : "arrow.right", variant: .primary, isLoading: isLoading) {
                 handleSignup()
             }
+            .accessibilityLabel("Create your account")
             .padding(.top, 4)
             .disabled(!isValid || isLoading)
             .opacity(isValid ? 1 : 0.6)
@@ -400,9 +409,11 @@ struct SignupScreen: View {
             socialButton(icon: "apple.logo", label: "Apple") {
                 handleAppleSignIn()
             }
+            .accessibilityLabel("Sign up with Apple")
             socialButton(icon: "g.circle.fill", label: "Google") {
                 handleGoogleSignIn()
             }
+            .accessibilityLabel("Sign up with Google")
         }
         .disabled(isSocialLoading)
         .opacity(isSocialLoading ? 0.6 : 1)
@@ -444,6 +455,7 @@ struct SignupScreen: View {
                     .fontWeight(.semibold)
                     .foregroundStyle(Color.brandPurple)
             }
+            .accessibilityLabel("Sign in to existing account")
         }
         .font(.subheadline)
         .opacity(showContent ? 1 : 0)

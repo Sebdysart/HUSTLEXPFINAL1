@@ -21,7 +21,8 @@ struct ForgotPasswordScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
                 // Background
@@ -47,12 +48,14 @@ struct ForgotPasswordScreen: View {
                             VStack(spacing: isCompact ? 8 : 12) {
                                 Text(isSubmitted ? "Check Your Email" : "Reset Password")
                                     .font(.system(size: isCompact ? 24 : 28, weight: .bold))
+                                    .minimumScaleFactor(0.7)
                                     .foregroundStyle(Color.textPrimary)
                                 
                                 Text(isSubmitted
                                     ? "We've sent reset instructions to \(email)"
                                     : "Enter your email and we'll send you instructions to reset your password")
                                     .font(.system(size: isCompact ? 14 : 16))
+                                    .minimumScaleFactor(0.7)
                                     .foregroundStyle(Color.textSecondary)
                                     .multilineTextAlignment(.center)
                             }
@@ -98,6 +101,7 @@ struct ForgotPasswordScreen: View {
                                 ) {
                                     handleSubmit()
                                 }
+                                .accessibilityLabel("Send password reset link")
                                 .disabled(!isValidEmail || isLoading)
                                 .opacity(isValidEmail ? 1 : 0.5)
                             }
@@ -119,6 +123,7 @@ struct ForgotPasswordScreen: View {
                                     
                                     Text("Email Sent!")
                                         .font(.system(size: isCompact ? 18 : 20, weight: .bold))
+                                        .minimumScaleFactor(0.7)
                                         .foregroundStyle(Color.successGreen)
                                 }
                                 .padding(isCompact ? 16 : 20)
@@ -128,12 +133,15 @@ struct ForgotPasswordScreen: View {
                                 HXButton("Back to Sign In", variant: .primary) {
                                     router.popAuth()
                                 }
+                                .accessibilityLabel("Go back to sign in")
                                 
                                 Button(action: { isSubmitted = false }) {
                                     Text("Didn't receive it? Try again")
                                         .font(.system(size: isCompact ? 13 : 14, weight: .medium))
+                                        .minimumScaleFactor(0.7)
                                         .foregroundStyle(Color.brandPurple)
                                 }
+                                .accessibilityLabel("Try sending reset link again")
                             }
                             .padding(.horizontal, isCompact ? 18 : 24)
                         }

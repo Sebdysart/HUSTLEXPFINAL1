@@ -60,7 +60,8 @@ struct CreateTaskScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
                 // Background
@@ -133,30 +134,32 @@ struct CreateTaskScreen: View {
     // MARK: - Background
     
     private var backgroundLayer: some View {
-        let screenWidth = UIScreen.main.bounds.width
+        GeometryReader { geometry in
+            let screenWidth = geometry.size.width
 
-        return ZStack {
-            Color.brandBlack.ignoresSafeArea()
+            ZStack {
+                Color.brandBlack.ignoresSafeArea()
 
-            VStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                Color.brandPurple.opacity(0.15),
-                                Color.brandPurple.opacity(0)
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: screenWidth * 0.46
+                VStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    Color.brandPurple.opacity(0.15),
+                                    Color.brandPurple.opacity(0)
+                                ],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: screenWidth * 0.46
+                            )
                         )
-                    )
-                    .frame(width: screenWidth * 0.92, height: screenWidth * 0.92)
-                    .offset(y: -100)
+                        .frame(width: screenWidth * 0.92, height: screenWidth * 0.92)
+                        .offset(y: -100)
 
-                Spacer()
+                    Spacer()
+                }
+                .ignoresSafeArea()
             }
-            .ignoresSafeArea()
         }
     }
     
@@ -296,6 +299,7 @@ struct CreateTaskScreen: View {
                 TextField("0", text: $payment)
                     .keyboardType(.decimalPad)
                     .font(.system(size: isCompact ? 20 : 24, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                     .frame(width: isCompact ? 60 : 80)
                     .focused($focusedField, equals: .payment)
@@ -577,6 +581,7 @@ struct CreateTaskScreen: View {
                 )
                 .shadow(color: isValid ? Color.brandPurple.opacity(0.3) : .clear, radius: 12, y: 4)
             }
+            .accessibilityLabel("Post task")
             .disabled(!isValid || isSubmitting)
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -917,6 +922,7 @@ struct PremiumSummaryRow: View {
                 .font(isCompact ? .footnote.weight(.medium) : .subheadline.weight(.medium))
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
     }
 }

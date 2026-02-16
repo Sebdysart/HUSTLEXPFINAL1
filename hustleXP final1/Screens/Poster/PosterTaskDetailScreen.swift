@@ -202,6 +202,7 @@ struct PosterTaskDetailScreen: View {
                     Image(systemName: "ellipsis.circle")
                         .foregroundStyle(Color.textPrimary)
                 }
+                .accessibilityLabel("Task options")
             }
         }
         .alert("Cancel Task?", isPresented: $showCancelConfirmation) {
@@ -350,12 +351,13 @@ private struct AssignedHustlerSection: View {
                         Circle()
                             .fill(Color.brandPurple)
                             .frame(width: 44, height: 44)
-                        
+
                         Image(systemName: "message.fill")
                             .font(.system(size: 18))
                             .foregroundStyle(.white)
                     }
                 }
+                .accessibilityLabel("Message hustler")
             }
             .padding(16)
             .background(Color.surfaceSecondary)
@@ -386,6 +388,7 @@ private struct ApplicantsSection: View {
             HXButton("View Applicants", variant: .secondary) {
                 // Navigate to applicants
             }
+            .accessibilityLabel("View applicants")
         }
         .padding(20)
         .background(Color.surfaceElevated)

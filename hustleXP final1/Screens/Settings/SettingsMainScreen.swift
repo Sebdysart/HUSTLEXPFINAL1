@@ -110,6 +110,7 @@ struct SettingsMainScreen: View {
                         Spacer()
                     }
                 }
+                .accessibilityLabel("Log out")
             }
             .listRowBackground(Color.surfaceElevated)
         }
@@ -140,18 +141,23 @@ struct SettingsListItem: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
+                    .font(.system(size: 18))
                     .foregroundStyle(iconColor)
-                    .frame(width: 24)
+                    .frame(width: 28, height: 28)
+                    .accessibilityHidden(true)
                 
                 Text(title)
                     .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 
-                Spacer()
+                Spacer(minLength: 8)
                 
                 Image(systemName: "chevron.right")
                     .foregroundStyle(Color.textTertiary)
-                    .font(.caption)
+                    .font(.system(size: 12, weight: .semibold))
             }
+            .contentShape(Rectangle())
         }
     }
 }

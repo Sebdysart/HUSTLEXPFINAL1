@@ -88,6 +88,7 @@ struct BatchDetailsScreen: View {
             HStack(alignment: .bottom, spacing: 8) {
                 Text(batch.formattedTotalPayment)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.moneyGreen)
                 
                 Text("total earnings")
@@ -279,6 +280,7 @@ struct BatchDetailsScreen: View {
                                 )
                         )
                 }
+                .accessibilityLabel("Pick individual tasks instead")
                 
                 // Accept batch button
                 Button(action: {
@@ -310,6 +312,7 @@ struct BatchDetailsScreen: View {
                     .shadow(color: Color.brandPurple.opacity(0.3), radius: 12, y: 4)
                 }
                 .disabled(isAcceptingBatch)
+                .accessibilityLabel("Accept all tasks in batch")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -525,6 +528,7 @@ struct SavingsStatCard: View {
             
             Text(value)
                 .font(.title3.weight(.bold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -565,6 +569,7 @@ struct BatchTaskRow: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                         
                         if isPrimary {
                             Text("PRIMARY")

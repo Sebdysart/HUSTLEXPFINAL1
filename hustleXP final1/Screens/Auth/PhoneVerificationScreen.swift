@@ -32,7 +32,8 @@ struct PhoneVerificationScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
                 // Background
@@ -57,12 +58,14 @@ struct PhoneVerificationScreen: View {
                         VStack(spacing: isCompact ? 6 : 10) {
                             Text(isCodeSent ? "Enter Verification Code" : "Verify Your Phone")
                                 .font(.system(size: isCompact ? 22 : 26, weight: .bold))
+                                .minimumScaleFactor(0.7)
                                 .foregroundStyle(Color.textPrimary)
                             
                             Text(isCodeSent
                                 ? "We sent a 6-digit code to \(formatPhoneNumber(phoneNumber))"
                                 : "We'll send you a verification code to confirm your number")
                                 .font(.system(size: isCompact ? 13 : 15))
+                                .minimumScaleFactor(0.7)
                                 .foregroundStyle(Color.textSecondary)
                                 .multilineTextAlignment(.center)
                         }
@@ -110,6 +113,7 @@ struct PhoneVerificationScreen: View {
                                 ) {
                                     sendCode()
                                 }
+                                .accessibilityLabel("Send verification code")
                                 .disabled(!isValidPhone || isLoading)
                                 .opacity(isValidPhone ? 1 : 0.5)
                             } else {
@@ -155,8 +159,10 @@ struct PhoneVerificationScreen: View {
                                         Button(action: resendCode) {
                                             Text("Resend Code")
                                                 .font(.system(size: isCompact ? 13 : 14, weight: .medium))
+                                                .minimumScaleFactor(0.7)
                                                 .foregroundStyle(Color.brandPurple)
                                         }
+                                        .accessibilityLabel("Resend verification code")
                                     }
                                 }
                                 
@@ -172,7 +178,7 @@ struct PhoneVerificationScreen: View {
                                     .padding(.top, 8)
                                 }
                                 
-                                Button(action: { 
+                                Button(action: {
                                     withAnimation {
                                         isCodeSent = false
                                         verificationCode = ""
@@ -180,8 +186,10 @@ struct PhoneVerificationScreen: View {
                                 }) {
                                     Text("Change Phone Number")
                                         .font(.system(size: isCompact ? 13 : 14))
+                                        .minimumScaleFactor(0.7)
                                         .foregroundStyle(Color.textSecondary)
                                 }
+                                .accessibilityLabel("Change phone number")
                             }
                         }
                         .padding(.horizontal, isCompact ? 18 : 24)
@@ -281,6 +289,7 @@ private struct CodeDigitBox: View {
             } else {
                 Text(digit)
                     .font(.system(size: isCompact ? 20 : 24, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
             }
         }

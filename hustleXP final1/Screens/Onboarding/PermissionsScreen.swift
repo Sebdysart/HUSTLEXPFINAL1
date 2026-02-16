@@ -25,8 +25,45 @@ struct PermissionsScreen: View {
             let isCompact = usableHeight < 600
 
             ZStack {
+                // Premium background
                 Color.brandBlack
                     .ignoresSafeArea()
+                
+                // Animated gradient orbs
+                VStack {
+                    HStack {
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [Color.brandPurple.opacity(0.2), Color.clear],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: 150
+                                )
+                            )
+                            .frame(width: 300, height: 300)
+                            .blur(radius: 60)
+                            .offset(x: -80, y: -50)
+                        Spacer()
+                    }
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [Color.infoBlue.opacity(0.12), Color.clear],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: 120
+                                )
+                            )
+                            .frame(width: 250, height: 250)
+                            .blur(radius: 50)
+                            .offset(x: 60, y: 80)
+                    }
+                }
+                .ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: isCompact ? 24 : 32) {
@@ -41,10 +78,12 @@ struct PermissionsScreen: View {
                         VStack(spacing: isCompact ? 8 : 12) {
                             Text("Enable Permissions")
                                 .font(.system(size: isCompact ? 24 : 28, weight: .bold))
+                                .minimumScaleFactor(0.7)
                                 .foregroundStyle(Color.textPrimary)
                             
                             Text("These help us give you the best experience")
                                 .font(.system(size: isCompact ? 14 : 15))
+                                .minimumScaleFactor(0.7)
                                 .foregroundStyle(Color.textSecondary)
                         }
                         .padding(.top, isCompact ? 16 : 24)
@@ -98,12 +137,15 @@ struct PermissionsScreen: View {
                             HXButton("Continue", variant: .primary) {
                                 router.navigateToOnboarding(.profileSetup)
                             }
+                            .accessibilityLabel("Continue to profile setup")
                             
                             Button(action: { router.navigateToOnboarding(.profileSetup) }) {
                                 Text("Skip for now")
                                     .font(.system(size: isCompact ? 13 : 14))
+                                    .minimumScaleFactor(0.7)
                                     .foregroundStyle(Color.textSecondary)
                             }
+                            .accessibilityLabel("Skip permissions setup")
                         }
                         .padding(.horizontal, isCompact ? 18 : 24)
                         .padding(.bottom, max(24, geometry.safeAreaInsets.bottom + 16))
@@ -158,6 +200,7 @@ private struct PermissionCard: View {
                     .labelsHidden()
                     .tint(Color.brandPurple)
                     .disabled(isEnabled) // Once granted, can't toggle off from here
+                    .accessibilityLabel("Toggle \(title) permission")
             }
             
             if isEnabled {

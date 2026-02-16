@@ -177,6 +177,7 @@ private struct NotificationToggleRow: View {
             Toggle("", isOn: $isOn)
                 .labelsHidden()
                 .tint(Color.brandPurple)
+                .accessibilityLabel(title)
         }
         .padding(16)
     }

@@ -25,6 +25,7 @@ struct ReferralScreen: View {
 
                     Text("Invite Friends, Earn Cash")
                         .font(.title2.weight(.bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundColor(.textPrimary)
 
                     Text("You and your friend each get $5 when they complete their first task")
@@ -48,6 +49,7 @@ struct ReferralScreen: View {
                     } else {
                         Text(referralService.referralCode ?? "---")
                             .font(.system(size: 32, weight: .black, design: .monospaced))
+                            .minimumScaleFactor(0.7)
                             .foregroundColor(.brandPurple)
                             .padding(.vertical, 8)
                     }
@@ -67,6 +69,7 @@ struct ReferralScreen: View {
                         .background(Color.brandPurple)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    .accessibilityLabel("Share referral code")
 
                     // Copy button
                     Button {
@@ -81,6 +84,7 @@ struct ReferralScreen: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.brandPurple)
                     }
+                    .accessibilityLabel("Copy referral code")
                 }
                 .padding(24)
                 .background(Color.surfaceElevated)
@@ -188,6 +192,7 @@ private struct ReferralStatCard: View {
                 .foregroundColor(.brandPurple)
             Text(value)
                 .font(.title2.weight(.bold))
+                .minimumScaleFactor(0.7)
                 .foregroundColor(.textPrimary)
             Text(title)
                 .font(.caption)

@@ -291,6 +291,7 @@ private struct VerificationCTA: View {
             HXButton("Start Identity Verification", variant: .primary) {
                 // Start verification
             }
+            .accessibilityLabel("Start identity verification")
             .padding(20)
             .background(Color.brandBlack)
         }

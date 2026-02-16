@@ -185,6 +185,7 @@ struct HustlerFeedScreen: View {
                     .background(Color.brandPurple.opacity(0.15))
                     .clipShape(Capsule())
                 }
+                .accessibilityLabel("Manage skills")
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showFilters.toggle() }) {
@@ -192,12 +193,13 @@ struct HustlerFeedScreen: View {
                         Circle()
                             .fill(Color.surfaceElevated)
                             .frame(width: 36, height: 36)
-                        
+
                         Image(systemName: "slider.horizontal.3")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.brandPurple)
                     }
                 }
+                .accessibilityLabel("Filter tasks")
             }
         }
         .task {
@@ -354,6 +356,7 @@ struct HustlerFeedScreen: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(filteredTasks.count)")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("tasks available")
@@ -368,6 +371,7 @@ struct HustlerFeedScreen: View {
                 let totalPotential = filteredTasks.reduce(0) { $0 + $1.payment }
                 Text("$\(Int(totalPotential))")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.moneyGreen)
                 
                 Text("potential earnings")

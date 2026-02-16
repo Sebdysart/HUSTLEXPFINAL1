@@ -48,6 +48,7 @@ struct PosterProfileScreen: View {
                     Image(systemName: "pencil")
                         .foregroundStyle(Color.textPrimary)
                 }
+                .accessibilityLabel("Edit profile")
             }
         }
     }

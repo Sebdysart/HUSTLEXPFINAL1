@@ -96,6 +96,7 @@ struct LiveRadarScreen: View {
                         .font(.system(size: 20))
                         .foregroundStyle(Color.textSecondary)
                 }
+                .accessibilityLabel("Filter quest categories")
             }
         }
         .sheet(isPresented: $showCategoryPicker) {
@@ -203,6 +204,7 @@ struct LiveRadarScreen: View {
             VStack(spacing: 12) {
                 Text("Go Live to Start Hunting")
                     .font(.system(size: 22, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Toggle Live Mode to see urgent quests\non your radar in real-time")
@@ -256,6 +258,7 @@ struct LiveRadarScreen: View {
             HStack {
                 Text("Nearby Quests")
                     .font(.system(size: 16, weight: .semibold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Spacer()
@@ -341,8 +344,9 @@ struct LiveRadarScreen: View {
             
             Text("Elite Tier Required")
                 .font(.system(size: 22, weight: .bold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.textPrimary)
-            
+
             Text("Live Mode quests are reserved for our most reliable Hustlers. Reach Elite tier to unlock.")
                 .font(.system(size: 15))
                 .foregroundStyle(Color.textSecondary)
@@ -532,12 +536,14 @@ private struct MiniQuestCard: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
                     .lineLimit(2)
+                    .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.leading)
                 
                 Spacer()
                 
                 Text("$\(Int(quest.totalPayment))")
                     .font(.system(size: 18, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.moneyGreen)
             }
             .padding(12)

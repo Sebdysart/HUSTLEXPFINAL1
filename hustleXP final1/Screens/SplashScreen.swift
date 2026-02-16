@@ -68,6 +68,7 @@ struct SplashScreen: View {
                     // HX Logo text
                     Text("HX")
                         .font(.system(size: 42, weight: .black, design: .rounded))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(.white)
                 }
                 .scaleEffect(isAnimating ? 1.0 : 0.9)
@@ -77,6 +78,7 @@ struct SplashScreen: View {
                 VStack(spacing: 8) {
                     Text("HustleXP")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [.white, Color.brandPurpleLight],
@@ -88,6 +90,7 @@ struct SplashScreen: View {
                     if showTagline {
                         Text("Get Paid. Level Up.")
                             .font(.system(size: 16, weight: .medium))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.textSecondary)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }

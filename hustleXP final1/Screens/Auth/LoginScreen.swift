@@ -35,7 +35,8 @@ struct LoginScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompactHeight = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompactHeight = safeHeight < 600
             
             ZStack {
                 // Background
@@ -141,10 +142,12 @@ struct LoginScreen: View {
             VStack(spacing: 6) {
                 Text("Welcome back")
                     .font(.system(size: isCompact ? 24 : 28, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Sign in to continue your hustle")
                     .font(.system(size: isCompact ? 14 : 15))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textSecondary)
             }
             .opacity(showContent ? 1 : 0)
@@ -211,6 +214,7 @@ struct LoginScreen: View {
             HXButton("Sign In", icon: isLoading ? nil : "arrow.right", variant: .primary, isLoading: isLoading) {
                 handleLogin()
             }
+            .accessibilityLabel("Sign in to your account")
             .padding(.top, isCompact ? 4 : 8)
             .disabled(!isValid || isLoading)
             .opacity(isValid ? 1 : 0.6)
@@ -248,9 +252,11 @@ struct LoginScreen: View {
             SocialButton(icon: "apple.logo", label: "Apple", isCompact: isCompact) {
                 handleAppleSignIn()
             }
+            .accessibilityLabel("Sign in with Apple")
             SocialButton(icon: "g.circle.fill", label: "Google", isCompact: isCompact) {
                 handleGoogleSignIn()
             }
+            .accessibilityLabel("Sign in with Google")
         }
         .disabled(isSocialLoading)
         .opacity(isSocialLoading ? 0.6 : 1)
@@ -270,6 +276,7 @@ struct LoginScreen: View {
                     .fontWeight(.semibold)
                     .foregroundStyle(Color.brandPurple)
             }
+            .accessibilityLabel("Create a new account")
         }
         .font(.subheadline)
         .opacity(showContent ? 1 : 0)
@@ -478,8 +485,10 @@ private struct FormSecureField: View {
                     Button(action: forgotAction) {
                         Text("Forgot Password?")
                             .font(.system(size: isCompact ? 11 : 12, weight: .medium))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.brandPurple)
                     }
+                    .accessibilityLabel("Forgot password")
                 }
             }
             
@@ -535,6 +544,7 @@ private struct SocialButton: View {
                     .font(.system(size: isCompact ? 16 : 18, weight: .medium))
                 Text(label)
                     .font(.system(size: isCompact ? 14 : 15, weight: .semibold))
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(Color.textPrimary)
             .frame(maxWidth: .infinity)

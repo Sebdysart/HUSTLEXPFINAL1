@@ -23,7 +23,8 @@ struct PosterHomeScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
                 // Neon background
@@ -77,39 +78,41 @@ struct PosterHomeScreen: View {
     // MARK: - Neon Background
     
     private var neonBackground: some View {
-        let screenWidth = UIScreen.main.bounds.width
+        GeometryReader { geometry in
+            let screenWidth = geometry.size.width
 
-        return ZStack {
-            Color.brandBlack.ignoresSafeArea()
+            ZStack {
+                Color.brandBlack.ignoresSafeArea()
 
-            // Animated gradient orbs
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.aiPurple.opacity(0.12), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: screenWidth * 0.5
+                // Animated gradient orbs
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.aiPurple.opacity(0.12), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: screenWidth * 0.5
+                        )
                     )
-                )
-                .frame(width: screenWidth, height: screenWidth)
-                .offset(x: -screenWidth * 0.2, y: -100)
-                .blur(radius: 60)
+                    .frame(width: screenWidth, height: screenWidth)
+                    .offset(x: -screenWidth * 0.2, y: -100)
+                    .blur(radius: 60)
 
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.brandPurple.opacity(0.08), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: screenWidth * 0.38
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.brandPurple.opacity(0.08), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: screenWidth * 0.38
+                        )
                     )
-                )
-                .frame(width: screenWidth * 0.75, height: screenWidth * 0.75)
-                .offset(x: screenWidth * 0.3, y: 350)
-                .blur(radius: 50)
+                    .frame(width: screenWidth * 0.75, height: screenWidth * 0.75)
+                    .offset(x: screenWidth * 0.3, y: 350)
+                    .blur(radius: 50)
+            }
+            .ignoresSafeArea()
         }
-        .ignoresSafeArea()
     }
     
     // MARK: - Profile Button
@@ -120,16 +123,17 @@ struct PosterHomeScreen: View {
                 Circle()
                     .fill(Color.brandPurple.opacity(0.2))
                     .frame(width: 40, height: 40)
-                
+
                 Circle()
                     .stroke(Color.brandPurple.opacity(0.5), lineWidth: 1)
                     .frame(width: 40, height: 40)
-                
+
                 Image(systemName: "person.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.brandPurple)
             }
         }
+        .accessibilityLabel("Profile")
     }
     
     // MARK: - Welcome Header
@@ -175,6 +179,7 @@ struct PosterHomeScreen: View {
             VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
                 Text("Hey, \(dataService.currentUser.name)!")
                     .font(.system(size: isCompact ? 22 : 26, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("What needs doing today?")
@@ -244,6 +249,7 @@ struct PosterHomeScreen: View {
                     HStack(spacing: isCompact ? 6 : 8) {
                         Text("Create with AI")
                             .font(.system(size: isCompact ? 16 : 18, weight: .bold))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(.white)
                         
                         // NEW badge with glow
@@ -305,6 +311,7 @@ struct PosterHomeScreen: View {
             .clipShape(RoundedRectangle(cornerRadius: isCompact ? 20 : 24))
             .shadow(color: Color.aiPurple.opacity(aiButtonGlow * 0.6), radius: isCompact ? 15 : 20, x: 0, y: isCompact ? 8 : 10)
         }
+        .accessibilityLabel("Create task with AI")
     }
     
     // MARK: - Manual Task Button
@@ -348,6 +355,7 @@ struct PosterHomeScreen: View {
                 }
             )
         }
+        .accessibilityLabel("Create task manually")
     }
     
     // MARK: - Stats Section

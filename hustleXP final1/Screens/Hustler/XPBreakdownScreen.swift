@@ -48,6 +48,7 @@ struct XPBreakdownScreen: View {
             
             Text("\(user.xp)")
                 .font(.system(size: 56, weight: .bold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.brandPurple)
             
             HXBadge(variant: .tier(user.trustTier))

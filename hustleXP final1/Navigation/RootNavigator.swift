@@ -10,12 +10,14 @@ import SwiftUI
 struct RootNavigator: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
+    @EnvironmentObject private var authService: AuthService
     
     var body: some View {
         Group {
             switch appState.authState {
             case .unauthenticated:
                 AuthStack()
+                    .environmentObject(authService)
                 
             case .onboarding:
                 OnboardingStack()
@@ -100,4 +102,5 @@ struct MainTabView: View {
     RootNavigator()
         .environment(AppState())
         .environment(Router())
+        .environmentObject(AuthService.shared)
 }

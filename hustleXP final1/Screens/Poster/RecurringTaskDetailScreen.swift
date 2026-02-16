@@ -111,6 +111,7 @@ struct RecurringTaskDetailScreen: View {
             VStack(spacing: 6) {
                 Text(series.title)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                     .multilineTextAlignment(.center)
 
@@ -209,6 +210,7 @@ struct RecurringTaskDetailScreen: View {
 
                 Text(value)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
             }
 
@@ -342,6 +344,7 @@ struct RecurringTaskDetailScreen: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(series.preferredWorkerName ?? "")
                         .font(.system(size: 16, weight: .semibold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textPrimary)
 
                     Text("Gets first dibs on each occurrence")
@@ -354,6 +357,7 @@ struct RecurringTaskDetailScreen: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(series.completedCount)")
                         .font(.system(size: 17, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.successGreen)
                     Text("completed")
                         .font(.system(size: 11))
@@ -513,6 +517,7 @@ struct RecurringTaskDetailScreen: View {
 
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
+                    .minimumScaleFactor(0.7)
 
                 Spacer()
 
@@ -535,6 +540,7 @@ struct RecurringTaskDetailScreen: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 
     // MARK: - Mock Data

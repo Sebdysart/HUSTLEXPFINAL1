@@ -106,11 +106,13 @@ struct LicenseUploadScreen: View {
                         .foregroundStyle(Color.textSecondary)
                         .frame(width: 40, height: 40)
                 }
+                .accessibilityLabel("Close")
                 
                 Spacer()
                 
                 Text("License Verification")
                     .font(.system(size: 17, weight: .semibold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Spacer()
@@ -138,6 +140,7 @@ struct LicenseUploadScreen: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(licenseType.rawValue)
                     .font(.system(size: 20, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 HStack(spacing: 6) {
@@ -289,6 +292,7 @@ struct LicenseUploadScreen: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle(for: status))
                     .font(.system(size: 15, weight: .semibold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text(statusMessage(for: status))
@@ -453,6 +457,7 @@ struct LicenseUploadScreen: View {
             VStack(spacing: 8) {
                 Text("License Verified!")
                     .font(.system(size: 28, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("You can now accept \(licenseType.rawValue) quests and earn premium rates.")
@@ -467,15 +472,17 @@ struct LicenseUploadScreen: View {
                 VStack(spacing: 4) {
                     Text("$\(String(format: "%.0f", Double.random(in: 75...150)))+")
                         .font(.system(size: 24, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.successGreen)
                     Text("Avg Quest")
                         .font(.system(size: 12))
                         .foregroundStyle(Color.textMuted)
                 }
-                
+
                 VStack(spacing: 4) {
                     Text("\(Int.random(in: 5...15))")
                         .font(.system(size: 24, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.infoBlue)
                     Text("Nearby")
                         .font(.system(size: 12))

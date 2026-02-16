@@ -66,6 +66,7 @@ struct SquadsHubScreen: View {
                         Image(systemName: "plus.circle.fill")
                             .foregroundStyle(Color.squadGold)
                     }
+                    .accessibilityLabel("Create new squad")
                 }
             }
         }
@@ -96,6 +97,7 @@ struct SquadsHubScreen: View {
                                 .font(.system(size: 13))
                             Text(tab.label)
                                 .font(.system(size: 14, weight: .semibold))
+                                .minimumScaleFactor(0.7)
 
                             if tab == .invites && !pendingInvites.isEmpty {
                                 Text("\(pendingInvites.count)")
@@ -159,10 +161,12 @@ struct SquadsHubScreen: View {
             VStack(spacing: 8) {
                 Text("No Squads Yet")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
 
                 Text("Create a squad to team up with other Elite hustlers and tackle bigger, higher-paying tasks together.")
                     .font(.system(size: 15))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
@@ -193,6 +197,7 @@ struct SquadsHubScreen: View {
 
                         Text("No Pending Invites")
                             .font(.system(size: 17, weight: .semibold))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
@@ -235,10 +240,12 @@ struct SquadsHubScreen: View {
 
                     Text("Squad Leaderboard")
                         .font(.system(size: 20, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textPrimary)
 
                     Text("Compete with other squads in your area.\nRankings update weekly.")
                         .font(.system(size: 14))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
 
@@ -277,6 +284,7 @@ struct SquadsHubScreen: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(names[rank - 1])
                     .font(.system(size: 15, weight: .semibold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
 
                 Text("\(xps[rank - 1]) Squad XP")
@@ -360,6 +368,7 @@ private struct SquadCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(squad.name)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textPrimary)
 
                     HStack(spacing: 12) {
@@ -458,6 +467,7 @@ private struct SquadCard: View {
                     .foregroundStyle(color)
                 Text(value)
                     .font(.system(size: 15, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
             }
             Text(label)
@@ -483,6 +493,7 @@ private struct InviteCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(invite.squadName)
                         .font(.system(size: 16, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textPrimary)
 
                     Text("Invited by \(invite.inviterName)")
@@ -510,12 +521,14 @@ private struct InviteCard: View {
                     } label: {
                         Text("Decline")
                             .font(.system(size: 14, weight: .semibold))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.textMuted)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                             .background(Color.surfaceSecondary)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
+                    .accessibilityLabel("Decline squad invite")
 
                     Button {
                         onRespond(true)
@@ -525,12 +538,14 @@ private struct InviteCard: View {
                             Text("Join Squad")
                         }
                         .font(.system(size: 14, weight: .semibold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.brandBlack)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(Color.squadGold)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
+                    .accessibilityLabel("Accept and join squad")
                 }
             }
         }
@@ -617,10 +632,12 @@ struct SquadsLockedView: View {
                 VStack(spacing: 12) {
                     Text("Squads Mode")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textPrimary)
 
                     Text("Team up with trusted hustlers to tackle\nbigger tasks and earn more together.")
                         .font(.system(size: 16))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
@@ -668,6 +685,7 @@ struct SquadsLockedView: View {
                             .foregroundStyle(tierColor(for: currentTier))
                         Text(currentTier.name)
                             .font(.system(size: 17, weight: .bold))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(tierColor(for: currentTier))
                     }
 
@@ -703,6 +721,7 @@ struct SquadsLockedView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(req.title)
                     .font(.system(size: 14, weight: .semibold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 Text(req.description)
                     .font(.system(size: 12))
@@ -732,9 +751,11 @@ struct SquadsLockedView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 Text(description)
                     .font(.system(size: 13))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textSecondary)
             }
 
@@ -838,6 +859,7 @@ private struct CreateSquadSheet: View {
 
                             Text("Squads can have up to \(SquadTierGate.maxSquadSize) members. Only Elite+ hustlers can join.")
                                 .font(.system(size: 13))
+                                .minimumScaleFactor(0.7)
                                 .foregroundStyle(Color.textSecondary)
                         }
                         .padding(14)

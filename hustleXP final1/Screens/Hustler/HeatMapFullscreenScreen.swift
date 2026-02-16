@@ -48,6 +48,7 @@ struct HeatMapFullscreenScreen: View {
                             .background(.ultraThinMaterial)
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("Close heat map")
                     
                     Spacer()
                     
@@ -71,6 +72,7 @@ struct HeatMapFullscreenScreen: View {
                             .background(.ultraThinMaterial)
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("Filter heat map zones")
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -267,8 +269,9 @@ struct ZoneStatItem: View {
             
             Text(value)
                 .font(.headline.weight(.bold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.textPrimary)
-            
+
             Text(label)
                 .font(.caption)
                 .foregroundStyle(Color.textMuted)

@@ -95,55 +95,60 @@ struct ProofSubmissionScreen: View {
     // MARK: - Submission Form
     
     private var submissionFormView: some View {
-        ZStack {
-            Color.brandBlack
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Header
-                    headerSection
-                    
-                    // Step indicator
-                    stepIndicator
-                    
-                    // Task summary
-                    if let task = task {
-                        taskSummaryCard(task)
+            ZStack {
+                Color.brandBlack
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: isCompact ? 18 : 24) {
+                        // Header
+                        headerSection(isCompact: isCompact)
+                        
+                        // Step indicator
+                        stepIndicator(isCompact: isCompact)
+                        
+                        // Task summary
+                        if let task = task {
+                            taskSummaryCard(task, isCompact: isCompact)
+                        }
+                        
+                        // GPS capture (v1.8.0)
+                        gpsSection(isCompact: isCompact)
+                        
+                        // Photo upload (only shown after GPS)
+                        if canProceedToPhoto {
+                            photoUploadSection(isCompact: isCompact)
+                        }
+                        
+                        // Notes (only shown after photo)
+                        if hasPhoto {
+                            notesSection(isCompact: isCompact)
+                        }
+                        
+                        Spacer(minLength: isCompact ? 100 : 120)
                     }
-                    
-                    // GPS capture (v1.8.0)
-                    gpsSection
-                    
-                    // Photo upload (only shown after GPS)
-                    if canProceedToPhoto {
-                        photoUploadSection
-                    }
-                    
-                    // Notes (only shown after photo)
-                    if hasPhoto {
-                        notesSection
-                    }
-                    
-                    Spacer(minLength: 120)
+                    .padding(isCompact ? 16 : 20)
                 }
-                .padding()
             }
-        }
-        .navigationTitle("Submit Proof")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.brandBlack, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .safeAreaInset(edge: .bottom) {
-            bottomBar
+            .navigationTitle("Submit Proof")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.brandBlack, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .safeAreaInset(edge: .bottom) {
+                bottomBar(bottomSafeArea: geometry.safeAreaInsets.bottom)
+            }
         }
     }
     
     // MARK: - Header Section
     
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func headerSection(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 6 : 8) {
             HXText("Submit Proof", style: .title2)
             HXText("Capture your location and photo to verify completion", style: .subheadline, color: .textSecondary)
         }
@@ -151,35 +156,35 @@ struct ProofSubmissionScreen: View {
     
     // MARK: - Step Indicator
     
-    private var stepIndicator: some View {
-        HStack(spacing: 8) {
-            stepBadge(number: 1, label: "GPS", isActive: currentStep == .gps, isComplete: gpsCoordinates != nil)
+    private func stepIndicator(isCompact: Bool) -> some View {
+        HStack(spacing: isCompact ? 6 : 8) {
+            stepBadge(number: 1, label: "GPS", isActive: currentStep == .gps, isComplete: gpsCoordinates != nil, isCompact: isCompact)
             
             stepConnector(isComplete: gpsCoordinates != nil)
             
-            stepBadge(number: 2, label: "Photo", isActive: currentStep == .photo, isComplete: hasPhoto)
+            stepBadge(number: 2, label: "Photo", isActive: currentStep == .photo, isComplete: hasPhoto, isCompact: isCompact)
             
             stepConnector(isComplete: hasPhoto)
             
-            stepBadge(number: 3, label: "Submit", isActive: currentStep == .review, isComplete: false)
+            stepBadge(number: 3, label: "Submit", isActive: currentStep == .review, isComplete: false, isCompact: isCompact)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, isCompact ? 6 : 8)
     }
     
-    private func stepBadge(number: Int, label: String, isActive: Bool, isComplete: Bool) -> some View {
-        VStack(spacing: 4) {
+    private func stepBadge(number: Int, label: String, isActive: Bool, isComplete: Bool, isCompact: Bool = false) -> some View {
+        VStack(spacing: isCompact ? 3 : 4) {
             ZStack {
                 Circle()
                     .fill(isComplete ? Color.successGreen : (isActive ? Color.brandPurple : Color.surfaceSecondary))
-                    .frame(width: 32, height: 32)
+                    .frame(width: isCompact ? 28 : 32, height: isCompact ? 28 : 32)
                 
                 if isComplete {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: isCompact ? 12 : 14, weight: .bold))
                         .foregroundStyle(.white)
                 } else {
                     Text("\(number)")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: isCompact ? 12 : 14, weight: .semibold))
                         .foregroundStyle(isActive ? .white : Color.textSecondary)
                 }
             }
@@ -197,26 +202,30 @@ struct ProofSubmissionScreen: View {
     
     // MARK: - Task Summary Card
     
-    private func taskSummaryCard(_ task: HXTask) -> some View {
+    private func taskSummaryCard(_ task: HXTask, isCompact: Bool) -> some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: isCompact ? 3 : 4) {
                 HXText(task.title, style: .headline)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
                 HXText(task.location, style: .caption, color: .textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             
             Spacer()
             
             PriceDisplay(amount: task.payment, size: .small)
         }
-        .padding()
+        .padding(isCompact ? 12 : 16)
         .background(Color.surfaceElevated)
-        .cornerRadius(12)
+        .cornerRadius(isCompact ? 10 : 12)
     }
     
     // MARK: - GPS Section (v1.8.0)
     
-    private var gpsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func gpsSection(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 10 : 12) {
             HStack {
                 HXText("Location Capture", style: .headline)
                 Spacer()
@@ -277,6 +286,7 @@ struct ProofSubmissionScreen: View {
         }
         .buttonStyle(.plain)
         .disabled(isCapturingGPS)
+        .accessibilityLabel("Capture GPS location")
     }
     
     private func gpsCapturedCard(_ coords: GPSCoordinates) -> some View {
@@ -366,8 +376,8 @@ struct ProofSubmissionScreen: View {
     
     // MARK: - Photo Upload Section
     
-    private var photoUploadSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func photoUploadSection(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 10 : 12) {
             HStack {
                 HXText("Photo Proof", style: .headline)
                 Spacer()
@@ -412,19 +422,19 @@ struct ProofSubmissionScreen: View {
                                 Circle()
                                     .fill(Color.brandPurple.opacity(0.1))
                                     .frame(width: 48, height: 48)
-                                
+
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: 20))
                                     .foregroundStyle(Color.brandPurple)
                             }
-                            
+
                             VStack(alignment: .leading, spacing: 2) {
                                 HXText("Take Photo", style: .subheadline)
                                 HXText("Use camera to capture proof", style: .caption, color: .textSecondary)
                             }
-                            
+
                             Spacer()
-                            
+
                             Image(systemName: "chevron.right")
                                 .foregroundStyle(Color.textSecondary)
                         }
@@ -433,6 +443,7 @@ struct ProofSubmissionScreen: View {
                         .cornerRadius(12)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Take photo for proof")
                     
                     // Photo picker button (secondary)
                     PhotosPicker(
@@ -499,8 +510,8 @@ struct ProofSubmissionScreen: View {
     
     // MARK: - Notes Section
     
-    private var notesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func notesSection(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 10 : 12) {
             HXText("Notes (Optional)", style: .headline)
             
             TextField("Add any notes about the completed task", text: $notes, axis: .vertical)
@@ -514,7 +525,7 @@ struct ProofSubmissionScreen: View {
     
     // MARK: - Bottom Bar
     
-    private var bottomBar: some View {
+    private func bottomBar(bottomSafeArea: CGFloat = 0) -> some View {
         VStack(spacing: 8) {
             if !canProceedToPhoto {
                 HXButton("Capture GPS to Continue", variant: .secondary) {

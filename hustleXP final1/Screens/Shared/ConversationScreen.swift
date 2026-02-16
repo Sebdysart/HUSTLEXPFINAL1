@@ -32,66 +32,70 @@ struct ConversationScreen: View {
     @FocusState private var isInputFocused: Bool
     
     var body: some View {
-        ZStack {
-            Color.brandBlack
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Task context header
-                TaskContextHeader()
+        GeometryReader { geometry in
+            ZStack {
+                Color.brandBlack
+                    .ignoresSafeArea()
                 
-                // Messages list
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 16) {
-                            if isLoading {
-                                LoadingState(message: "Loading messages...")
-                                    .frame(height: 200)
-                            } else if messages.isEmpty {
-                                EmptyMessagesView()
-                            } else {
-                                ForEach(messages) { message in
-                                    MessageBubble(message: message)
-                                        .id(message.id)
+                VStack(spacing: 0) {
+                    // Task context header
+                    TaskContextHeader()
+                    
+                    // Messages list
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 16) {
+                                if isLoading {
+                                    LoadingState(message: "Loading messages...")
+                                        .frame(height: 200)
+                                } else if messages.isEmpty {
+                                    EmptyMessagesView()
+                                } else {
+                                    ForEach(messages) { message in
+                                        MessageBubble(message: message, maxWidth: geometry.size.width * 0.75)
+                                            .id(message.id)
+                                    }
+                                }
+                            }
+                            .padding(16)
+                            .padding(.bottom, 8) // Extra padding before input bar
+                        }
+                        .onChange(of: messages.count) { _, _ in
+                            if let lastMessage = messages.last {
+                                withAnimation {
+                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
                                 }
                             }
                         }
-                        .padding(16)
                     }
-                    .onChange(of: messages.count) { _, _ in
-                        if let lastMessage = messages.last {
-                            withAnimation {
-                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                            }
+                    
+                    // Typing indicator
+                    if isOtherUserTyping {
+                        HStack(spacing: 4) {
+                            Text("Typing")
+                                .font(.caption)
+                                .foregroundColor(.textTertiary)
+                            TypingDotsView()
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 4)
                     }
-                }
-                
-                // Typing indicator
-                if isOtherUserTyping {
-                    HStack(spacing: 4) {
-                        Text("Typing")
-                            .font(.caption)
-                            .foregroundColor(.textTertiary)
-                        TypingDotsView()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 4)
-                }
 
-                // Message input
-                MessageInputBar(
-                    text: $messageText,
-                    isFocused: $isInputFocused,
-                    onSend: sendMessage,
-                    onAttachment: { showPhotosPicker = true }
-                )
-                .photosPicker(isPresented: $showPhotosPicker, selection: $selectedPhotoItem, matching: .images)
-                .onChange(of: selectedPhotoItem) { _, newItem in
-                    Task {
-                        if let newItem = newItem,
-                           let data = try? await newItem.loadTransferable(type: Data.self) {
-                            sendPhotoMessage(imageData: data)
+                    // Message input with safe area handling
+                    MessageInputBar(
+                        text: $messageText,
+                        isFocused: $isInputFocused,
+                        onSend: sendMessage,
+                        onAttachment: { showPhotosPicker = true },
+                        bottomSafeArea: geometry.safeAreaInsets.bottom
+                    )
+                    .photosPicker(isPresented: $showPhotosPicker, selection: $selectedPhotoItem, matching: .images)
+                    .onChange(of: selectedPhotoItem) { _, newItem in
+                        Task {
+                            if let newItem = newItem,
+                               let data = try? await newItem.loadTransferable(type: Data.self) {
+                                sendPhotoMessage(imageData: data)
+                            }
                         }
                     }
                 }
@@ -119,6 +123,7 @@ struct ConversationScreen: View {
                     Image(systemName: "ellipsis.circle")
                         .foregroundStyle(Color.textPrimary)
                 }
+                .accessibilityLabel("Conversation options")
             }
         }
         .sheet(isPresented: $showReportSheet) {
@@ -376,11 +381,12 @@ private struct EmptyMessagesView: View {
 // MARK: - Message Bubble
 private struct MessageBubble: View {
     let message: ChatMessage
+    var maxWidth: CGFloat = 280 // Default max width, overridden by parent
     
     var body: some View {
         HStack {
             if message.isFromCurrentUser {
-                Spacer(minLength: 60)
+                Spacer(minLength: 40)
             }
             
             VStack(alignment: message.isFromCurrentUser ? .trailing : .leading, spacing: 4) {
@@ -398,6 +404,7 @@ private struct MessageBubble: View {
                         ? [.topLeft, .topRight, .bottomLeft]
                         : [.topLeft, .topRight, .bottomRight]
                     )
+                    .frame(maxWidth: maxWidth, alignment: message.isFromCurrentUser ? .trailing : .leading)
                 
                 HXText(
                     formatTime(message.timestamp),
@@ -419,7 +426,7 @@ private struct MessageBubble: View {
             }
 
             if !message.isFromCurrentUser {
-                Spacer(minLength: 60)
+                Spacer(minLength: 40)
             }
         }
     }
@@ -437,6 +444,7 @@ private struct MessageInputBar: View {
     var isFocused: FocusState<Bool>.Binding
     let onSend: () -> Void
     let onAttachment: () -> Void
+    var bottomSafeArea: CGFloat = 0
     
     var body: some View {
         VStack(spacing: 0) {
@@ -450,6 +458,7 @@ private struct MessageInputBar: View {
                         .font(.system(size: 28))
                         .foregroundStyle(Color.textSecondary)
                 }
+                .accessibilityLabel("Attach photo")
                 
                 // Text input
                 TextField("", text: $text, prompt: Text("Type a message...").foregroundColor(.textTertiary))
@@ -472,8 +481,11 @@ private struct MessageInputBar: View {
                         )
                 }
                 .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityLabel("Send message")
             }
-            .padding(12)
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+            .padding(.bottom, max(12, bottomSafeArea))
             .background(Color.brandBlack)
         }
     }

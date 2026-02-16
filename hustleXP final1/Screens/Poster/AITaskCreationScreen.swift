@@ -30,7 +30,8 @@ struct AITaskCreationScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
                 // Neon nexus background
@@ -133,12 +134,13 @@ struct AITaskCreationScreen: View {
                     Circle()
                         .fill(Color.white.opacity(0.05))
                         .frame(width: isCompact ? 38 : 44, height: isCompact ? 38 : 44)
-                    
+
                     Image(systemName: "xmark")
                         .font(.system(size: isCompact ? 14 : 16, weight: .medium))
                         .foregroundStyle(Color.textSecondary)
                 }
             }
+            .accessibilityLabel("Close AI task creator")
             
             Spacer()
             
@@ -151,6 +153,7 @@ struct AITaskCreationScreen: View {
                 
                 Text("AI CREATOR")
                     .font(.system(size: isCompact ? 10 : 12, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .tracking(2)
                     .foregroundStyle(Color.textSecondary)
             }
@@ -213,6 +216,7 @@ struct AITaskCreationScreen: View {
             // Main prompt text - BOLD and CENTERED
             Text("What do you need done?")
                 .font(.system(size: isCompact ? 26 : 32, weight: .bold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(.white)
                 .shadow(color: Color.aiPurple.opacity(0.5), radius: 20)
                 .multilineTextAlignment(.center)
@@ -322,6 +326,7 @@ struct AITaskCreationScreen: View {
             .clipShape(RoundedRectangle(cornerRadius: isCompact ? 14 : 16))
             .shadow(color: Color.successGreen.opacity(0.5), radius: isCompact ? 12 : 15, y: isCompact ? 4 : 5)
         }
+        .accessibilityLabel("Post task")
         .disabled(isPosting)
         .padding(.horizontal, isCompact ? 16 : 20)
         .padding(.vertical, isCompact ? 10 : 12)
@@ -396,6 +401,7 @@ struct AITaskCreationScreen: View {
                         .foregroundStyle(userInput.isEmpty ? Color.textMuted : .white)
                 }
             }
+            .accessibilityLabel("Send message")
             .disabled(userInput.isEmpty || isTyping)
             .scaleEffect(userInput.isEmpty ? 1.0 : 1.05)
             .animation(.spring(response: 0.3), value: userInput.isEmpty)
@@ -726,6 +732,7 @@ struct NeonTaskCardPreview: View {
                 .font(.system(size: isCompact ? 17 : 20, weight: .bold))
                 .foregroundStyle(title.isEmpty ? Color.textMuted : Color.textPrimary)
                 .lineLimit(2)
+                .minimumScaleFactor(0.8)
             
             Spacer().frame(height: isCompact ? 12 : 16)
             
@@ -744,6 +751,7 @@ struct NeonTaskCardPreview: View {
                 if let payment = payment {
                     Text("$\(String(format: "%.0f", payment))")
                         .font(.system(size: isCompact ? 22 : 28, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.moneyGreen)
                         .shadow(color: Color.moneyGreen.opacity(0.3), radius: 5)
                 } else {
@@ -781,6 +789,7 @@ struct NeonTaskCardPreview: View {
                         .font(isCompact ? .footnote : .subheadline)
                         .foregroundStyle(location.isEmpty ? Color.textMuted : Color.textSecondary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 
                 Spacer()

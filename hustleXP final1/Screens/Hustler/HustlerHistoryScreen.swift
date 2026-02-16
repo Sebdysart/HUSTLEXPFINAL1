@@ -79,6 +79,7 @@ struct HustlerHistoryScreen: View {
             ) {
                 // Navigate to feed - would need tab switching
             }
+            .accessibilityLabel("No completed tasks yet, browse tasks to get started")
             Spacer()
         }
     }

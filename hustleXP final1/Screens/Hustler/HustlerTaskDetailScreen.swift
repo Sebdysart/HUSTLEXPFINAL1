@@ -84,6 +84,7 @@ struct HustlerTaskDetailScreen: View {
                             .font(.system(size: 22))
                             .foregroundStyle(Color.textSecondary)
                     }
+                    .accessibilityLabel("More options")
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -182,6 +183,7 @@ struct HustlerTaskDetailScreen: View {
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(3)
+                .minimumScaleFactor(0.7)
             
             // Price and duration row
             HStack(spacing: 20) {
@@ -199,6 +201,7 @@ struct HustlerTaskDetailScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("$\(Int(task.payment))")
                             .font(.system(size: 20, weight: .bold))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.moneyGreen)
                         Text("Payment")
                             .font(.caption)
@@ -222,6 +225,7 @@ struct HustlerTaskDetailScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(task.estimatedDuration)
                             .font(.system(size: 16, weight: .semibold))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.textPrimary)
                         Text("Duration")
                             .font(.caption)
@@ -287,6 +291,7 @@ struct HustlerTaskDetailScreen: View {
                     .foregroundStyle(color)
                 Text(value)
                     .font(.system(size: 16, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
             }
             Text(label)
@@ -495,6 +500,7 @@ struct HustlerTaskDetailScreen: View {
                                 .fill(Color.brandPurple.opacity(0.15))
                         )
                 }
+                .accessibilityLabel("Message poster")
             }
         }
         .padding(16)
@@ -627,6 +633,7 @@ struct HustlerTaskDetailScreen: View {
                                 )
                         )
                 }
+                .accessibilityLabel("Save task")
                 
                 // Main action button
                 Button(action: {

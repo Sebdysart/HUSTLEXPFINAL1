@@ -340,6 +340,7 @@ private struct FeedbackButton: View {
             .cornerRadius(10)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(title) feedback")
     }
 }
 

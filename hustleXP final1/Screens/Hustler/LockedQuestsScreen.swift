@@ -57,15 +57,17 @@ struct LockedQuestsScreen: View {
                     .foregroundStyle(Color.textPrimary)
                     .frame(width: 44, height: 44)
             }
-            
+            .accessibilityLabel("Go back")
+
             Spacer()
-            
+
             Text("Locked Quests")
                 .font(.system(size: 17, weight: .semibold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.textPrimary)
-            
+
             Spacer()
-            
+
             Button {
                 router.navigateToHustler(.skillSelection)
             } label: {
@@ -74,6 +76,7 @@ struct LockedQuestsScreen: View {
                     .foregroundStyle(Color.brandPurple)
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Manage skills")
         }
         .padding(.horizontal, 8)
         .padding(.top, 8)
@@ -121,6 +124,7 @@ struct LockedQuestsScreen: View {
         VStack(spacing: 2) {
             Text(value)
                 .font(.system(size: 18, weight: .bold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(color)
             Text(label)
                 .font(.system(size: 11))
@@ -147,6 +151,7 @@ struct LockedQuestsScreen: View {
             VStack(spacing: 8) {
                 Text("All Caught Up!")
                     .font(.system(size: 20, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("You're eligible for all nearby quests.\nKeep building your skills to unlock premium tasks.")

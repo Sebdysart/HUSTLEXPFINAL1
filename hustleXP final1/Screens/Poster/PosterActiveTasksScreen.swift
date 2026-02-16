@@ -58,6 +58,7 @@ struct PosterActiveTasksScreen: View {
                 Button(action: { router.navigateToPoster(.createTask) }) {
                     HXIcon(HXIcon.add, size: .medium, color: .brandPurple)
                 }
+                .accessibilityLabel("Create new task")
             }
         }
     }

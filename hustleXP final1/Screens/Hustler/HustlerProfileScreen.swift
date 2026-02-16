@@ -82,6 +82,7 @@ struct HustlerProfileScreen: View {
                     Image(systemName: "pencil")
                         .foregroundStyle(Color.textPrimary)
                 }
+                .accessibilityLabel("Edit profile")
             }
         }
     }
@@ -380,6 +381,7 @@ private struct AchievementsPreviewSection: View {
                 Button(action: {}) {
                     HXText("See All", style: .caption, color: .brandPurple)
                 }
+                .accessibilityLabel("See all achievements")
             }
             .padding(.horizontal, 4)
             

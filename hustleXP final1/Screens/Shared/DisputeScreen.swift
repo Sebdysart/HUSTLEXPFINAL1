@@ -291,7 +291,7 @@ private struct PhotoAttachmentSection: View {
                         Image(systemName: "camera.fill")
                             .font(.system(size: 24))
                             .foregroundStyle(Color.brandPurple)
-                        
+
                         HXText("Add Photo", style: .caption, color: .textSecondary)
                     }
                     .frame(width: 80, height: 80)
@@ -302,6 +302,7 @@ private struct PhotoAttachmentSection: View {
                             .stroke(Color.borderSubtle, style: StrokeStyle(lineWidth: 1, dash: [5]))
                     )
                 }
+                .accessibilityLabel("Add evidence photo")
                 
                 // Attached photos would appear here
                 ForEach(attachedPhotos, id: \.self) { photo in
@@ -381,6 +382,7 @@ private struct SubmitActionBar: View {
                 }
                 .disabled(!isValid || isSubmitting)
                 .opacity(isValid ? 1 : 0.5)
+                .accessibilityLabel("Submit report")
                 
                 HXText(
                     "By submitting, you confirm this report is accurate and truthful.",

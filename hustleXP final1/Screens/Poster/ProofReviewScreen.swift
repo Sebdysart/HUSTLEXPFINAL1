@@ -235,6 +235,7 @@ private struct RatingSection: View {
                             .foregroundStyle(star <= rating ? Color.warningOrange : Color.textTertiary)
                             .scaleEffect(star <= rating ? 1.1 : 1.0)
                     }
+                    .accessibilityLabel("\(star) star\(star == 1 ? "" : "s")")
                 }
             }
             .frame(maxWidth: .infinity)
@@ -392,11 +393,13 @@ private struct ReviewActionBar: View {
                 }
                 .disabled(rating == 0 || isProcessing)
                 .opacity(rating > 0 ? 1 : 0.5)
+                .accessibilityLabel("Approve and pay")
                 
                 Button(action: onReject) {
                     HXText("Request Changes", style: .subheadline, color: .warningOrange)
                 }
                 .disabled(isProcessing)
+                .accessibilityLabel("Request changes")
             }
             .padding(20)
             .background(Color.brandBlack)

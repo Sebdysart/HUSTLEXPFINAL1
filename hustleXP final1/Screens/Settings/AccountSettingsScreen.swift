@@ -57,6 +57,7 @@ struct AccountSettingsScreen: View {
                         HXText("Edit Profile", style: .body, color: .infoBlue)
                     }
                 }
+                .accessibilityLabel("Edit profile")
                 
                 Button(action: {}) {
                     HStack {
@@ -75,6 +76,7 @@ struct AccountSettingsScreen: View {
                         HXText("Delete Account", style: .body, color: .errorRed)
                     }
                 }
+                .accessibilityLabel("Delete account")
             } footer: {
                 Text("This action cannot be undone. All your data will be permanently deleted.")
                     .font(.caption)

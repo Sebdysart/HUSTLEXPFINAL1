@@ -15,7 +15,8 @@ struct NetworkErrorScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
                 Color.brandBlack
@@ -95,6 +96,7 @@ struct NetworkErrorScreen: View {
                                 onRetry()
                             }
                         }
+                        .accessibilityLabel("Try connecting again")
                         
                         HXText(
                             "Error Code: NET_TIMEOUT",
@@ -120,6 +122,7 @@ private struct TroubleshootRow: View {
         HStack(spacing: isCompact ? 10 : 12) {
             Text("\(number)")
                 .font(.system(size: isCompact ? 10 : 12, weight: .bold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.brandBlack)
                 .frame(width: isCompact ? 20 : 24, height: isCompact ? 20 : 24)
                 .background(Color.textSecondary)

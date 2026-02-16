@@ -17,14 +17,54 @@ struct OnboardingCompleteScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
-                // Background
-                LinearGradient.brandGradient
+                // Premium dark background with gradient
+                Color.brandBlack
                     .ignoresSafeArea()
                 
-                // Confetti particles (simple version)
+                // Success gradient orbs
+                VStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color.successGreen.opacity(0.25), Color.clear],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 200
+                            )
+                        )
+                        .frame(width: 400, height: 400)
+                        .blur(radius: 60)
+                        .offset(y: -50)
+                    Spacer()
+                }
+                .ignoresSafeArea()
+                
+                // Secondary purple accent
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [Color.brandPurple.opacity(0.15), Color.clear],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: 150
+                                )
+                            )
+                            .frame(width: 300, height: 300)
+                            .blur(radius: 50)
+                            .offset(x: 80, y: 100)
+                    }
+                }
+                .ignoresSafeArea()
+                
+                // Confetti particles (enhanced version)
                 if confettiTrigger {
                     ConfettiView()
                 }
@@ -70,10 +110,12 @@ struct OnboardingCompleteScreen: View {
                         VStack(spacing: isCompact ? 12 : 16) {
                             Text("You're All Set!")
                                 .font(.system(size: isCompact ? 28 : 34, weight: .bold))
+                                .minimumScaleFactor(0.7)
                                 .foregroundStyle(Color.textPrimary)
                             
                             Text("Welcome to HustleXP, \(appState.userName ?? "Hustler")!")
                                 .font(.system(size: isCompact ? 15 : 17))
+                                .minimumScaleFactor(0.7)
                                 .foregroundStyle(Color.textSecondary)
                         }
                         .opacity(showContent ? 1 : 0)
@@ -88,6 +130,7 @@ struct OnboardingCompleteScreen: View {
                             HStack {
                                 Text("Your Profile")
                                     .font(.system(size: isCompact ? 16 : 18, weight: .semibold))
+                                    .minimumScaleFactor(0.7)
                                     .foregroundStyle(Color.textPrimary)
                                 Spacer()
                                 HXBadge(variant: .tier(appState.trustTier))
@@ -135,6 +178,7 @@ struct OnboardingCompleteScreen: View {
                         HXButton("Start Hustling", variant: .primary) {
                             appState.completeOnboarding()
                         }
+                        .accessibilityLabel("Start using the app")
                         .padding(.horizontal, isCompact ? 18 : 24)
                         .padding(.bottom, max(24, geometry.safeAreaInsets.bottom + 16))
                         .opacity(showContent ? 1 : 0)
@@ -171,12 +215,13 @@ private struct StatRow: View {
             
             Text(value)
                 .font(.system(size: isCompact ? 15 : 17, weight: .semibold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.textPrimary)
         }
     }
 }
 
-// MARK: - Simple Confetti View
+// MARK: - Enhanced Confetti View
 private struct ConfettiView: View {
     @State private var particles: [ConfettiParticle] = []
     @State private var hasCreatedParticles = false
@@ -185,11 +230,26 @@ private struct ConfettiView: View {
         GeometryReader { geometry in
             ZStack {
                 ForEach(particles) { particle in
-                    Circle()
-                        .fill(particle.color)
-                        .frame(width: particle.size, height: particle.size)
-                        .position(particle.position)
-                        .opacity(particle.opacity)
+                    Group {
+                        if particle.shape == .circle {
+                            Circle()
+                                .fill(particle.color)
+                                .frame(width: particle.size, height: particle.size)
+                        } else if particle.shape == .rectangle {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(particle.color)
+                                .frame(width: particle.size, height: particle.size * 1.5)
+                                .rotationEffect(.degrees(particle.rotation))
+                        } else {
+                            // Star shape
+                            Image(systemName: "star.fill")
+                                .font(.system(size: particle.size))
+                                .foregroundStyle(particle.color)
+                                .rotationEffect(.degrees(particle.rotation))
+                        }
+                    }
+                    .position(particle.position)
+                    .opacity(particle.opacity)
                 }
             }
             .onAppear {
@@ -201,24 +261,35 @@ private struct ConfettiView: View {
     }
     
     private func createParticles(screenWidth: CGFloat, screenHeight: CGFloat) {
-        let colors: [Color] = [.brandPurple, .accentPurple, .successGreen, .warningOrange, .infoBlue]
+        let colors: [Color] = [
+            .brandPurple, .brandPurpleLight, .accentPurple, .accentViolet,
+            .successGreen, .moneyGreen, .warningOrange, .instantYellow, .infoBlue
+        ]
+        let shapes: [ConfettiShape] = [.circle, .circle, .rectangle, .rectangle, .star]
         
-        for i in 0..<30 {
+        // Create more particles for a richer effect
+        for i in 0..<50 {
             let particle = ConfettiParticle(
                 id: i,
                 color: colors.randomElement()!,
-                size: CGFloat.random(in: 6...12),
+                size: CGFloat.random(in: 5...14),
                 position: CGPoint(x: CGFloat.random(in: 0...screenWidth), y: -20),
-                opacity: 1.0
+                opacity: 1.0,
+                shape: shapes.randomElement()!,
+                rotation: Double.random(in: 0...360)
             )
             particles.append(particle)
             
-            // Animate falling
+            // Animate falling with varied timing
+            let delay = Double.random(in: 0...0.8)
+            let duration = Double.random(in: 2.5...5.0)
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.easeIn(duration: Double.random(in: 2...4)).delay(Double.random(in: 0...0.5))) {
+                withAnimation(.easeIn(duration: duration).delay(delay)) {
                     if i < particles.count {
                         particles[i].position.y = screenHeight + 50
-                        particles[i].position.x += CGFloat.random(in: -100...100)
+                        particles[i].position.x += CGFloat.random(in: -150...150)
+                        particles[i].rotation += Double.random(in: 180...720)
                         particles[i].opacity = 0
                     }
                 }
@@ -227,12 +298,18 @@ private struct ConfettiView: View {
     }
 }
 
+private enum ConfettiShape {
+    case circle, rectangle, star
+}
+
 private struct ConfettiParticle: Identifiable {
     let id: Int
     let color: Color
     let size: CGFloat
     var position: CGPoint
     var opacity: Double
+    var shape: ConfettiShape
+    var rotation: Double
 }
 
 #Preview {

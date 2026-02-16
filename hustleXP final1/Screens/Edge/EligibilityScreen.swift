@@ -28,6 +28,7 @@ struct EligibilityScreen: View {
                     Button(action: onDismiss) {
                         HXIcon("xmark", size: .medium, color: .textSecondary)
                     }
+                    .accessibilityLabel("Dismiss")
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
@@ -119,12 +120,14 @@ struct EligibilityScreen: View {
                         variant: .primary,
                         action: onLearnMore
                     )
-                    
+                    .accessibilityLabel("Learn how to level up your tier")
+
                     HXButton(
                         "Find Other Tasks",
                         variant: .ghost,
                         action: onDismiss
                     )
+                    .accessibilityLabel("Find other available tasks")
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)

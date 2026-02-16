@@ -37,4 +37,5 @@ struct AuthStack: View {
     AuthStack()
         .environment(AppState())
         .environment(Router())
+        .environmentObject(AuthService.shared)
 }

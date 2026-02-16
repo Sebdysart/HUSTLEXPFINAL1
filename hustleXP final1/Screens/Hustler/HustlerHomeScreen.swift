@@ -19,7 +19,8 @@ struct HustlerHomeScreen: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isCompact = geometry.size.height < 700
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
             ZStack {
                 // Neon background
@@ -78,10 +79,11 @@ struct HustlerHomeScreen: View {
     // MARK: - Neon Background
     
     private var neonBackground: some View {
-        let screenWidth = UIScreen.main.bounds.width
+        GeometryReader { geometry in
+            let screenWidth = geometry.size.width
 
-        return ZStack {
-            Color.brandBlack.ignoresSafeArea()
+            ZStack {
+                Color.brandBlack.ignoresSafeArea()
 
             // Animated gradient orbs
             Circle()
@@ -109,8 +111,9 @@ struct HustlerHomeScreen: View {
                 .frame(width: screenWidth * 0.75, height: screenWidth * 0.75)
                 .offset(x: screenWidth * 0.25, y: 400)
                 .blur(radius: 50)
+            }
+            .ignoresSafeArea()
         }
-        .ignoresSafeArea()
     }
     
     // MARK: - Profile Button
@@ -121,16 +124,17 @@ struct HustlerHomeScreen: View {
                 Circle()
                     .fill(Color.brandPurple.opacity(0.2))
                     .frame(width: 40, height: 40)
-                
+
                 Circle()
                     .stroke(Color.brandPurple.opacity(0.5), lineWidth: 1)
                     .frame(width: 40, height: 40)
-                
+
                 Image(systemName: "person.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.brandPurple)
             }
         }
+        .accessibilityLabel("View profile")
     }
     
     // MARK: - Welcome Header
@@ -176,12 +180,14 @@ struct HustlerHomeScreen: View {
             VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
                 Text("Hey, \(dataService.currentUser.name)!")
                     .font(.system(size: isCompact ? 22 : 26, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                     .opacity(showGreeting ? 1 : 0)
                     .offset(x: showGreeting ? 0 : -20)
                 
                 Text("Ready to hustle?")
                     .font(.system(size: isCompact ? 14 : 15))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textSecondary)
                     .opacity(showGreeting ? 1 : 0)
                     .offset(x: showGreeting ? 0 : -20)
@@ -280,16 +286,19 @@ struct HustlerHomeScreen: View {
                     }
                     .foregroundStyle(Color.brandPurple)
                 }
+                .accessibilityLabel("View XP details")
             }
             
             // XP display
             HStack(alignment: .bottom, spacing: 4) {
                 Text("\(dataService.currentUser.xp)")
                     .font(.system(size: isCompact ? 36 : 48, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("XP")
                     .font(.system(size: 20, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.warningOrange)
                     .padding(.bottom, 8)
                 
@@ -512,6 +521,7 @@ struct HustlerHomeScreen: View {
                     }
                     .foregroundStyle(Color.brandPurple)
                 }
+                .accessibilityLabel("See all recommended tasks")
                 .padding(.trailing, 20)
             }
             
@@ -523,24 +533,27 @@ struct HustlerHomeScreen: View {
                 )
                 .padding(.horizontal, 20)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
-                        ForEach(Array(dataService.availableTasks.prefix(3).enumerated()), id: \.element.id) { index, task in
-                            TaskCard(
-                                title: task.title,
-                                payment: task.payment,
-                                location: task.location,
-                                duration: task.estimatedDuration,
-                                variant: index == 0 ? .featured : .compact,
-                                category: index == 0 ? "Top Pick" : nil
-                            ) {
-                                router.navigateToHustler(.taskDetail(taskId: task.id))
+                GeometryReader { geo in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            ForEach(Array(dataService.availableTasks.prefix(3).enumerated()), id: \.element.id) { index, task in
+                                TaskCard(
+                                    title: task.title,
+                                    payment: task.payment,
+                                    location: task.location,
+                                    duration: task.estimatedDuration,
+                                    variant: index == 0 ? .featured : .compact,
+                                    category: index == 0 ? "Top Pick" : nil
+                                ) {
+                                    router.navigateToHustler(.taskDetail(taskId: task.id))
+                                }
+                                .frame(width: index == 0 ? min(300, geo.size.width * 0.77) : min(260, geo.size.width * 0.67))
                             }
-                            .frame(width: index == 0 ? min(300, UIScreen.main.bounds.width * 0.77) : min(260, UIScreen.main.bounds.width * 0.67))
                         }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
                 }
+                .frame(height: 220)
             }
         }
     }
@@ -644,6 +657,7 @@ struct ActiveTaskCard: View {
                     .font(.title3.weight(.bold))
                     .foregroundStyle(Color.textPrimary)
                     .lineLimit(2)
+                    .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.leading)
                 
                 // Payment

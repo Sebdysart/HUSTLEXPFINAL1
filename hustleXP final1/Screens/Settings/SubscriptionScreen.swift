@@ -221,6 +221,7 @@ struct SubscriptionScreen: View {
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(priceLabel)
                     .font(.title2.weight(.bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundColor(.textPrimary)
                 Text(interval)
                     .font(.caption)
@@ -284,6 +285,7 @@ struct SubscriptionScreen: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .shadow(color: plan.color.opacity(0.4), radius: 8, y: 4)
                 }
+                .accessibilityLabel("Subscribe to \(plan.displayName)")
             }
         }
         .padding(16)
@@ -309,6 +311,7 @@ struct SubscriptionScreen: View {
                 .font(.caption)
                 .foregroundColor(.textSecondary)
                 .lineLimit(2)
+                .minimumScaleFactor(0.8)
         }
     }
 
@@ -375,6 +378,7 @@ struct SubscriptionScreen: View {
             .background(Color.errorRed.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+        .accessibilityLabel("Cancel subscription")
     }
 
     // MARK: - Actions

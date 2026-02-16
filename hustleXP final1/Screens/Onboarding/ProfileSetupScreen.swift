@@ -118,10 +118,12 @@ struct ProfileSetupScreen: View {
         VStack(spacing: isCompact ? 8 : 12) {
             Text("Set Up Your Profile")
                 .font(.system(size: isCompact ? 24 : 28, weight: .bold))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.textPrimary)
             
             Text("Let people know who you are")
                 .font(.system(size: isCompact ? 14 : 15))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.textSecondary)
         }
         .padding(.top, isCompact ? 16 : 24)
@@ -207,6 +209,7 @@ struct ProfileSetupScreen: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.brandPurple)
             }
+            .accessibilityLabel("Add profile photo")
         }
         .opacity(showContent ? 1 : 0)
         .scaleEffect(showContent ? 1 : 0.9)
@@ -275,6 +278,7 @@ struct ProfileSetupScreen: View {
                         .font(.body)
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(3...6)
+                        .minimumScaleFactor(0.8)
                         .focused($focusedField, equals: .bio)
                 }
                 .padding(16)
@@ -409,6 +413,7 @@ struct ProfileSetupScreen: View {
                         } else {
                             Text("Complete Setup")
                                 .font(.system(size: isCompact ? 15 : 17, weight: .semibold))
+                                .minimumScaleFactor(0.7)
                             Image(systemName: "arrow.right")
                                 .font(.system(size: isCompact ? 12 : 14, weight: .bold))
                         }
@@ -434,6 +439,7 @@ struct ProfileSetupScreen: View {
                     )
                     .shadow(color: isValid ? Color.brandPurple.opacity(0.3) : .clear, radius: 12, y: 4)
                 }
+                .accessibilityLabel("Complete profile setup")
                 .disabled(!isValid || isLoading)
                 .padding(.horizontal, isCompact ? 18 : 24)
                 .padding(.vertical, isCompact ? 12 : 16)

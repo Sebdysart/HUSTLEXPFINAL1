@@ -130,6 +130,7 @@ private struct BalanceCard: View {
             HXButton("Cash Out", variant: .primary) {
                 // Handle cash out
             }
+            .accessibilityLabel("Cash out balance")
         }
         .padding(24)
         .background(

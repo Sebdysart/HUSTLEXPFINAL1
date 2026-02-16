@@ -88,6 +88,7 @@ struct TaxPaymentScreen: View {
             // Amount
             Text(dataService.taxStatus.formattedUnpaidAmount)
                 .font(.system(size: 56, weight: .bold, design: .rounded))
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.taxWarning)
             
             // XP held
@@ -97,6 +98,7 @@ struct TaxPaymentScreen: View {
                 
                 Text("\(dataService.taxStatus.xpHeldBack) XP locked")
                     .font(.headline)
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(Color.brandPurple)
             .padding(.horizontal, 16)
@@ -254,6 +256,7 @@ struct TaxPaymentScreen: View {
                     
                     Text("+\(result.xpReleased)")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.brandPurple)
                     
                     Text("XP")

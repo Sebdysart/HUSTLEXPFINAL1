@@ -117,6 +117,7 @@ struct HowItWorksScreen: View {
                                 router.navigateToOnboarding(.roleSelection)
                             }
                         }
+                        .accessibilityLabel(currentPage < pages.count - 1 ? "Next page" : "Choose your role")
 
                         if currentPage < pages.count - 1 {
                             Button(action: {
@@ -124,8 +125,10 @@ struct HowItWorksScreen: View {
                             }) {
                                 Text("Skip")
                                     .font(.system(size: 14, weight: .medium))
+                                    .minimumScaleFactor(0.7)
                                     .foregroundStyle(Color.textMuted)
                             }
+                            .accessibilityLabel("Skip tutorial")
                         }
                     }
                     .padding(.horizontal, 24)
@@ -186,12 +189,14 @@ struct HowItWorksScreen: View {
             VStack(spacing: isCompact ? 12 : 16) {
                 Text(page.title)
                     .font(.system(size: isCompact ? 26 : 32, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(page.subtitle)
                     .font(.system(size: isCompact ? 15 : 17))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
@@ -206,6 +211,7 @@ struct HowItWorksScreen: View {
 
                     Text(page.detail)
                         .font(.system(size: isCompact ? 12 : 13, weight: .medium))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)

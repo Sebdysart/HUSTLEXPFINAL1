@@ -296,6 +296,7 @@ private struct HustlerInfoCard: View {
                     .background(Color.brandPurple.opacity(0.15))
                     .cornerRadius(10)
                 }
+                .accessibilityLabel("Message hustler")
                 
                 Button(action: {}) {
                     HStack(spacing: 8) {
@@ -308,6 +309,7 @@ private struct HustlerInfoCard: View {
                     .background(Color.surfaceSecondary)
                     .cornerRadius(10)
                 }
+                .accessibilityLabel("Call hustler")
                 
                 Spacer()
             }
@@ -425,6 +427,7 @@ private struct ReviewProofCTA: View {
                 HXButton("Review Proof", variant: .primary) {
                     router.navigateToPoster(.proofReview(taskId: task.id))
                 }
+                .accessibilityLabel("Review proof")
             }
             .padding(20)
             .background(Color.brandBlack)

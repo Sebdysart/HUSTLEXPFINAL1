@@ -64,6 +64,7 @@ struct SquadDetailScreen: View {
                         .foregroundStyle(Color.textMuted)
                     Text("Squad not found")
                         .font(.system(size: 17, weight: .semibold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textSecondary)
                 }
             }
@@ -103,11 +104,13 @@ struct SquadDetailScreen: View {
             VStack(spacing: 6) {
                 Text(squad.name)
                     .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
 
                 if let tagline = squad.tagline, !tagline.isEmpty {
                     Text(tagline)
                         .font(.system(size: 15, weight: .medium))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textSecondary)
                         .italic()
                 }
@@ -225,6 +228,7 @@ struct SquadDetailScreen: View {
 
                 Text(value)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
             }
 
@@ -298,6 +302,7 @@ struct SquadDetailScreen: View {
                 HStack(spacing: 6) {
                     Text(member.userName)
                         .font(.system(size: 15, weight: .semibold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textPrimary)
 
                     // Captain crown
@@ -336,6 +341,7 @@ struct SquadDetailScreen: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(member.completedTasks)")
                     .font(.system(size: 16, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 Text("tasks")
                     .font(.system(size: 11))
@@ -379,6 +385,7 @@ struct SquadDetailScreen: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
 
                     Text(task.statusLabel)
                         .font(.system(size: 12, weight: .medium))
@@ -390,6 +397,7 @@ struct SquadDetailScreen: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(task.formattedPerWorkerPay)
                         .font(.system(size: 17, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.moneyGreen)
                     Text("per worker")
                         .font(.system(size: 11))
@@ -496,6 +504,7 @@ struct SquadDetailScreen: View {
 
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
+                    .minimumScaleFactor(0.7)
 
                 Spacer()
 
@@ -516,6 +525,7 @@ struct SquadDetailScreen: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 
     // MARK: - Invite Sheet
@@ -541,10 +551,12 @@ struct SquadDetailScreen: View {
                     VStack(spacing: 8) {
                         Text("Invite to Squad")
                             .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.textPrimary)
 
                         Text("Only Elite+ hustlers can join squads.\nShare your invite link or search by username.")
                             .font(.system(size: 15))
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.textSecondary)
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)

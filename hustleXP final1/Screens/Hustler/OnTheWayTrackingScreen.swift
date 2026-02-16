@@ -95,6 +95,7 @@ struct OnTheWayTrackingScreen: View {
                     .frame(width: 44, height: 44)
                     .background(Circle().fill(Color.surfaceElevated))
             }
+            .accessibilityLabel("Go back")
             
             Spacer()
             
@@ -126,6 +127,7 @@ struct OnTheWayTrackingScreen: View {
                     .frame(width: 44, height: 44)
                     .background(Circle().fill(Color.surfaceElevated))
             }
+            .accessibilityLabel("Emergency contact")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -238,6 +240,7 @@ struct OnTheWayTrackingScreen: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(hasStartedNavigation ? "Navigating to destination" : "Waiting for navigation")
                     .font(.system(size: 16, weight: .semibold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 if hasStartedNavigation {
@@ -316,6 +319,7 @@ struct OnTheWayTrackingScreen: View {
             VStack(spacing: 4) {
                 Text("\(tracking.currentETA / 60)")
                     .font(.system(size: 32, weight: .black))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 Text("min ETA")
                     .font(.system(size: 12))
@@ -331,6 +335,7 @@ struct OnTheWayTrackingScreen: View {
             VStack(spacing: 4) {
                 Text(formatDistance(tracking.distanceRemaining))
                     .font(.system(size: 24, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 Text("remaining")
                     .font(.system(size: 12))
@@ -346,6 +351,7 @@ struct OnTheWayTrackingScreen: View {
             VStack(spacing: 4) {
                 Text(String(format: "%.1f", tracking.averageSpeed * 3.6))
                     .font(.system(size: 24, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 Text("km/h")
                     .font(.system(size: 12))
@@ -449,6 +455,7 @@ struct OnTheWayTrackingScreen: View {
                 
                 Text("Ghosting Warning")
                     .font(.system(size: 24, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("You haven't started moving toward the destination. If you don't start within the next 30 seconds, you'll receive a strike and the quest will be re-listed.")

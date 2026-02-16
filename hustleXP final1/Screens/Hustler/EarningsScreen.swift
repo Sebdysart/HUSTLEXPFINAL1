@@ -11,22 +11,28 @@ struct EarningsScreen: View {
     @Environment(LiveDataService.self) private var dataService
     
     var body: some View {
-        ZStack {
-            Color.brandBlack
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
             
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Total earnings hero
-                    earningsHero
-                    
-                    // Period breakdown
-                    periodBreakdown
-                    
-                    // Recent earnings
-                    recentEarnings
+            ZStack {
+                Color.brandBlack
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: isCompact ? 18 : 24) {
+                        // Total earnings hero
+                        earningsHero(isCompact: isCompact)
+                        
+                        // Period breakdown
+                        periodBreakdown(isCompact: isCompact)
+                        
+                        // Recent earnings
+                        recentEarnings(isCompact: isCompact)
+                    }
+                    .padding(.vertical, isCompact ? 12 : 16)
+                    .padding(.bottom, max(16, geometry.safeAreaInsets.bottom))
                 }
-                .padding(.vertical)
             }
         }
         .navigationTitle("Earnings")
@@ -38,8 +44,8 @@ struct EarningsScreen: View {
     
     // MARK: - Earnings Hero
     
-    private var earningsHero: some View {
-        VStack(spacing: 8) {
+    private func earningsHero(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? 6 : 8) {
             HXText("Total Earnings", style: .subheadline, color: .textSecondary)
             
             PriceDisplay(
@@ -50,7 +56,7 @@ struct EarningsScreen: View {
             )
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
+        .padding(.vertical, isCompact ? 24 : 32)
         .background(
             LinearGradient(
                 colors: [Color.moneyGreen.opacity(0.1), Color.moneyGreen.opacity(0.05)],
@@ -58,44 +64,47 @@ struct EarningsScreen: View {
                 endPoint: .bottom
             )
         )
-        .cornerRadius(16)
-        .padding(.horizontal)
+        .cornerRadius(isCompact ? 12 : 16)
+        .padding(.horizontal, isCompact ? 16 : 20)
     }
     
     // MARK: - Period Breakdown
     
-    private var periodBreakdown: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private func periodBreakdown(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 12 : 16) {
             HXText("Breakdown", style: .headline)
-                .padding(.horizontal)
+                .padding(.horizontal, isCompact ? 16 : 20)
             
-            VStack(spacing: 12) {
+            VStack(spacing: isCompact ? 8 : 12) {
                 EarningsPeriodRow(
                     period: "This Week",
                     amount: dataService.currentUser.totalEarnings * 0.3,
-                    icon: "calendar"
+                    icon: "calendar",
+                    isCompact: isCompact
                 )
                 EarningsPeriodRow(
                     period: "This Month",
                     amount: dataService.currentUser.totalEarnings * 0.7,
-                    icon: "calendar.badge.clock"
+                    icon: "calendar.badge.clock",
+                    isCompact: isCompact
                 )
                 EarningsPeriodRow(
                     period: "All Time",
                     amount: dataService.currentUser.totalEarnings,
-                    icon: "clock.fill"
+                    icon: "clock.fill",
+                    isCompact: isCompact
                 )
             }
-            .padding(.horizontal)
+            .padding(.horizontal, isCompact ? 16 : 20)
         }
     }
     
     // MARK: - Recent Earnings
     
-    private var recentEarnings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private func recentEarnings(isCompact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isCompact ? 12 : 16) {
             HXText("Recent Earnings", style: .headline)
-                .padding(.horizontal)
+                .padding(.horizontal, isCompact ? 16 : 20)
             
             if dataService.completedTasks.isEmpty {
                 EmptyState(
@@ -104,12 +113,12 @@ struct EarningsScreen: View {
                     message: "Complete tasks to start earning"
                 )
             } else {
-                VStack(spacing: 8) {
+                VStack(spacing: isCompact ? 6 : 8) {
                     ForEach(dataService.completedTasks.prefix(5)) { task in
-                        EarningsTransactionRow(task: task)
+                        EarningsTransactionRow(task: task, isCompact: isCompact)
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, isCompact ? 16 : 20)
             }
         }
     }
@@ -121,6 +130,7 @@ struct EarningsPeriodRow: View {
     let period: String
     let amount: Double
     let icon: String
+    var isCompact: Bool = false
     
     var body: some View {
         HStack {
@@ -129,9 +139,9 @@ struct EarningsPeriodRow: View {
             Spacer()
             HXText("$\(String(format: "%.2f", amount))", style: .headline, color: .moneyGreen)
         }
-        .padding()
+        .padding(isCompact ? 12 : 16)
         .background(Color.surfaceElevated)
-        .cornerRadius(8)
+        .cornerRadius(isCompact ? 8 : 10)
     }
 }
 
@@ -139,11 +149,14 @@ struct EarningsPeriodRow: View {
 
 struct EarningsTransactionRow: View {
     let task: HXTask
+    var isCompact: Bool = false
     
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 HXText(task.title, style: .subheadline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 if let date = task.completedAt {
                     HXText(date.formatted(date: .abbreviated, time: .omitted), style: .caption, color: .textSecondary)
                 }
@@ -153,9 +166,9 @@ struct EarningsTransactionRow: View {
             
             HXText("+$\(String(format: "%.0f", task.payment))", style: .headline, color: .successGreen)
         }
-        .padding()
+        .padding(isCompact ? 12 : 16)
         .background(Color.surfaceElevated)
-        .cornerRadius(8)
+        .cornerRadius(isCompact ? 8 : 10)
     }
 }
 

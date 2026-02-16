@@ -263,6 +263,7 @@ struct FileClaimScreen: View {
                 TextField("0", text: $amountText)
                     .keyboardType(.decimalPad)
                     .font(.system(size: 28, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                     .focused($focusedField, equals: .amount)
                 
@@ -362,6 +363,7 @@ struct FileClaimScreen: View {
                 submitClaim()
             }
             .disabled(!isValid || isSubmitting)
+            .accessibilityLabel("Submit claim")
         }
         .padding(20)
         .background(.ultraThinMaterial)

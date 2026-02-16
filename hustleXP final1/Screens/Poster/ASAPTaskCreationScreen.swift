@@ -125,26 +125,28 @@ struct ASAPTaskCreationScreen: View {
     // MARK: - Background
     
     private var backgroundLayer: some View {
-        ZStack {
-            Color.brandBlack.ignoresSafeArea()
-            
-            // Urgent red glow
-            VStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color.errorRed.opacity(0.2), Color.errorRed.opacity(0)],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 200
-                        )
-                    )
-                    .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width)
-                    .offset(y: -100)
+        GeometryReader { geometry in
+            ZStack {
+                Color.brandBlack.ignoresSafeArea()
                 
-                Spacer()
+                // Urgent red glow
+                VStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color.errorRed.opacity(0.2), Color.errorRed.opacity(0)],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 200
+                            )
+                        )
+                        .frame(width: geometry.size.width, height: geometry.size.width)
+                        .offset(y: -100)
+                    
+                    Spacer()
+                }
+                .ignoresSafeArea()
             }
-            .ignoresSafeArea()
         }
     }
     
@@ -159,6 +161,7 @@ struct ASAPTaskCreationScreen: View {
                     .frame(width: 44, height: 44)
                     .background(Circle().fill(Color.surfaceElevated))
             }
+            .accessibilityLabel(currentStep == 1 ? "Close" : "Go back")
             
             Spacer()
             
@@ -169,6 +172,7 @@ struct ASAPTaskCreationScreen: View {
                         .frame(width: 8, height: 8)
                     Text("ASAP REQUEST")
                         .font(.system(size: 12, weight: .black))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.errorRed)
                 }
                 
@@ -207,6 +211,7 @@ struct ASAPTaskCreationScreen: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("What do you need help with?")
                     .font(.system(size: 24, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Select the category that best fits your urgent need")
@@ -258,6 +263,7 @@ struct ASAPTaskCreationScreen: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Tell us more")
                     .font(.system(size: 24, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Be specific so workers know exactly what you need")
@@ -364,6 +370,7 @@ struct ASAPTaskCreationScreen: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Set your price")
                     .font(.system(size: 24, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Higher pay = faster response time")
@@ -377,6 +384,7 @@ struct ASAPTaskCreationScreen: View {
                 VStack(spacing: 8) {
                     Text("$\(Int(totalPayment))")
                         .font(.system(size: 48, weight: .black))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.moneyGreen)
                     
                     HStack(spacing: 4) {
@@ -448,6 +456,7 @@ struct ASAPTaskCreationScreen: View {
                     
                     Text(estimatedETA)
                         .font(.system(size: 20, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textPrimary)
                 }
                 
@@ -472,6 +481,7 @@ struct ASAPTaskCreationScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Instant Escrow")
                         .font(.system(size: 14, weight: .semibold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.textPrimary)
                     
                     Text("Your payment will be held securely until the task is complete")
@@ -511,6 +521,7 @@ struct ASAPTaskCreationScreen: View {
                                 .fill(Color.errorRed)
                         )
                     }
+                    .accessibilityLabel("Continue to next step")
                     .disabled(!canProceed)
                     .opacity(canProceed ? 1 : 0.5)
                 } else {
@@ -541,6 +552,7 @@ struct ASAPTaskCreationScreen: View {
                         )
                         .shadow(color: Color.errorRed.opacity(0.4), radius: 12, y: 4)
                     }
+                    .accessibilityLabel("Broadcast quest to nearby workers")
                     .disabled(!isValid || isSubmitting)
                 }
             }
@@ -707,6 +719,7 @@ private struct CategoryCard: View {
                     .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
                     .foregroundStyle(isSelected ? Color.textPrimary : Color.textSecondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
@@ -759,6 +772,7 @@ private struct QuestCreatedConfirmation: View {
             VStack(spacing: 8) {
                 Text("Quest Broadcasting!")
                     .font(.system(size: 26, weight: .bold))
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
                 
                 Text("Your request is now visible to \nelite workers nearby")
@@ -785,6 +799,7 @@ private struct QuestCreatedConfirmation: View {
                     
                     Text("$\(Int(quest.totalPayment))")
                         .font(.system(size: 18, weight: .bold))
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Color.moneyGreen)
                 }
             }
@@ -808,6 +823,7 @@ private struct QuestCreatedConfirmation: View {
                             .fill(Color.brandPurple)
                     )
             }
+            .accessibilityLabel("Track worker on the way")
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
