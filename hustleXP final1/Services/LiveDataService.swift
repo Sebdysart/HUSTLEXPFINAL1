@@ -390,7 +390,8 @@ final class LiveDataService {
     // MARK: - v1.8.0 AI Pricing
 
     func getAIPriceSuggestion(for request: AIPricingRequest) -> AIPriceSuggestion {
-        // Use local suggestion generator for now; real AI pricing goes through PricingService
+        // Local heuristic pricing — real AI pricing goes through PricingService.shared
+        HXLogger.debug("LiveDataService: Using local pricing heuristic (PricingService not yet integrated)", category: "AI")
         return request.generateMockSuggestion()
     }
 

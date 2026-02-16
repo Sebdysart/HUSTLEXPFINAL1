@@ -8,6 +8,8 @@
 //  Premium team-based task mode. Hustlers form squads of up to 5
 //  to tackle larger tasks together. Requires Elite trust tier.
 //
+//  v3.0.0: Refactored — logic extracted to SquadsHubViewModel
+//
 
 import SwiftUI
 
@@ -15,31 +17,18 @@ struct SquadsHubScreen: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
 
-    @State private var mySquads: [HXSquad] = []
-    @State private var pendingInvites: [SquadInvite] = []
-    @State private var selectedTab: SquadsTab = .mySquads
-    @State private var showCreateSheet = false
-    @State private var isLoading = true
-    @State private var showContent = false
-
-    private var isUnlocked: Bool {
-        SquadTierGate.isUnlocked(tier: appState.trustTier)
-    }
+    @State private var viewModel = SquadsHubViewModel()
 
     var body: some View {
         ZStack {
             Color.brandBlack.ignoresSafeArea()
 
-            if !isUnlocked {
-                // TIER-GATE: Show locked splash
+            if !viewModel.isUnlocked {
                 SquadsLockedView(currentTier: appState.trustTier)
             } else {
                 VStack(spacing: 0) {
-                    // Tab selector
                     squadTabBar
-
-                    // Content
-                    switch selectedTab {
+                    switch viewModel.selectedTab {
                     case .mySquads:
                         mySquadsView
                     case .invites:
@@ -48,8 +37,8 @@ struct SquadsHubScreen: View {
                         leaderboardView
                     }
                 }
-                .opacity(showContent ? 1 : 0)
-                .offset(y: showContent ? 0 : 20)
+                .opacity(viewModel.showContent ? 1 : 0)
+                .offset(y: viewModel.showContent ? 0 : 20)
             }
         }
         .navigationTitle("Squads")
@@ -58,10 +47,10 @@ struct SquadsHubScreen: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            if isUnlocked {
+            if viewModel.isUnlocked {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        showCreateSheet = true
+                        viewModel.showCreateSheet = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .foregroundStyle(Color.squadGold)
@@ -70,14 +59,16 @@ struct SquadsHubScreen: View {
                 }
             }
         }
-        .sheet(isPresented: $showCreateSheet) {
+        .sheet(isPresented: Binding(
+            get: { viewModel.showCreateSheet },
+            set: { viewModel.showCreateSheet = $0 }
+        )) {
             CreateSquadSheet()
         }
         .task {
-            await loadData()
-            withAnimation(.easeOut(duration: 0.4)) {
-                showContent = true
-            }
+            viewModel.appState = appState
+            await viewModel.loadData()
+            viewModel.animateContentIn()
         }
     }
 
@@ -88,7 +79,7 @@ struct SquadsHubScreen: View {
             ForEach(SquadsTab.allCases, id: \.self) { tab in
                 Button {
                     withAnimation(.spring(response: 0.3)) {
-                        selectedTab = tab
+                        viewModel.selectedTab = tab
                     }
                 } label: {
                     VStack(spacing: 8) {
@@ -99,8 +90,8 @@ struct SquadsHubScreen: View {
                                 .font(.system(size: 14, weight: .semibold))
                                 .minimumScaleFactor(0.7)
 
-                            if tab == .invites && !pendingInvites.isEmpty {
-                                Text("\(pendingInvites.count)")
+                            if tab == .invites && !viewModel.pendingInvites.isEmpty {
+                                Text("\(viewModel.pendingInvites.count)")
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 6)
@@ -109,10 +100,10 @@ struct SquadsHubScreen: View {
                                     .clipShape(Capsule())
                             }
                         }
-                        .foregroundStyle(selectedTab == tab ? Color.squadGold : Color.textMuted)
+                        .foregroundStyle(viewModel.selectedTab == tab ? Color.squadGold : Color.textMuted)
 
                         Rectangle()
-                            .fill(selectedTab == tab ? Color.squadGold : Color.clear)
+                            .fill(viewModel.selectedTab == tab ? Color.squadGold : Color.clear)
                             .frame(height: 2)
                     }
                 }
@@ -129,10 +120,10 @@ struct SquadsHubScreen: View {
     private var mySquadsView: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                if mySquads.isEmpty && !isLoading {
+                if viewModel.mySquads.isEmpty && !viewModel.isLoading {
                     emptySquadsState
                 } else {
-                    ForEach(mySquads) { squad in
+                    ForEach(viewModel.mySquads) { squad in
                         SquadCard(squad: squad)
                             .onTapGesture {
                                 router.navigateToHustler(.squadDetail(squadId: squad.id))
@@ -174,7 +165,7 @@ struct SquadsHubScreen: View {
             .padding(.horizontal, 24)
 
             HXButton("Create Your First Squad", icon: "plus.circle.fill", variant: .primary) {
-                showCreateSheet = true
+                viewModel.showCreateSheet = true
             }
             .padding(.horizontal, 24)
 
@@ -187,7 +178,7 @@ struct SquadsHubScreen: View {
     private var invitesView: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                if pendingInvites.isEmpty {
+                if viewModel.pendingInvites.isEmpty {
                     VStack(spacing: 16) {
                         Spacer().frame(height: 60)
 
@@ -202,15 +193,9 @@ struct SquadsHubScreen: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    ForEach(pendingInvites) { invite in
+                    ForEach(viewModel.pendingInvites) { invite in
                         InviteCard(invite: invite) { accepted in
-                            Task {
-                                try? await SquadService.shared.respondToInvite(
-                                    inviteId: invite.id,
-                                    accept: accepted
-                                )
-                                await loadData()
-                            }
+                            viewModel.respondToInvite(inviteId: invite.id, accept: accepted)
                         }
                     }
                 }
@@ -224,7 +209,6 @@ struct SquadsHubScreen: View {
     private var leaderboardView: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Coming soon placeholder
                 VStack(spacing: 16) {
                     Spacer().frame(height: 60)
 
@@ -249,7 +233,6 @@ struct SquadsHubScreen: View {
                         .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
 
-                    // Sample leaderboard entries
                     VStack(spacing: 0) {
                         ForEach(0..<5, id: \.self) { rank in
                             leaderboardRow(rank: rank + 1)
@@ -307,26 +290,6 @@ struct SquadsHubScreen: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
     }
-
-    // MARK: - Data Loading
-
-    private func loadData() async {
-        isLoading = true
-        do {
-            async let squadsTask = SquadService.shared.getMySquads()
-            async let invitesTask = SquadService.shared.getPendingInvites()
-
-            let (squads, invites) = try await (squadsTask, invitesTask)
-            mySquads = squads
-            pendingInvites = invites
-        } catch {
-            HXLogger.error("SquadsHub: Load failed - \(error.localizedDescription)", category: "General")
-            // Use mock data for demo
-            mySquads = []
-            pendingInvites = []
-        }
-        isLoading = false
-    }
 }
 
 // MARK: - Squads Tab Enum
@@ -360,7 +323,6 @@ private struct SquadCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             HStack(spacing: 12) {
                 Text(squad.emoji)
                     .font(.system(size: 32))
@@ -402,7 +364,6 @@ private struct SquadCard: View {
             }
             .padding(16)
 
-            // Stats row
             HStack(spacing: 0) {
                 squadStat(value: "\(squad.totalTasksCompleted)", label: "Tasks", icon: "checkmark.circle.fill", color: .successGreen)
 
@@ -421,7 +382,6 @@ private struct SquadCard: View {
             .padding(.vertical, 12)
             .background(Color.surfaceSecondary.opacity(0.5))
 
-            // Member avatars
             HStack(spacing: -8) {
                 ForEach(squad.members.prefix(5)) { member in
                     ZStack {
@@ -583,9 +543,7 @@ struct SquadsLockedView: View {
             VStack(spacing: 32) {
                 Spacer().frame(height: 20)
 
-                // Locked emblem
                 ZStack {
-                    // Pulse rings
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .stroke(Color.squadGold.opacity(0.1), lineWidth: 1)
@@ -628,7 +586,6 @@ struct SquadsLockedView: View {
                     }
                 }
 
-                // Title
                 VStack(spacing: 12) {
                     Text("Squads Mode")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -643,7 +600,6 @@ struct SquadsLockedView: View {
                         .lineSpacing(4)
                 }
 
-                // Requirements
                 VStack(spacing: 12) {
                     Text("UNLOCK REQUIREMENTS")
                         .font(.system(size: 12, weight: .bold))
@@ -665,7 +621,6 @@ struct SquadsLockedView: View {
                 )
                 .padding(.horizontal, 24)
 
-                // Benefits
                 VStack(spacing: 16) {
                     benefitRow(icon: "person.3.fill", title: "Team Up", description: "Form squads of up to 5 Elite hustlers")
                     benefitRow(icon: "dollarsign.arrow.circlepath", title: "Higher Payouts", description: "Access multi-worker tasks worth 2-5x more")
@@ -674,7 +629,6 @@ struct SquadsLockedView: View {
                 }
                 .padding(.horizontal, 24)
 
-                // Current progress
                 VStack(spacing: 8) {
                     Text("Your Current Tier")
                         .font(.system(size: 13))
@@ -793,7 +747,6 @@ private struct CreateSquadSheet: View {
 
                 ScrollView {
                     VStack(spacing: 28) {
-                        // Emoji picker
                         VStack(spacing: 12) {
                             Text(selectedEmoji)
                                 .font(.system(size: 64))
@@ -824,7 +777,6 @@ private struct CreateSquadSheet: View {
                             }
                         }
 
-                        // Squad name
                         VStack(alignment: .leading, spacing: 8) {
                             HXText("Squad Name", style: .subheadline, color: .textSecondary)
 
@@ -836,7 +788,6 @@ private struct CreateSquadSheet: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
 
-                        // Tagline
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 HXText("Tagline", style: .subheadline, color: .textSecondary)
@@ -851,7 +802,6 @@ private struct CreateSquadSheet: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
 
-                        // Info
                         HStack(spacing: 10) {
                             Image(systemName: "info.circle.fill")
                                 .font(.system(size: 14))
@@ -866,7 +816,6 @@ private struct CreateSquadSheet: View {
                         .background(Color.squadGold.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
 
-                        // Create button
                         HXButton(
                             isCreating ? "Creating..." : "Create Squad",
                             icon: "person.3.fill",

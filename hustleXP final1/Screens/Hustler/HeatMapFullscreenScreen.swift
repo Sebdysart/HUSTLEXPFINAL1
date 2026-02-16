@@ -136,7 +136,7 @@ struct HeatMapFullscreenScreen: View {
     }
     
     private var filteredZones: [HeatZone] {
-        let zones = apiZones ?? MockHeatMapService.shared.heatZones
+        let zones = apiZones ?? []
         if minPaymentFilter > 0 {
             return zones.filter { $0.averagePayment >= minPaymentFilter }
         }

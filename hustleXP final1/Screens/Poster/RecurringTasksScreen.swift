@@ -8,6 +8,8 @@
 //  Posters can schedule tasks that repeat on a cadence.
 //  Requires Trust Tier 3 (Trusted) — "Silver Tier"
 //
+//  v3.0.0: Refactored — logic extracted to RecurringTasksViewModel
+//
 
 import SwiftUI
 
@@ -15,29 +17,13 @@ struct RecurringTasksScreen: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
 
-    @State private var series: [RecurringTaskSeries] = []
-    @State private var showCreateSheet = false
-    @State private var selectedFilter: RecurringFilter = .active
-    @State private var isLoading = true
-    @State private var showContent = false
-
-    private var isUnlocked: Bool {
-        RecurringTaskTierGate.isUnlocked(tier: appState.trustTier)
-    }
-
-    private var filteredSeries: [RecurringTaskSeries] {
-        switch selectedFilter {
-        case .active: return series.filter { $0.isActive }
-        case .paused: return series.filter { $0.isPaused }
-        case .all: return series
-        }
-    }
+    @State private var viewModel = RecurringTasksViewModel()
 
     var body: some View {
         ZStack {
             Color.brandBlack.ignoresSafeArea()
 
-            if !isUnlocked {
+            if !viewModel.isUnlocked {
                 RecurringLockedView(currentTier: appState.trustTier)
             } else {
                 VStack(spacing: 0) {
@@ -45,14 +31,14 @@ struct RecurringTasksScreen: View {
                     filterBar
 
                     // Content
-                    if filteredSeries.isEmpty && !isLoading {
+                    if viewModel.filteredSeries.isEmpty && !viewModel.isLoading {
                         emptyState
                     } else {
                         seriesList
                     }
                 }
-                .opacity(showContent ? 1 : 0)
-                .offset(y: showContent ? 0 : 20)
+                .opacity(viewModel.showContent ? 1 : 0)
+                .offset(y: viewModel.showContent ? 0 : 20)
             }
         }
         .navigationTitle("Recurring Tasks")
@@ -61,10 +47,10 @@ struct RecurringTasksScreen: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            if isUnlocked {
+            if viewModel.isUnlocked {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        showCreateSheet = true
+                        viewModel.showCreateSheet = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .foregroundStyle(Color.recurringBlue)
@@ -73,14 +59,16 @@ struct RecurringTasksScreen: View {
                 }
             }
         }
-        .sheet(isPresented: $showCreateSheet) {
+        .sheet(isPresented: Binding(
+            get: { viewModel.showCreateSheet },
+            set: { viewModel.showCreateSheet = $0 }
+        )) {
             CreateRecurringTaskSheet()
         }
         .task {
-            await loadData()
-            withAnimation(.easeOut(duration: 0.4)) {
-                showContent = true
-            }
+            viewModel.appState = appState
+            await viewModel.loadData()
+            viewModel.animateContentIn()
         }
     }
 
@@ -90,33 +78,31 @@ struct RecurringTasksScreen: View {
         HStack(spacing: 10) {
             ForEach(RecurringFilter.allCases, id: \.self) { filter in
                 Button {
-                    withAnimation(.spring(response: 0.3)) {
-                        selectedFilter = filter
-                    }
+                    viewModel.selectFilter(filter)
                 } label: {
                     HStack(spacing: 6) {
                         Text(filter.label)
                             .font(.system(size: 13, weight: .semibold))
 
-                        let count = countForFilter(filter)
+                        let count = viewModel.countForFilter(filter)
                         if count > 0 {
                             Text("\(count)")
                                 .font(.system(size: 11, weight: .bold))
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(
-                                    selectedFilter == filter
+                                    viewModel.selectedFilter == filter
                                         ? Color.white.opacity(0.2)
                                         : Color.textMuted.opacity(0.2)
                                 )
                                 .clipShape(Capsule())
                         }
                     }
-                    .foregroundStyle(selectedFilter == filter ? .white : Color.textMuted)
+                    .foregroundStyle(viewModel.selectedFilter == filter ? .white : Color.textMuted)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
                     .background(
-                        selectedFilter == filter
+                        viewModel.selectedFilter == filter
                             ? Color.recurringBlue
                             : Color.surfaceSecondary
                     )
@@ -135,9 +121,9 @@ struct RecurringTasksScreen: View {
     private var seriesList: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
-                ForEach(filteredSeries) { item in
+                ForEach(viewModel.filteredSeries) { item in
                     RecurringSeriesCard(series: item) { action in
-                        handleAction(action, for: item)
+                        viewModel.handleAction(action, for: item)
                     }
                 }
             }
@@ -162,7 +148,7 @@ struct RecurringTasksScreen: View {
             }
 
             VStack(spacing: 8) {
-                Text(selectedFilter == .active ? "No Active Recurring Tasks" : "No Recurring Tasks")
+                Text(viewModel.selectedFilter == .active ? "No Active Recurring Tasks" : "No Recurring Tasks")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
@@ -192,7 +178,7 @@ struct RecurringTasksScreen: View {
             .padding(.horizontal, 24)
 
             HXButton("Create Recurring Task", icon: "plus.circle.fill", variant: .primary) {
-                showCreateSheet = true
+                viewModel.showCreateSheet = true
             }
             .padding(.horizontal, 24)
 
@@ -202,7 +188,7 @@ struct RecurringTasksScreen: View {
 
     private func suggestedCategoryCard(_ cat: RecurringCategory) -> some View {
         Button {
-            showCreateSheet = true
+            viewModel.showCreateSheet = true
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: cat.icon)
@@ -221,41 +207,6 @@ struct RecurringTasksScreen: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
-    }
-
-    // MARK: - Actions
-
-    private func handleAction(_ action: SeriesAction, for item: RecurringTaskSeries) {
-        Task {
-            switch action {
-            case .pause:
-                try? await RecurringTaskService.shared.pauseSeries(id: item.id)
-            case .resume:
-                try? await RecurringTaskService.shared.resumeSeries(id: item.id)
-            case .cancel:
-                try? await RecurringTaskService.shared.cancelSeries(id: item.id)
-            }
-            await loadData()
-        }
-    }
-
-    private func countForFilter(_ filter: RecurringFilter) -> Int {
-        switch filter {
-        case .active: return series.filter { $0.isActive }.count
-        case .paused: return series.filter { $0.isPaused }.count
-        case .all: return series.count
-        }
-    }
-
-    private func loadData() async {
-        isLoading = true
-        do {
-            series = try await RecurringTaskService.shared.getMySeries()
-        } catch {
-            HXLogger.error("RecurringTasks: Load failed - \(error.localizedDescription)", category: "Task")
-            series = []
-        }
-        isLoading = false
     }
 }
 

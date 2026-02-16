@@ -7,12 +7,11 @@
 
 import SwiftUI
 import FirebaseCore
+import FirebaseCrashlytics
 import FirebaseMessaging
 import GoogleSignIn
 import UserNotifications
 import StripePaymentSheet
-
-// Note: FirebaseCrashlytics removed - add FirebaseCrashlytics to SPM if crash reporting needed
 
 // MARK: - App Delegate for Firebase
 
@@ -23,7 +22,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         // Initialize Firebase
         FirebaseApp.configure()
-        HXLogger.info("Firebase configured successfully", category: "General")
+        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
+        HXLogger.info("Firebase + Crashlytics configured successfully", category: "General")
 
         // Set up push notification delegates
         UNUserNotificationCenter.current().delegate = PushNotificationManager.shared

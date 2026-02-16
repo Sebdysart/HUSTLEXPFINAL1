@@ -212,7 +212,7 @@ struct HustlerFeedScreen: View {
     private var mapViewSection: some View {
         VStack(spacing: 0) {
             HeatMapView(
-                heatZones: apiHeatZones ?? MockHeatMapService.shared.heatZones,
+                heatZones: apiHeatZones ?? [],
                 tasks: filteredTasks,
                 userLocation: currentLocation,
                 onZoneTapped: { zone in

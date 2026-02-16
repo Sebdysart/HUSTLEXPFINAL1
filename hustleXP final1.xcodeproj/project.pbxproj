@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		71AAAA012F3C000100000001 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 71AAAA042F3C000100000004 /* FirebaseMessaging */; };
 		71AAAA032F3C000100000003 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 71AAAA052F3C000100000005 /* StripePaymentSheet */; };
+		71AAAA062F3C000200000006 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 71AAAA072F3C000200000007 /* FirebaseCrashlytics */; };
 		71B48DD12F38067200782AA2 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 71B48DD02F38067200782AA2 /* FirebaseAuth */; };
 		71B48DD32F38067200782AA2 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 71B48DD22F38067200782AA2 /* FirebaseCore */; };
 		71F70B822F3B0710000ACBA0 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 71F70B812F3B0710000ACBA0 /* GoogleSignIn */; };
@@ -25,11 +26,9 @@
 		};
 /* End PBXContainerItemProxy section */
 
-
-
 /* Begin PBXFileReference section */
 		71972DFC2F359FB900F03F8E /* hustleXP final1.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hustleXP final1.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-AA000001TESTS00000001 /* hustleXP final1Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "hustleXP final1Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA000001TESTS00000001 /* hustleXP final1Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "hustleXP final1Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -38,11 +37,11 @@ AA000001TESTS00000001 /* hustleXP final1Tests.xctest */ = {isa = PBXFileReferenc
 			path = "hustleXP final1";
 			sourceTree = "<group>";
 		};
-AA000002TESTS00000002 /* hustleXP final1Tests */ = {
-	isa = PBXFileSystemSynchronizedRootGroup;
-	path = "hustleXP final1Tests";
-	sourceTree = "<group>";
-};
+		AA000002TESTS00000002 /* hustleXP final1Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "hustleXP final1Tests";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,16 +55,17 @@ AA000002TESTS00000002 /* hustleXP final1Tests */ = {
 				71F70B842F3B0710000ACBA0 /* GoogleSignInSwift in Frameworks */,
 				71AAAA012F3C000100000001 /* FirebaseMessaging in Frameworks */,
 				71AAAA032F3C000100000003 /* StripePaymentSheet in Frameworks */,
+				71AAAA062F3C000200000006 /* FirebaseCrashlytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-AA000004TESTS00000004 /* Frameworks */ = {
-	isa = PBXFrameworksBuildPhase;
-	buildActionMask = 2147483647;
-	files = (
-	);
-	runOnlyForDeploymentPostprocessing = 0;
-};
+		AA000004TESTS00000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -113,34 +113,35 @@ AA000004TESTS00000004 /* Frameworks */ = {
 				71F70B832F3B0710000ACBA0 /* GoogleSignInSwift */,
 				71AAAA042F3C000100000004 /* FirebaseMessaging */,
 				71AAAA052F3C000100000005 /* StripePaymentSheet */,
+				71AAAA072F3C000200000007 /* FirebaseCrashlytics */,
 			);
 			productName = "hustleXP final1";
 			productReference = 71972DFC2F359FB900F03F8E /* hustleXP final1.app */;
 			productType = "com.apple.product-type.application";
 		};
-AA000006TESTS00000006 /* hustleXP final1Tests */ = {
-	isa = PBXNativeTarget;
-	buildConfigurationList = AA000009TESTS00000009 /* Build configuration list for PBXNativeTarget "hustleXP final1Tests" */;
-	buildPhases = (
-		AA000003TESTS00000003 /* Sources */,
-		AA000004TESTS00000004 /* Frameworks */,
-		AA000005TESTS00000005 /* Resources */,
-	);
-	buildRules = (
-	);
-	dependencies = (
-		AA00000BTESTS0000000B /* PBXTargetDependency */,
-	);
-	fileSystemSynchronizedGroups = (
-		AA000002TESTS00000002 /* hustleXP final1Tests */,
-	);
-	name = "hustleXP final1Tests";
-	packageProductDependencies = (
-	);
-	productName = "hustleXP final1Tests";
-	productReference = AA000001TESTS00000001 /* hustleXP final1Tests.xctest */;
-	productType = "com.apple.product-type.bundle.unit-test";
-};
+		AA000006TESTS00000006 /* hustleXP final1Tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA000009TESTS00000009 /* Build configuration list for PBXNativeTarget "hustleXP final1Tests" */;
+			buildPhases = (
+				AA000003TESTS00000003 /* Sources */,
+				AA000004TESTS00000004 /* Frameworks */,
+				AA000005TESTS00000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA00000BTESTS0000000B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA000002TESTS00000002 /* hustleXP final1Tests */,
+			);
+			name = "hustleXP final1Tests";
+			packageProductDependencies = (
+			);
+			productName = "hustleXP final1Tests";
+			productReference = AA000001TESTS00000001 /* hustleXP final1Tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -152,12 +153,12 @@ AA000006TESTS00000006 /* hustleXP final1Tests */ = {
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					71972DFB2F359FB900F03F8E = {
-					CreatedOnToolsVersion = 26.3;
-				};
-				AA000006TESTS00000006 = {
-					CreatedOnToolsVersion = 26.3;
-					TestTargetID = 71972DFB2F359FB900F03F8E;
-				};
+						CreatedOnToolsVersion = 26.3;
+					};
+					AA000006TESTS00000006 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 71972DFB2F359FB900F03F8E;
+					};
 				};
 			};
 			buildConfigurationList = 71972DF72F359FB900F03F8E /* Build configuration list for PBXProject "hustleXP final1" */;
@@ -193,13 +194,13 @@ AA000006TESTS00000006 /* hustleXP final1Tests */ = {
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-AA000005TESTS00000005 /* Resources */ = {
-	isa = PBXResourcesBuildPhase;
-	buildActionMask = 2147483647;
-	files = (
-	);
-	runOnlyForDeploymentPostprocessing = 0;
-};
+		AA000005TESTS00000005 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -210,15 +211,14 @@ AA000005TESTS00000005 /* Resources */ = {
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-AA000003TESTS00000003 /* Sources */ = {
-	isa = PBXSourcesBuildPhase;
-	buildActionMask = 2147483647;
-	files = (
-	);
-	runOnlyForDeploymentPostprocessing = 0;
-};
+		AA000003TESTS00000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
-
 
 /* Begin PBXTargetDependency section */
 		AA00000BTESTS0000000B /* PBXTargetDependency */ = {
@@ -425,48 +425,48 @@ AA000003TESTS00000003 /* Sources */ = {
 			};
 			name = Release;
 		};
-AA000007TESTS00000007 /* Debug */ = {
-	isa = XCBuildConfiguration;
-	buildSettings = {
-		BUNDLE_LOADER = "$(TEST_HOST)";
-		CODE_SIGN_STYLE = Automatic;
-		CURRENT_PROJECT_VERSION = 1;
-		DEVELOPMENT_TEAM = V85B8S6KA2;
-		GENERATE_INFOPLIST_FILE = YES;
-		IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-		MARKETING_VERSION = 1.0;
-		PRODUCT_BUNDLE_IDENTIFIER = "com.hustlexp.hustleXP-final1Tests";
-		PRODUCT_NAME = "$(TARGET_NAME)";
-		SWIFT_APPROACHABLE_CONCURRENCY = YES;
-		SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-		SWIFT_EMIT_LOC_STRINGS = NO;
-		SWIFT_VERSION = 5.0;
-		TARGETED_DEVICE_FAMILY = "1,2";
-		TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hustleXP final1.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/hustleXP final1";
-	};
-	name = Debug;
-};
-AA000008TESTS00000008 /* Release */ = {
-	isa = XCBuildConfiguration;
-	buildSettings = {
-		BUNDLE_LOADER = "$(TEST_HOST)";
-		CODE_SIGN_STYLE = Automatic;
-		CURRENT_PROJECT_VERSION = 1;
-		DEVELOPMENT_TEAM = V85B8S6KA2;
-		GENERATE_INFOPLIST_FILE = YES;
-		IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-		MARKETING_VERSION = 1.0;
-		PRODUCT_BUNDLE_IDENTIFIER = "com.hustlexp.hustleXP-final1Tests";
-		PRODUCT_NAME = "$(TARGET_NAME)";
-		SWIFT_APPROACHABLE_CONCURRENCY = YES;
-		SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-		SWIFT_EMIT_LOC_STRINGS = NO;
-		SWIFT_VERSION = 5.0;
-		TARGETED_DEVICE_FAMILY = "1,2";
-		TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hustleXP final1.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/hustleXP final1";
-	};
-	name = Release;
-};
+		AA000007TESTS00000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = V85B8S6KA2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.hustlexp.hustleXP-final1Tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hustleXP final1.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/hustleXP final1";
+			};
+			name = Debug;
+		};
+		AA000008TESTS00000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = V85B8S6KA2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.hustlexp.hustleXP-final1Tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hustleXP final1.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/hustleXP final1";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -488,15 +488,15 @@ AA000008TESTS00000008 /* Release */ = {
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-AA000009TESTS00000009 /* Build configuration list for PBXNativeTarget "hustleXP final1Tests" */ = {
-	isa = XCConfigurationList;
-	buildConfigurations = (
-		AA000007TESTS00000007 /* Debug */,
-		AA000008TESTS00000008 /* Release */,
-	);
-	defaultConfigurationIsVisible = 0;
-	defaultConfigurationName = Release;
-};
+		AA000009TESTS00000009 /* Build configuration list for PBXNativeTarget "hustleXP final1Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA000007TESTS00000007 /* Debug */,
+				AA000008TESTS00000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -536,6 +536,11 @@ AA000009TESTS00000009 /* Build configuration list for PBXNativeTarget "hustleXP 
 			isa = XCSwiftPackageProductDependency;
 			package = 71AAAA022F3C000100000002 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
 			productName = StripePaymentSheet;
+		};
+		71AAAA072F3C000200000007 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 71B48DCF2F38067200782AA2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
 		};
 		71B48DD02F38067200782AA2 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
