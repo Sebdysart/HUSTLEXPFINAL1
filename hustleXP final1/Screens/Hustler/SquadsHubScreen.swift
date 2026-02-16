@@ -320,7 +320,7 @@ struct SquadsHubScreen: View {
             mySquads = squads
             pendingInvites = invites
         } catch {
-            print("⚠️ SquadsHub: Load failed - \(error.localizedDescription)")
+            HXLogger.error("SquadsHub: Load failed - \(error.localizedDescription)", category: "General")
             // Use mock data for demo
             mySquads = []
             pendingInvites = []
@@ -906,7 +906,7 @@ private struct CreateSquadSheet: View {
                 )
                 dismiss()
             } catch {
-                print("⚠️ CreateSquad: Failed - \(error.localizedDescription)")
+                HXLogger.error("CreateSquad: Failed - \(error.localizedDescription)", category: "General")
             }
             isCreating = false
         }

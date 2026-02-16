@@ -289,7 +289,7 @@ struct TaxPaymentScreen: View {
             do {
                 // 1. Create payment intent via TaxService
                 let paymentIntent = try await taxService.createTaxPaymentIntent()
-                print("✅ TaxPayment: Payment intent created - \(paymentIntent.paymentIntentId)")
+                HXLogger.info("TaxPayment: Payment intent created - \(paymentIntent.paymentIntentId)", category: "Payment")
 
                 // 2. Prepare and present real Stripe PaymentSheet
                 let stripeManager = StripePaymentManager.shared
@@ -300,11 +300,11 @@ struct TaxPaymentScreen: View {
                 switch result {
                 case .completed:
                     // 3. Payment succeeded - confirm with backend
-                    print("✅ TaxPayment: Stripe payment completed")
+                    HXLogger.info("TaxPayment: Stripe payment completed", category: "Payment")
 
                     do {
                         let taxResult = try await taxService.payTax(paymentIntentId: paymentIntent.paymentIntentId)
-                        print("✅ TaxPayment: Tax payment confirmed, released \(taxResult.xpReleased) XP")
+                        HXLogger.info("TaxPayment: Tax payment confirmed, released \(taxResult.xpReleased) XP", category: "Payment")
 
                         // Also update mock data for consistency
                         let mockResult = dataService.payTax()
@@ -318,7 +318,7 @@ struct TaxPaymentScreen: View {
                             showSuccess = true
                         }
                     } catch {
-                        print("⚠️ TaxPayment: Backend confirm failed - \(error.localizedDescription)")
+                        HXLogger.error("TaxPayment: Backend confirm failed - \(error.localizedDescription)", category: "Payment")
                         // Payment went through but backend confirm failed
                         // Webhook will reconcile; show success with mock data
                         let mockResult = dataService.payTax()
@@ -333,19 +333,19 @@ struct TaxPaymentScreen: View {
                     }
 
                 case .canceled:
-                    print("⚠️ TaxPayment: Payment canceled by user")
+                    HXLogger.error("TaxPayment: Payment canceled by user", category: "Payment")
                     stripeManager.reset()
                     isProcessingPayment = false
 
                 case .failed(error: let error):
-                    print("⚠️ TaxPayment: Stripe payment failed - \(error.localizedDescription)")
+                    HXLogger.error("TaxPayment: Stripe payment failed - \(error.localizedDescription)", category: "Payment")
                     stripeManager.reset()
                     isProcessingPayment = false
                     paymentError = "Payment failed. Please try again."
                 }
 
             } catch {
-                print("⚠️ TaxPayment: Failed to create payment intent - \(error.localizedDescription)")
+                HXLogger.error("TaxPayment: Failed to create payment intent - \(error.localizedDescription)", category: "Payment")
                 isProcessingPayment = false
                 paymentError = "Could not start payment. Please try again."
             }

@@ -62,9 +62,9 @@ struct TaskInProgressScreen: View {
                 // v2.2.0: Load task from real API
                 do {
                     apiTask = try await TaskService.shared.getTask(id: taskId)
-                    print("✅ TaskInProgress: Loaded task from API")
+                    HXLogger.info("TaskInProgress: Loaded task from API", category: "Task")
                 } catch {
-                    print("⚠️ TaskInProgress: API load failed, using mock - \(error.localizedDescription)")
+                    HXLogger.error("TaskInProgress: API load failed, using mock - \(error.localizedDescription)", category: "Task")
                 }
                 await setupSpatialIntelligence(for: task)
             }
@@ -159,9 +159,9 @@ struct TaskInProgressScreen: View {
             )
             currentDistance = proximity.distanceMeters
             isInsideGeofence = proximity.isWithinGeofence
-            print("✅ TaskInProgress: Geofence proximity - \(proximity.distanceMeters)m")
+            HXLogger.info("TaskInProgress: Geofence proximity - \(proximity.distanceMeters)m", category: "Task")
         } catch {
-            print("⚠️ TaskInProgress: Geofence API failed - \(error.localizedDescription)")
+            HXLogger.error("TaskInProgress: Geofence API failed - \(error.localizedDescription)", category: "Task")
         }
 
         // Register local geofence for real-time monitoring (mock for now)
@@ -227,9 +227,9 @@ struct TaskInProgressScreen: View {
         Task {
             do {
                 apiTask = try await TaskService.shared.startTask(taskId: task.id)
-                print("✅ TaskInProgress: Smart Start - task started via API")
+                HXLogger.info("TaskInProgress: Smart Start - task started via API", category: "Task")
             } catch {
-                print("⚠️ TaskInProgress: API start failed - \(error.localizedDescription)")
+                HXLogger.error("TaskInProgress: API start failed - \(error.localizedDescription)", category: "Task")
                 dataService.updateTaskState(task.id, to: .inProgress)
             }
         }
@@ -298,9 +298,9 @@ struct TaskInProgressScreen: View {
                     Task {
                         do {
                             apiTask = try await TaskService.shared.startTask(taskId: task.id)
-                            print("✅ TaskInProgress: Arrived - task started via API")
+                            HXLogger.info("TaskInProgress: Arrived - task started via API", category: "Task")
                         } catch {
-                            print("⚠️ TaskInProgress: API start failed - \(error.localizedDescription)")
+                            HXLogger.error("TaskInProgress: API start failed - \(error.localizedDescription)", category: "Task")
                             dataService.updateTaskState(task.id, to: .inProgress)
                         }
                     }

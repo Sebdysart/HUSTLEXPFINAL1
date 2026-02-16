@@ -204,7 +204,7 @@ struct LockedQuestsScreen: View {
         do {
             let mySkills = try await SkillService.shared.getMySkills()
             myVerifiedSkills = mySkills
-            print("LockedQuests: Got \(mySkills.count) skills from API")
+            HXLogger.debug("LockedQuests: Got \(mySkills.count) skills from API", category: "Skill")
 
             // Check eligibility for each available task
             var locked: [LockedQuest] = []
@@ -253,10 +253,10 @@ struct LockedQuestsScreen: View {
             }
 
             lockedQuests = locked
-            print("LockedQuests: Found \(locked.count) locked quests via API")
+            HXLogger.debug("LockedQuests: Found \(locked.count) locked quests via API", category: "Skill")
 
         } catch {
-            print("LockedQuests: API failed, using mock - \(error.localizedDescription)")
+            HXLogger.debug("LockedQuests: API failed, using mock - \(error.localizedDescription)", category: "Skill")
 
             // Fallback to mock
             let mockService = MockLicenseVerificationService.shared

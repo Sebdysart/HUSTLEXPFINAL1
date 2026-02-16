@@ -240,10 +240,10 @@ struct PosterTaskDetailScreen: View {
         Task {
             do {
                 task = try await TaskService.shared.getTask(id: taskId)
-                print("✅ PosterTaskDetail: Loaded task from API")
+                HXLogger.info("PosterTaskDetail: Loaded task from API", category: "Task")
             } catch {
                 loadError = error
-                print("⚠️ PosterTaskDetail: API failed - \(error.localizedDescription)")
+                HXLogger.error("PosterTaskDetail: API failed - \(error.localizedDescription)", category: "Task")
                 // Fall back to mock data
                 task = LiveDataService.shared.getTask(by: taskId)
             }
@@ -271,9 +271,9 @@ struct PosterTaskDetailScreen: View {
                 tipSent = true
                 let haptic = UINotificationFeedbackGenerator()
                 haptic.notificationOccurred(.success)
-                print("✅ PosterTaskDetail: Tip of \(amountCents) cents sent")
+                HXLogger.info("PosterTaskDetail: Tip of \(amountCents) cents sent", category: "Task")
             } catch {
-                print("⚠️ PosterTaskDetail: Tip failed - \(error.localizedDescription)")
+                HXLogger.error("PosterTaskDetail: Tip failed - \(error.localizedDescription)", category: "Task")
                 showTipSheet = false
             }
         }
@@ -283,9 +283,9 @@ struct PosterTaskDetailScreen: View {
         Task {
             do {
                 _ = try await TaskService.shared.cancelTask(taskId: taskId, reason: nil)
-                print("✅ PosterTaskDetail: Task cancelled via API")
+                HXLogger.info("PosterTaskDetail: Task cancelled via API", category: "Task")
             } catch {
-                print("⚠️ PosterTaskDetail: Cancel API failed - \(error.localizedDescription)")
+                HXLogger.error("PosterTaskDetail: Cancel API failed - \(error.localizedDescription)", category: "Task")
             }
             router.posterPath.removeLast()
         }

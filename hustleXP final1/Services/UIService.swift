@@ -104,7 +104,7 @@ final class UIService: ObservableObject {
             input: EmptyInput()
         )
 
-        print("✅ UIService: XP celebration shouldShow = \(status.shouldShow)")
+        HXLogger.info("UIService: XP celebration shouldShow = \(status.shouldShow)", category: "UI")
         return status
     }
 
@@ -120,7 +120,7 @@ final class UIService: ObservableObject {
             input: MarkInput(timestamp: timestamp)
         )
 
-        print("✅ UIService: Marked XP celebration shown (alreadyShown: \(response.alreadyShown))")
+        HXLogger.info("UIService: Marked XP celebration shown (alreadyShown: \(response.alreadyShown))", category: "UI")
         return response
     }
 
@@ -139,7 +139,7 @@ final class UIService: ObservableObject {
             input: BadgeInput(badgeId: badgeId)
         )
 
-        print("✅ UIService: Badge animation shouldShow = \(status.shouldShow) for badge \(badgeId)")
+        HXLogger.info("UIService: Badge animation shouldShow = \(status.shouldShow) for badge \(badgeId)", category: "UI")
         return status
     }
 
@@ -156,7 +156,7 @@ final class UIService: ObservableObject {
             input: MarkBadgeInput(badgeId: badgeId, timestamp: timestamp)
         )
 
-        print("✅ UIService: Marked badge animation shown for \(badgeId) (alreadyShown: \(response.alreadyShown))")
+        HXLogger.info("UIService: Marked badge animation shown for \(badgeId) (alreadyShown: \(response.alreadyShown))", category: "UI")
         return response
     }
 
@@ -190,7 +190,7 @@ final class UIService: ObservableObject {
             )
         )
 
-        print("✅ UIService: Reported \(severity.rawValue) violation in \(component)")
+        HXLogger.info("UIService: Reported \(severity.rawValue) violation in \(component)", category: "UI")
         return response
     }
 }

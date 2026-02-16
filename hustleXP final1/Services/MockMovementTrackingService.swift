@@ -60,7 +60,7 @@ final class MockMovementTrackingService {
         // Start tracking timer
         startTrackingTimer()
         
-        print("[MovementTracking] Started tracking for task: \(taskId)")
+        HXLogger.debug("[MovementTracking] Started tracking for task: \(taskId)", category: "General")
         
         return session
     }
@@ -80,7 +80,7 @@ final class MockMovementTrackingService {
         isTracking = false
         currentFlags = []
         
-        print("[MovementTracking] Stopped tracking. Total distance: \(String(format: "%.1f", session.totalDistanceMeters))m")
+        HXLogger.debug("[MovementTracking] Stopped tracking. Total distance: \(String(format: "%.1f", session.totalDistanceMeters))m", category: "General")
         
         return finalSession
     }
@@ -126,7 +126,7 @@ final class MockMovementTrackingService {
         
         activeSession = session
         
-        print("[MovementTracking] Recorded location. Total points: \(session.locations.count)")
+        HXLogger.debug("[MovementTracking] Recorded location. Total points: \(session.locations.count)", category: "General")
     }
     
     // MARK: - Analysis

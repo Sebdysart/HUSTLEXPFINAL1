@@ -436,9 +436,9 @@ struct LiveRadarScreen: View {
         Task {
             do {
                 let status = try await LiveModeService.shared.toggle(enabled: true)
-                print("✅ LiveRadar: Live mode toggled via API - \(status.state.rawValue)")
+                HXLogger.info("LiveRadar: Live mode toggled via API - \(status.state.rawValue)", category: "LiveMode")
             } catch {
-                print("⚠️ LiveRadar: API toggle failed - \(error.localizedDescription)")
+                HXLogger.error("LiveRadar: API toggle failed - \(error.localizedDescription)", category: "LiveMode")
             }
 
             // v2.2.0: Try to load live broadcasts from real API
@@ -448,11 +448,11 @@ struct LiveRadarScreen: View {
                         latitude: location.latitude,
                         longitude: location.longitude
                     )
-                    print("✅ LiveRadar: Loaded \(broadcasts.count) live broadcasts from API")
+                    HXLogger.info("LiveRadar: Loaded \(broadcasts.count) live broadcasts from API", category: "LiveMode")
                     // Broadcasts are stored on LiveModeService.shared.broadcasts
                     // Keep mock quests for UI since QuestAlert format differs from LiveBroadcast
                 } catch {
-                    print("⚠️ LiveRadar: Broadcast API failed - \(error.localizedDescription)")
+                    HXLogger.error("LiveRadar: Broadcast API failed - \(error.localizedDescription)", category: "LiveMode")
                 }
             }
         }
@@ -476,9 +476,9 @@ struct LiveRadarScreen: View {
         Task {
             do {
                 _ = try await LiveModeService.shared.toggle(enabled: false)
-                print("✅ LiveRadar: Live mode ended via API")
+                HXLogger.info("LiveRadar: Live mode ended via API", category: "LiveMode")
             } catch {
-                print("⚠️ LiveRadar: API end failed - \(error.localizedDescription)")
+                HXLogger.error("LiveRadar: API end failed - \(error.localizedDescription)", category: "LiveMode")
             }
         }
         liveModeService.endLiveMode()

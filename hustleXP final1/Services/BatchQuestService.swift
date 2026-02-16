@@ -66,7 +66,7 @@ final class BatchQuestService: ObservableObject {
             )
         )
 
-        print("✅ BatchQuestService: Found \(suggestions.count) batch suggestions")
+        HXLogger.info("BatchQuestService: Found \(suggestions.count) batch suggestions", category: "Task")
         return suggestions
     }
 
@@ -86,7 +86,7 @@ final class BatchQuestService: ObservableObject {
             input: RouteInput(taskIds: taskIds)
         )
 
-        print("✅ BatchQuestService: Built route for \(taskIds.count) tasks")
+        HXLogger.info("BatchQuestService: Built route for \(taskIds.count) tasks", category: "Task")
         return route
     }
 }

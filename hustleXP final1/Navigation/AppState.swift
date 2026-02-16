@@ -88,7 +88,7 @@ final class AppState {
         self.userRole = role
         self.isLoggedIn = true
         self.authState = hasCompletedOnboarding ? .authenticated : .onboarding
-        print("[AppState] User logged in: \(userId), role: \(role.rawValue)")
+        HXLogger.info("[AppState] User logged in: \(userId), role: \(role.rawValue)", category: "Navigation")
     }
     
     func logout() {
@@ -97,17 +97,17 @@ final class AppState {
         self.isLoggedIn = false
         self.authState = .unauthenticated
         self.selectedTab = 0
-        print("[AppState] User logged out")
+        HXLogger.info("[AppState] User logged out", category: "Navigation")
     }
     
     func completeOnboarding() {
         self.hasCompletedOnboarding = true
         self.authState = .authenticated
-        print("[AppState] Onboarding completed")
+        HXLogger.info("[AppState] Onboarding completed", category: "Navigation")
     }
     
     func setRole(_ role: UserRole) {
         self.userRole = role
-        print("[AppState] Role set to: \(role.rawValue)")
+        HXLogger.info("[AppState] Role set to: \(role.rawValue)", category: "Navigation")
     }
 }

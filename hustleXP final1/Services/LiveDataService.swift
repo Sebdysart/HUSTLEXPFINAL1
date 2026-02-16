@@ -123,7 +123,7 @@ final class LiveDataService {
             let tasks = try await taskService.listOpenTasks(limit: 50)
             self.availableTasks = tasks
         } catch {
-            print("⚠️ LiveData: Failed to fetch available tasks - \(error.localizedDescription)")
+            HXLogger.error("LiveData: Failed to fetch available tasks - \(error.localizedDescription)", category: "General")
             // Keep existing data on error
         }
     }
@@ -137,7 +137,7 @@ final class LiveDataService {
             })
             self.completedTasks = tasks.filter { $0.state == .completed }
         } catch {
-            print("⚠️ LiveData: Failed to fetch claimed tasks - \(error.localizedDescription)")
+            HXLogger.error("LiveData: Failed to fetch claimed tasks - \(error.localizedDescription)", category: "General")
         }
     }
 
@@ -147,7 +147,7 @@ final class LiveDataService {
             self.postedTasks = tasks
             self.completedTasks = tasks.filter { $0.state == .completed }
         } catch {
-            print("⚠️ LiveData: Failed to fetch posted tasks - \(error.localizedDescription)")
+            HXLogger.error("LiveData: Failed to fetch posted tasks - \(error.localizedDescription)", category: "General")
         }
     }
 
@@ -162,7 +162,7 @@ final class LiveDataService {
             )
             self.taxStatus = status
         } catch {
-            print("⚠️ LiveData: Failed to fetch tax status - \(error.localizedDescription)")
+            HXLogger.error("LiveData: Failed to fetch tax status - \(error.localizedDescription)", category: "General")
             // Keep defaults on error - non-blocking
         }
     }
@@ -178,7 +178,7 @@ final class LiveDataService {
             )
             self.insurancePoolStatus = status
         } catch {
-            print("⚠️ LiveData: Failed to fetch insurance status - \(error.localizedDescription)")
+            HXLogger.error("LiveData: Failed to fetch insurance status - \(error.localizedDescription)", category: "General")
             // Keep defaults on error - non-blocking
         }
     }
@@ -192,9 +192,9 @@ final class LiveDataService {
                 // Remove from available, set as active
                 availableTasks.removeAll { $0.id == taskId }
                 activeTask = task
-                print("✅ LiveData: Task claimed - \(task.title)")
+                HXLogger.info("LiveData: Task claimed - \(task.title)", category: "General")
             } catch {
-                print("❌ LiveData: Failed to claim task - \(error.localizedDescription)")
+                HXLogger.error("LiveData: Failed to claim task - \(error.localizedDescription)", category: "General")
                 lastError = error.localizedDescription
             }
         }
@@ -227,9 +227,9 @@ final class LiveDataService {
                         activeTask = task
                     }
                 }
-                print("✅ LiveData: Task state updated to \(state.rawValue)")
+                HXLogger.info("LiveData: Task state updated to \(state.rawValue)", category: "General")
             } catch {
-                print("❌ LiveData: Failed to update task state - \(error.localizedDescription)")
+                HXLogger.error("LiveData: Failed to update task state - \(error.localizedDescription)", category: "General")
                 lastError = error.localizedDescription
             }
         }
@@ -250,9 +250,9 @@ final class LiveDataService {
                 )
                 availableTasks.insert(created, at: 0)
                 postedTasks.insert(created, at: 0)
-                print("✅ LiveData: Task posted - \(created.title)")
+                HXLogger.info("LiveData: Task posted - \(created.title)", category: "General")
             } catch {
-                print("❌ LiveData: Failed to post task - \(error.localizedDescription)")
+                HXLogger.error("LiveData: Failed to post task - \(error.localizedDescription)", category: "General")
                 lastError = error.localizedDescription
             }
         }
@@ -373,9 +373,9 @@ final class LiveDataService {
                         requestedAmountCents: request.requestedAmountCents
                     )
                 )
-                print("✅ LiveData: Claim filed via API")
+                HXLogger.info("LiveData: Claim filed via API", category: "General")
             } catch {
-                print("⚠️ LiveData: API claim filing failed (local claim saved) - \(error.localizedDescription)")
+                HXLogger.error("LiveData: API claim filing failed (local claim saved) - \(error.localizedDescription)", category: "General")
             }
         }
 

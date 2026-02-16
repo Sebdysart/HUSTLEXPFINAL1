@@ -98,7 +98,7 @@ final class UserProfileService: ObservableObject {
         // Update AuthService's current user
         AuthService.shared.currentUser = user
 
-        print("✅ UserProfileService: Updated profile")
+        HXLogger.info("UserProfileService: Updated profile", category: "General")
         return user
     }
 
@@ -134,7 +134,7 @@ final class UserProfileService: ObservableObject {
         )
 
         self.xpHistory = entries
-        print("✅ UserProfileService: Fetched \(entries.count) XP history entries")
+        HXLogger.info("UserProfileService: Fetched \(entries.count) XP history entries", category: "General")
         return entries
     }
 
@@ -152,7 +152,7 @@ final class UserProfileService: ObservableObject {
         )
 
         self.badges = badges
-        print("✅ UserProfileService: Fetched \(badges.count) badges")
+        HXLogger.info("UserProfileService: Fetched \(badges.count) badges", category: "General")
         return badges
     }
 
@@ -171,7 +171,7 @@ final class UserProfileService: ObservableObject {
         )
 
         self.verificationStatus = status
-        print("✅ UserProfileService: Verification \(status.unlocked ? "unlocked" : "locked") - \(Int(status.percentage))% complete")
+        HXLogger.info("UserProfileService: Verification \(status.unlocked ? "unlocked" : "locked") - \(Int(status.percentage))% complete", category: "General")
         return status
     }
 
@@ -207,7 +207,7 @@ final class UserProfileService: ObservableObject {
             input: LedgerInput(limit: limit)
         )
 
-        print("✅ UserProfileService: Fetched \(entries.count) verification earnings entries")
+        HXLogger.info("UserProfileService: Fetched \(entries.count) verification earnings entries", category: "General")
         return entries
     }
 
@@ -257,6 +257,6 @@ final class UserProfileService: ObservableObject {
             )
         )
 
-        print("✅ UserProfileService: Onboarding completed")
+        HXLogger.info("UserProfileService: Onboarding completed", category: "General")
     }
 }

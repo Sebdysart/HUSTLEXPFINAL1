@@ -196,7 +196,7 @@ struct MovementTrackingSession: Identifiable, Codable {
         guard locations.count > 2 else { return false }
         let recentLocations = locations.suffix(20) // Last ~10 min at 30s intervals
         var maxDistance: Double = 0
-        let firstRecent = recentLocations.first!
+        guard let firstRecent = recentLocations.first else { return false }
         let firstLoc = CLLocation(latitude: firstRecent.latitude, longitude: firstRecent.longitude)
         
         for loc in recentLocations {

@@ -173,11 +173,11 @@ final class SubscriptionService {
             }
 
             isLoading = false
-            print("✅ SubscriptionService: Plan=\(currentPlan.rawValue), tasks=\(recurringTaskCount)/\(recurringTaskLimit)")
+            HXLogger.info("SubscriptionService: Plan=\(currentPlan.rawValue), tasks=\(recurringTaskCount)/\(recurringTaskLimit)", category: "Payment")
         } catch {
             self.error = error.localizedDescription
             isLoading = false
-            print("⚠️ SubscriptionService: fetchSubscription failed - \(error.localizedDescription)")
+            HXLogger.error("SubscriptionService: fetchSubscription failed - \(error.localizedDescription)", category: "Payment")
         }
     }
 
@@ -194,12 +194,12 @@ final class SubscriptionService {
             )
 
             isLoading = false
-            print("✅ SubscriptionService: Got clientSecret for \(plan) (\(interval))")
+            HXLogger.info("SubscriptionService: Got clientSecret for \(plan) (\(interval))", category: "Payment")
             return result.clientSecret
         } catch {
             self.error = error.localizedDescription
             isLoading = false
-            print("⚠️ SubscriptionService: subscribe failed - \(error.localizedDescription)")
+            HXLogger.error("SubscriptionService: subscribe failed - \(error.localizedDescription)", category: "Payment")
             return nil
         }
     }
@@ -220,12 +220,12 @@ final class SubscriptionService {
             recurringTaskLimit = 0
             expiresAt = nil
             isLoading = false
-            print("✅ SubscriptionService: Subscription cancelled")
+            HXLogger.info("SubscriptionService: Subscription cancelled", category: "Payment")
             return true
         } catch {
             self.error = error.localizedDescription
             isLoading = false
-            print("⚠️ SubscriptionService: cancel failed - \(error.localizedDescription)")
+            HXLogger.error("SubscriptionService: cancel failed - \(error.localizedDescription)", category: "Payment")
             return false
         }
     }
@@ -245,12 +245,12 @@ final class SubscriptionService {
             isLoading = false
             // Refresh subscription state
             await fetchSubscription()
-            print("✅ SubscriptionService: Subscription confirmed")
+            HXLogger.info("SubscriptionService: Subscription confirmed", category: "Payment")
             return true
         } catch {
             self.error = error.localizedDescription
             isLoading = false
-            print("⚠️ SubscriptionService: confirm failed - \(error.localizedDescription)")
+            HXLogger.error("SubscriptionService: confirm failed - \(error.localizedDescription)", category: "Payment")
             return false
         }
     }

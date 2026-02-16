@@ -373,13 +373,13 @@ struct BatchDetailsScreen: View {
                                 savings: savings,
                                 expiresAt: Date().addingTimeInterval(30 * 60)
                             )
-                            print("✅ BatchDetails: Loaded batch from API with \(nearbyTasks.count) nearby tasks")
+                            HXLogger.info("BatchDetails: Loaded batch from API with \(nearbyTasks.count) nearby tasks", category: "Task")
                             return
                         }
                     }
                 }
             } catch {
-                print("⚠️ BatchDetails: API failed, falling back to mock - \(error.localizedDescription)")
+                HXLogger.error("BatchDetails: API failed, falling back to mock - \(error.localizedDescription)", category: "Task")
             }
 
             // Fallback: use mock current recommendation

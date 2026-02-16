@@ -70,7 +70,7 @@ final class MockTaskBatchingService {
         currentRecommendation = recommendation
         recentRecommendations.append(recommendation)
         
-        print("[TaskBatching] Generated recommendation: \(recommendation.taskCount) tasks, \(recommendation.formattedTotalPayment)")
+        HXLogger.debug("[TaskBatching] Generated recommendation: \(recommendation.taskCount) tasks, \(recommendation.formattedTotalPayment)", category: "Task")
         
         return recommendation
     }
@@ -184,7 +184,7 @@ final class MockTaskBatchingService {
         }
         recentRecommendations.removeAll { $0.id == id }
         
-        print("[TaskBatching] Dismissed recommendation: \(id)")
+        HXLogger.debug("[TaskBatching] Dismissed recommendation: \(id)", category: "Task")
     }
     
     /// Clear all recommendations

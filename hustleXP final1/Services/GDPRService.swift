@@ -167,7 +167,7 @@ final class GDPRService: ObservableObject {
         // Refresh requests list
         _ = try? await getMyRequests()
 
-        print("✅ GDPRService: Created \(type.rawValue) request")
+        HXLogger.info("GDPRService: Created \(type.rawValue) request", category: "General")
         return request
     }
 
@@ -199,7 +199,7 @@ final class GDPRService: ObservableObject {
         )
 
         self.requests = requests
-        print("✅ GDPRService: Fetched \(requests.count) GDPR requests")
+        HXLogger.info("GDPRService: Fetched \(requests.count) GDPR requests", category: "General")
         return requests
     }
 
@@ -223,7 +223,7 @@ final class GDPRService: ObservableObject {
         // Refresh requests list
         _ = try? await getMyRequests()
 
-        print("✅ GDPRService: Cancelled request \(requestId)")
+        HXLogger.info("GDPRService: Cancelled request \(requestId)", category: "General")
     }
 
     // MARK: - Consent Management
@@ -240,7 +240,7 @@ final class GDPRService: ObservableObject {
         )
 
         self.consents = consents
-        print("✅ GDPRService: Fetched \(consents.count) consent statuses")
+        HXLogger.info("GDPRService: Fetched \(consents.count) consent statuses", category: "General")
         return consents
     }
 
@@ -265,7 +265,7 @@ final class GDPRService: ObservableObject {
         // Refresh consents
         _ = try? await getConsentStatus()
 
-        print("✅ GDPRService: Updated consent \(type.rawValue) = \(granted)")
+        HXLogger.info("GDPRService: Updated consent \(type.rawValue) = \(granted)", category: "General")
     }
 
     // MARK: - Convenience Methods

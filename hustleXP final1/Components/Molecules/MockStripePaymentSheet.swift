@@ -321,6 +321,6 @@ struct MockStripePaymentSheet: View {
 
 #Preview {
     MockStripePaymentSheet(amount: 1500) { success in
-        print("Payment completed: \(success)")
+        HXLogger.debug("Payment completed: \(success)", category: "Payment")
     }
 }

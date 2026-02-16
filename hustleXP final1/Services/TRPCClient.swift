@@ -30,7 +30,11 @@ final class TRPCClient: ObservableObject {
 
     init() {
         // Railway production backend
-        self.baseURL = URL(string: "https://hustlexp-ai-backend-staging-production.up.railway.app")!
+        // swiftlint:disable:next force_unwrapping
+        guard let url = URL(string: "https://hustlexp-ai-backend-staging-production.up.railway.app") else {
+            fatalError("TRPCClient: Invalid hardcoded base URL — this is a programmer error")
+        }
+        self.baseURL = url
 
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
@@ -71,12 +75,17 @@ final class TRPCClient: ObservableObject {
             // tRPC queries use GET with input as JSON-encoded URL param
             let inputData = try encoder.encode(input)
             let inputJSON = String(data: inputData, encoding: .utf8) ?? "{}"
-            var components = URLComponents(url: baseURL.appendingPathComponent("/trpc/\(path)"), resolvingAgainstBaseURL: false)!
+            guard var components = URLComponents(url: baseURL.appendingPathComponent("/trpc/\(path)"), resolvingAgainstBaseURL: false) else {
+                throw APIError.invalidResponse
+            }
             // Only add input param if it contains real data (not empty object)
             if inputJSON != "{}" {
                 components.queryItems = [URLQueryItem(name: "input", value: inputJSON)]
             }
-            request = URLRequest(url: components.url!)
+            guard let queryURL = components.url else {
+                throw APIError.invalidResponse
+            }
+            request = URLRequest(url: queryURL)
             request.httpMethod = "GET"
 
         case .mutation:
@@ -102,9 +111,9 @@ final class TRPCClient: ObservableObject {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             // Log error details for debugging
-            print("❌ tRPC HTTP \(httpResponse.statusCode) for \(path)")
+            HXLogger.error("tRPC HTTP \(httpResponse.statusCode) for \(path)", category: "Network")
             if let body = String(data: data, encoding: .utf8) {
-                print("❌ tRPC error body: \(body.prefix(500))")
+                HXLogger.error("tRPC error body: \(body.prefix(500))", category: "Network")
             }
 
             // Try to decode tRPC error with HX error code support
@@ -150,9 +159,9 @@ final class TRPCClient: ObservableObject {
             let envelope = try decoder.decode(TRPCResponse<Output>.self, from: data)
             return envelope.result.data
         } catch {
-            print("❌ tRPC decode error: \(error)")
+            HXLogger.error("tRPC decode error: \(error)", category: "Network")
             if let str = String(data: data, encoding: .utf8) {
-                print("❌ tRPC raw response: \(str.prefix(500))")
+                HXLogger.error("tRPC raw response: \(str.prefix(500))", category: "Network")
             }
             throw APIError.decodingError(error)
         }

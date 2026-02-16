@@ -40,7 +40,7 @@ final class MockGeofenceService {
     @discardableResult
     func registerGeofence(for task: HXTask, radius: Double = 50) -> GeofenceRegion? {
         guard let region = GeofenceRegion.forTask(task, radius: radius) else {
-            print("[Geofence] Cannot register - task has no coordinates")
+            HXLogger.debug("[Geofence] Cannot register - task has no coordinates", category: "General")
             return nil
         }
         
@@ -51,7 +51,7 @@ final class MockGeofenceService {
         activeGeofences.append(region)
         isMonitoring = true
         
-        print("[Geofence] Registered geofence for task '\(task.title)' at (\(region.centerLatitude), \(region.centerLongitude)) - radius: \(radius)m")
+        HXLogger.debug("[Geofence] Registered geofence for task '\(task.title)' at (\(region.centerLatitude), \(region.centerLongitude)) - radius: \(radius)m", category: "General")
         
         return region
     }
@@ -65,7 +65,7 @@ final class MockGeofenceService {
             isMonitoring = false
         }
         
-        print("[Geofence] Removed geofence for task: \(taskId)")
+        HXLogger.debug("[Geofence] Removed geofence for task: \(taskId)", category: "General")
     }
     
     /// Remove all geofences
@@ -74,7 +74,7 @@ final class MockGeofenceService {
         dwellingTimers.removeAll()
         isMonitoring = false
         
-        print("[Geofence] Removed all geofences")
+        HXLogger.debug("[Geofence] Removed all geofences", category: "General")
     }
     
     // MARK: - Location Checking
@@ -146,7 +146,7 @@ final class MockGeofenceService {
             lastGeofenceEvent = (.entered, region)
             onGeofenceEntered?(region)
             
-            print("[Geofence] ENTERED - Task: \(region.taskId)")
+            HXLogger.debug("[Geofence] ENTERED - Task: \(region.taskId)", category: "General")
             
             // Check for dwelling after threshold
             Task {
@@ -166,14 +166,14 @@ final class MockGeofenceService {
         lastGeofenceEvent = (.exited, region)
         onGeofenceExited?(region)
         
-        print("[Geofence] EXITED - Task: \(region.taskId)")
+        HXLogger.debug("[Geofence] EXITED - Task: \(region.taskId)", category: "General")
     }
     
     private func handleDwellingDetected(_ region: GeofenceRegion) {
         lastGeofenceEvent = (.dwelling, region)
         onDwellingDetected?(region)
         
-        print("[Geofence] DWELLING DETECTED - Task: \(region.taskId) - Smart Start: \(smartStartEnabled ? "ENABLED" : "DISABLED")")
+        HXLogger.debug("[Geofence] DWELLING DETECTED - Task: \(region.taskId) - Smart Start: \(smartStartEnabled ? "ENABLED" : "DISABLED")", category: "General")
     }
     
     private func checkForExits(currentLocation: GPSCoordinates) {
@@ -213,6 +213,6 @@ final class MockGeofenceService {
     /// Toggle Smart Start feature
     func setSmartStartEnabled(_ enabled: Bool) {
         smartStartEnabled = enabled
-        print("[Geofence] Smart Start \(enabled ? "ENABLED" : "DISABLED")")
+        HXLogger.debug("[Geofence] Smart Start \(enabled ? "ENABLED" : "DISABLED")", category: "General")
     }
 }

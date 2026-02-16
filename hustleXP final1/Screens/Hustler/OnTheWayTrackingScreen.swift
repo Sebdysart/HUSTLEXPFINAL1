@@ -525,9 +525,9 @@ struct OnTheWayTrackingScreen: View {
                     navigationDeadline: Date().addingTimeInterval(60),
                     movementDeadline: Date().addingTimeInterval(120)
                 )
-                print("✅ OnTheWay: Loaded real task data for tracking")
+                HXLogger.info("OnTheWay: Loaded real task data for tracking", category: "Task")
             } catch {
-                print("⚠️ OnTheWay: API load failed, using mock - \(error.localizedDescription)")
+                HXLogger.error("OnTheWay: API load failed, using mock - \(error.localizedDescription)", category: "Task")
                 // Fall back to mock tracking data
                 tracking = OnTheWaySession(
                     id: trackingId,
@@ -600,9 +600,9 @@ struct OnTheWayTrackingScreen: View {
                     lat: coords.latitude,
                     lng: coords.longitude
                 )
-                print("✅ OnTheWay: Arrival confirmed via API")
+                HXLogger.info("OnTheWay: Arrival confirmed via API", category: "Task")
             } catch {
-                print("⚠️ OnTheWay: API arrival check failed - \(error.localizedDescription)")
+                HXLogger.error("OnTheWay: API arrival check failed - \(error.localizedDescription)", category: "Task")
             }
         }
 

@@ -26,7 +26,7 @@ final class StripePaymentManager {
     func configure() {
         // Stripe test publishable key (safe to embed in client apps)
         StripeAPI.defaultPublishableKey = "pk_test_51SCTxI9oJYlVip5Z931pD73nICDzzkhjFrKZ1pED20fJWRgwLDrVqEhkfYuosQXrt8S56WIdnjBT9Nv5oJ4SXyvB009Ajm9uRv"
-        print("✅ StripePaymentManager: Configured with publishable key")
+        HXLogger.info("StripePaymentManager: Configured with publishable key", category: "Payment")
     }
 
     // MARK: - Payment Sheet
@@ -45,7 +45,7 @@ final class StripePaymentManager {
             configuration: configuration
         )
 
-        print("✅ StripePaymentManager: Payment sheet prepared")
+        HXLogger.info("StripePaymentManager: Payment sheet prepared", category: "Payment")
     }
 
     /// Present the payment sheet and return the result

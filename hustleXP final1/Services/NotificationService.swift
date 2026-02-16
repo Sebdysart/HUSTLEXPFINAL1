@@ -137,7 +137,7 @@ final class NotificationService: ObservableObject {
             self.notifications.append(contentsOf: list)
         }
 
-        print("✅ NotificationService: Fetched \(list.count) notifications")
+        HXLogger.info("NotificationService: Fetched \(list.count) notifications", category: "Push")
         return list
     }
 
@@ -198,7 +198,7 @@ final class NotificationService: ObservableObject {
         }
         await refreshUnreadCount()
 
-        print("✅ NotificationService: Marked notification \(notificationId) as read")
+        HXLogger.info("NotificationService: Marked notification \(notificationId) as read", category: "Push")
     }
 
     /// Marks all notifications as read
@@ -216,7 +216,7 @@ final class NotificationService: ObservableObject {
         // Refresh list
         _ = try? await getNotifications()
 
-        print("✅ NotificationService: Marked all notifications as read")
+        HXLogger.info("NotificationService: Marked all notifications as read", category: "Push")
     }
 
     /// Marks a notification as clicked (for analytics tracking)
@@ -263,7 +263,7 @@ final class NotificationService: ObservableObject {
         )
 
         self.preferences = prefs
-        print("✅ NotificationService: Updated notification preferences")
+        HXLogger.info("NotificationService: Updated notification preferences", category: "Push")
     }
 
     // MARK: - Helpers
@@ -273,7 +273,7 @@ final class NotificationService: ObservableObject {
         do {
             _ = try await getUnreadCount()
         } catch {
-            print("⚠️ NotificationService: Failed to refresh unread count")
+            HXLogger.error("NotificationService: Failed to refresh unread count", category: "Push")
         }
     }
 
@@ -283,7 +283,7 @@ final class NotificationService: ObservableObject {
             _ = try await getNotifications()
             _ = try await getUnreadCount()
         } catch {
-            print("⚠️ NotificationService: Failed to refresh")
+            HXLogger.error("NotificationService: Failed to refresh", category: "Push")
         }
     }
 }

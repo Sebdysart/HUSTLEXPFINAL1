@@ -693,14 +693,14 @@ struct CreateTaskScreen: View {
                     requiredSkills: nil
                 )
 
-                print("✅ CreateTask: Task created via API - \(newTask.id)")
+                HXLogger.info("CreateTask: Task created via API - \(newTask.id)", category: "Task")
 
                 // Store task ID for payment
                 pendingTaskId = newTask.id
 
                 // Create payment intent for escrow
                 let paymentIntent = try await escrowService.createPaymentIntent(taskId: newTask.id)
-                print("✅ CreateTask: Payment intent created - \(paymentIntent.paymentIntentId)")
+                HXLogger.info("CreateTask: Payment intent created - \(paymentIntent.paymentIntentId)", category: "Task")
 
                 // Prepare and present real Stripe PaymentSheet
                 let stripeManager = StripePaymentManager.shared
@@ -711,16 +711,16 @@ struct CreateTaskScreen: View {
                 switch result {
                 case .completed:
                     // Payment succeeded - confirm escrow funding on backend
-                    print("✅ CreateTask: Stripe payment completed")
+                    HXLogger.info("CreateTask: Stripe payment completed", category: "Task")
 
                     do {
                         _ = try await escrowService.confirmFunding(
                             escrowId: paymentIntent.escrowId,
                             stripePaymentIntentId: paymentIntent.paymentIntentId
                         )
-                        print("✅ CreateTask: Escrow funded successfully")
+                        HXLogger.info("CreateTask: Escrow funded successfully", category: "Task")
                     } catch {
-                        print("⚠️ CreateTask: Escrow confirm failed - \(error.localizedDescription)")
+                        HXLogger.error("CreateTask: Escrow confirm failed - \(error.localizedDescription)", category: "Task")
                         // Payment went through but confirm failed - backend webhook will reconcile
                     }
 
@@ -753,20 +753,20 @@ struct CreateTaskScreen: View {
                     router.popPoster()
 
                 case .canceled:
-                    print("⚠️ CreateTask: Payment canceled by user")
+                    HXLogger.error("CreateTask: Payment canceled by user", category: "Task")
                     stripeManager.reset()
                     isSubmitting = false
                     // Task created but not funded - user can retry from task detail
 
                 case .failed(error: let error):
-                    print("⚠️ CreateTask: Stripe payment failed - \(error.localizedDescription)")
+                    HXLogger.error("CreateTask: Stripe payment failed - \(error.localizedDescription)", category: "Task")
                     stripeManager.reset()
                     isSubmitting = false
                     // Task created but not funded - user can retry from task detail
                 }
 
             } catch {
-                print("⚠️ CreateTask: API failed, using mock - \(error.localizedDescription)")
+                HXLogger.error("CreateTask: API failed, using mock - \(error.localizedDescription)", category: "Task")
 
                 // Fall back to mock data
                 let mockTask = HXTask(

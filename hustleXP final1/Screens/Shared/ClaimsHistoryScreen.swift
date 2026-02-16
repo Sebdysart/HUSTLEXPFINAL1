@@ -88,10 +88,10 @@ struct ClaimsHistoryScreen: View {
         loadError = nil
         do {
             claims = try await InsuranceService.shared.getMyClaims()
-            print("✅ ClaimsHistory: Loaded \(claims.count) claims from API")
+            HXLogger.info("ClaimsHistory: Loaded \(claims.count) claims from API", category: "General")
         } catch {
             // v2.5.0: Show error to user instead of silent fallback
-            print("⚠️ ClaimsHistory: API failed - \(error.localizedDescription)")
+            HXLogger.error("ClaimsHistory: API failed - \(error.localizedDescription)", category: "General")
             loadError = error
         }
         isLoading = false

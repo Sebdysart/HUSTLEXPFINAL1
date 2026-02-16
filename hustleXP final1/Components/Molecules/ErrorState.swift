@@ -51,7 +51,7 @@ struct ErrorState: View {
             title: "Connection Lost",
             message: "Please check your internet connection"
         ) {
-            print("Retry tapped")
+            HXLogger.debug("Retry tapped", category: "UI")
         }
         
         ErrorState(

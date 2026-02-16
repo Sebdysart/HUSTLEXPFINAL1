@@ -67,7 +67,7 @@ final class ProofService: ObservableObject {
             input: GetURLInput(taskId: taskId, filename: filename, contentType: contentType)
         )
 
-        print("✅ ProofService: Got pre-signed URL for \(filename)")
+        HXLogger.info("ProofService: Got pre-signed URL for \(filename)", category: "Task")
         return response
     }
 
@@ -84,7 +84,10 @@ final class ProofService: ObservableObject {
             throw ProofError.imageCompressionFailed
         }
 
-        var request = URLRequest(url: URL(string: presignedURL.uploadUrl)!)
+        guard let uploadURL = URL(string: presignedURL.uploadUrl) else {
+            throw ProofError.uploadFailed
+        }
+        var request = URLRequest(url: uploadURL)
         request.httpMethod = "PUT"
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
         request.setValue("\(imageData.count)", forHTTPHeaderField: "Content-Length")
@@ -97,7 +100,7 @@ final class ProofService: ObservableObject {
             throw ProofError.uploadFailed
         }
 
-        print("✅ ProofService: Uploaded image to R2")
+        HXLogger.info("ProofService: Uploaded image to R2", category: "Task")
         return presignedURL.publicUrl
     }
 
@@ -127,7 +130,7 @@ final class ProofService: ObservableObject {
         }
 
         uploadProgress = 1.0
-        print("✅ ProofService: Uploaded \(uploadedUrls.count) proof photos")
+        HXLogger.info("ProofService: Uploaded \(uploadedUrls.count) proof photos", category: "Task")
         return uploadedUrls
     }
 
@@ -166,7 +169,7 @@ final class ProofService: ObservableObject {
             input: input
         )
 
-        print("✅ ProofService: Submitted proof for task \(taskId)")
+        HXLogger.info("ProofService: Submitted proof for task \(taskId)", category: "Task")
         return proof
     }
 
@@ -206,7 +209,7 @@ final class ProofService: ObservableObject {
             input: ReviewInput(taskId: taskId, approved: approved, feedback: feedback)
         )
 
-        print("✅ ProofService: Reviewed proof for task \(taskId), approved: \(approved)")
+        HXLogger.info("ProofService: Reviewed proof for task \(taskId), approved: \(approved)", category: "Task")
         return proof
     }
 }
@@ -247,7 +250,10 @@ struct BiometricProofGenerator {
         let combined = "\(deviceId)|\(timestampStr)|\(locationStr)"
 
         // Simple hash (in production, use proper cryptographic hash)
-        let hash = combined.data(using: .utf8)!.base64EncodedString()
+        guard let data = combined.data(using: .utf8) else {
+            return "unknown_hash"
+        }
+        let hash = data.base64EncodedString()
         return hash
     }
 }

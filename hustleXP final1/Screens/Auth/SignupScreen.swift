@@ -515,7 +515,7 @@ struct SignupScreen: View {
                 // App will automatically navigate to RootNavigator
                 isLoading = false
 
-                print("✅ Signup: Account created successfully for \(email)")
+                HXLogger.info("Signup: Account created successfully for \(email)", category: "Auth")
 
                 // Haptic feedback
                 let successFeedback = UINotificationFeedbackGenerator()
@@ -525,7 +525,7 @@ struct SignupScreen: View {
                 isLoading = false
                 signupError = error.localizedDescription
 
-                print("❌ Signup: Failed - \(error.localizedDescription)")
+                HXLogger.error("Signup: Failed - \(error.localizedDescription)", category: "Auth")
 
                 // Error haptic
                 let errorFeedback = UINotificationFeedbackGenerator()

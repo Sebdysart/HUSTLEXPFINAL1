@@ -226,7 +226,7 @@ struct EmptyState: View {
                 message: "Your completed tasks will appear here",
                 actionTitle: "Browse Tasks",
                 action: {
-                    print("Action tapped")
+                    HXLogger.debug("Action tapped", category: "UI")
                 },
                 accentColor: .infoBlue
             )

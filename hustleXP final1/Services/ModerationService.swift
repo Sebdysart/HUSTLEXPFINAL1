@@ -156,7 +156,7 @@ final class ModerationService: ObservableObject {
             )
         )
 
-        print("✅ ModerationService: Created report \(report.id)")
+        HXLogger.info("ModerationService: Created report \(report.id)", category: "General")
         return report
     }
 
@@ -211,7 +211,7 @@ final class ModerationService: ObservableObject {
         }
 
         // Default deadline: 7 days from now
-        let appealDeadline = deadline ?? Calendar.current.date(byAdding: .day, value: 7, to: Date())!
+        let appealDeadline = deadline ?? (Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date().addingTimeInterval(7 * 24 * 3600))
         let formatter = ISO8601DateFormatter()
 
         let appeal: ModerationAppeal = try await trpc.call(
@@ -225,7 +225,7 @@ final class ModerationService: ObservableObject {
             )
         )
 
-        print("✅ ModerationService: Created appeal \(appeal.id)")
+        HXLogger.info("ModerationService: Created appeal \(appeal.id)", category: "General")
         return appeal
     }
 
@@ -241,7 +241,7 @@ final class ModerationService: ObservableObject {
         )
 
         self.myAppeals = appeals
-        print("✅ ModerationService: Fetched \(appeals.count) appeals")
+        HXLogger.info("ModerationService: Fetched \(appeals.count) appeals", category: "General")
         return appeals
     }
 }

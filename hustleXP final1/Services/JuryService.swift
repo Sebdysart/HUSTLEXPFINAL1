@@ -77,7 +77,7 @@ final class JuryService: ObservableObject {
             )
         )
 
-        print("✅ JuryService: Vote submitted for dispute \(disputeId)")
+        HXLogger.info("JuryService: Vote submitted for dispute \(disputeId)", category: "General")
         return result
     }
 
@@ -97,7 +97,7 @@ final class JuryService: ObservableObject {
             input: TallyInput(disputeId: disputeId)
         )
 
-        print("✅ JuryService: Tally for \(disputeId) - \(tally.totalVotes) votes")
+        HXLogger.info("JuryService: Tally for \(disputeId) - \(tally.totalVotes) votes", category: "General")
         return tally
     }
 }

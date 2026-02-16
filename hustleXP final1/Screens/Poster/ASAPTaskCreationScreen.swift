@@ -616,7 +616,7 @@ struct ASAPTaskCreationScreen: View {
                     category: nil, // LiveTaskCategory doesn't map directly to TaskCategory
                     requiredTier: .elite
                 )
-                print("✅ ASAP: Task created via API - \(createdTask.id)")
+                HXLogger.info("ASAP: Task created via API - \(createdTask.id)", category: "Task")
 
                 // Create local quest alert for UI using the API-created task
                 let quest = liveModeService.createQuestAlert(
@@ -634,7 +634,7 @@ struct ASAPTaskCreationScreen: View {
                 let impact = UINotificationFeedbackGenerator()
                 impact.notificationOccurred(.success)
             } catch {
-                print("⚠️ ASAP: API create failed - \(error.localizedDescription)")
+                HXLogger.error("ASAP: API create failed - \(error.localizedDescription)", category: "Task")
 
                 // Fall back to mock task creation
                 let task = HXTask(
@@ -687,9 +687,9 @@ struct ASAPTaskCreationScreen: View {
                 longitude: coords.longitude
             )
             nearbyWorkerCount = max(broadcasts.count, 2)
-            print("✅ ASAP: Found \(broadcasts.count) nearby workers via API")
+            HXLogger.info("ASAP: Found \(broadcasts.count) nearby workers via API", category: "Task")
         } catch {
-            print("⚠️ ASAP: Broadcast API failed, using random count - \(error.localizedDescription)")
+            HXLogger.error("ASAP: Broadcast API failed, using random count - \(error.localizedDescription)", category: "Task")
             nearbyWorkerCount = Int.random(in: 2...6)
         }
     }

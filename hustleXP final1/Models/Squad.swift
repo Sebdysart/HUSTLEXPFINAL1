@@ -47,7 +47,7 @@ struct HXSquad: Identifiable, Codable {
     var levelProgress: Double {
         let thresholds = [0, 500, 1500, 3500, 7000, 12000]
         guard squadLevel < thresholds.count else { return 1.0 }
-        let current = squadLevel < thresholds.count ? thresholds[squadLevel] : thresholds.last!
+        let current = squadLevel < thresholds.count ? thresholds[squadLevel] : (thresholds.last ?? 12000)
         let previous = squadLevel > 0 ? thresholds[squadLevel - 1] : 0
         let range = current - previous
         guard range > 0 else { return 1.0 }

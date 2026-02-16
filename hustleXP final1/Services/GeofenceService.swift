@@ -70,7 +70,7 @@ final class GeofenceService: ObservableObject {
             input: ProximityInput(taskId: taskId, lat: lat, lng: lng)
         )
 
-        print("✅ GeofenceService: Proximity check - \(result.distanceMeters)m, inside: \(result.isWithinGeofence)")
+        HXLogger.info("GeofenceService: Proximity check - \(result.distanceMeters)m, inside: \(result.isWithinGeofence)", category: "General")
         return result
     }
 
@@ -90,7 +90,7 @@ final class GeofenceService: ObservableObject {
             input: TaskInput(taskId: taskId)
         )
 
-        print("✅ GeofenceService: Fetched \(events.count) geofence events")
+        HXLogger.info("GeofenceService: Fetched \(events.count) geofence events", category: "General")
         return events
     }
 
@@ -110,7 +110,7 @@ final class GeofenceService: ObservableObject {
             input: PresenceInput(taskId: taskId)
         )
 
-        print("✅ GeofenceService: Presence verified - present: \(result.isPresent)")
+        HXLogger.info("GeofenceService: Presence verified - present: \(result.isPresent)", category: "General")
         return result
     }
 }

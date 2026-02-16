@@ -56,7 +56,7 @@ final class MockLicenseVerificationService {
         }
         
         workerProfile = profile
-        print("[License] Selected skill: \(skill.name)")
+        HXLogger.debug("[License] Selected skill: \(skill.name)", category: "Skill")
     }
     
     func deselectSkill(_ skillId: String) {
@@ -102,7 +102,7 @@ final class MockLicenseVerificationService {
             await verifyLicense(license.id)
         }
         
-        print("[License] Upload started for \(type.rawValue)")
+        HXLogger.debug("[License] Upload started for \(type.rawValue)", category: "Skill")
         return license
     }
     
@@ -144,15 +144,15 @@ final class MockLicenseVerificationService {
                 workerProfile = profile
             }
             
-            print("[License] VERIFIED: \(license.type.rawValue) (confidence: \(String(format: "%.1f", confidenceScore * 100))%)")
+            HXLogger.debug("[License] VERIFIED: \(license.type.rawValue) (confidence: \(String(format: "%.1f", confidenceScore * 100))%)", category: "Skill")
         } else if confidenceScore > 0.5 {
             license.verificationStatus = .manualReview
             license.manualReviewRequired = true
-            print("[License] MANUAL REVIEW: \(license.type.rawValue) (confidence: \(String(format: "%.1f", confidenceScore * 100))%)")
+            HXLogger.debug("[License] MANUAL REVIEW: \(license.type.rawValue) (confidence: \(String(format: "%.1f", confidenceScore * 100))%)", category: "Skill")
         } else {
             license.verificationStatus = .rejected
             license.rejectionReason = "Unable to verify license with state database. Please check your license number and try again."
-            print("[License] REJECTED: \(license.type.rawValue)")
+            HXLogger.debug("[License] REJECTED: \(license.type.rawValue)", category: "Skill")
         }
         
         pendingVerifications[pendingIndex] = license
@@ -197,7 +197,7 @@ final class MockLicenseVerificationService {
         
         if taskRequirementMet && xpRequirementMet {
             profile.unlockedSkills.insert(skill.id)
-            print("[License] UNLOCKED skill: \(skill.name)")
+            HXLogger.debug("[License] UNLOCKED skill: \(skill.name)", category: "Skill")
         }
     }
     
@@ -254,7 +254,7 @@ final class MockLicenseVerificationService {
                 let taskCoords = GPSCoordinates(latitude: taskLat, longitude: taskLon)
                 distance = LocationService.current.calculateDistance(from: loc, to: taskCoords)
                 
-                if distance! > filterSettings.maxRadiusMeters {
+                if let dist = distance, dist > filterSettings.maxRadiusMeters {
                     filteredByDistance += 1
                     continue
                 }
@@ -353,9 +353,9 @@ final class MockLicenseVerificationService {
             let blockReason: TaskEligibilityResult.EligibilityBlockReason
             let unlockAction: TaskEligibilityResult.UnlockAction?
             
-            if requiredSkill.type == .licensed {
+            if requiredSkill.type == .licensed, let licenseType = requiredSkill.licenseType {
                 blockReason = .licenseRequired
-                unlockAction = .uploadLicense(requiredSkill.licenseType!)
+                unlockAction = .uploadLicense(licenseType)
             } else if !profile.selectedSkills.contains(requiredSkill.id) {
                 blockReason = .skillNotSelected
                 unlockAction = .selectSkill(requiredSkill)

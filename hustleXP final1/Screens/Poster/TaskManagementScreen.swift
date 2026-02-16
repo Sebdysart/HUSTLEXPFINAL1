@@ -81,9 +81,9 @@ struct TaskManagementScreen: View {
         Task {
             do {
                 task = try await TaskService.shared.getTask(id: taskId)
-                print("✅ TaskManagement: Loaded task from API")
+                HXLogger.info("TaskManagement: Loaded task from API", category: "Task")
             } catch {
-                print("⚠️ TaskManagement: API failed - \(error.localizedDescription)")
+                HXLogger.error("TaskManagement: API failed - \(error.localizedDescription)", category: "Task")
                 task = LiveDataService.shared.getTask(by: taskId)
             }
             isLoading = false

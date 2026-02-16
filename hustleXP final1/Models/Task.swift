@@ -42,7 +42,7 @@ enum TaskState: String, Codable, CaseIterable {
         case "EXPIRED":           self = .expired
         default:
             // Fallback: unknown states default to .posted to avoid crash
-            print("⚠️ TaskState: Unknown value '\(rawValue)', defaulting to .posted")
+            HXLogger.error("TaskState: Unknown value '\(rawValue)', defaulting to .posted", category: "Task")
             self = .posted
         }
     }

@@ -67,7 +67,7 @@ final class TaskService: ObservableObject {
             input: input
         )
 
-        print("✅ TaskService: Created task - \(task.title)")
+        HXLogger.info("TaskService: Created task - \(task.title)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(.taskCreated, taskId: task.id, taskTitle: task.title)
         return task
     }
@@ -125,7 +125,7 @@ final class TaskService: ObservableObject {
             input: AcceptInput(taskId: taskId)
         )
 
-        print("✅ TaskService: Accepted task - \(task.title)")
+        HXLogger.info("TaskService: Accepted task - \(task.title)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(.taskAccepted, taskId: task.id, taskTitle: task.title)
         return task
     }
@@ -145,7 +145,7 @@ final class TaskService: ObservableObject {
             input: StartInput(taskId: taskId)
         )
 
-        print("✅ TaskService: Started task - \(task.title)")
+        HXLogger.info("TaskService: Started task - \(task.title)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(.taskStarted, taskId: task.id, taskTitle: task.title)
         return task
     }
@@ -186,7 +186,7 @@ final class TaskService: ObservableObject {
             input: input
         )
 
-        print("✅ TaskService: Submitted proof for task - \(task.title)")
+        HXLogger.info("TaskService: Submitted proof for task - \(task.title)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(.proofSubmitted, taskId: task.id, taskTitle: task.title)
         return task
     }
@@ -208,7 +208,7 @@ final class TaskService: ObservableObject {
             input: CancelInput(taskId: taskId, reason: reason)
         )
 
-        print("✅ TaskService: Abandoned task - \(task.title)")
+        HXLogger.info("TaskService: Abandoned task - \(task.title)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(.taskAbandoned, taskId: task.id, taskTitle: task.title)
         return task
     }
@@ -232,7 +232,7 @@ final class TaskService: ObservableObject {
             input: ReviewInput(taskId: taskId, approved: approved, feedback: feedback)
         )
 
-        print("✅ TaskService: Reviewed proof for task - \(task.title), approved: \(approved)")
+        HXLogger.info("TaskService: Reviewed proof for task - \(task.title), approved: \(approved)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(approved ? .proofApproved : .proofRejected, taskId: task.id, taskTitle: task.title)
         return task
     }
@@ -253,7 +253,7 @@ final class TaskService: ObservableObject {
             input: CancelInput(taskId: taskId, reason: reason)
         )
 
-        print("✅ TaskService: Cancelled task - \(task.title)")
+        HXLogger.info("TaskService: Cancelled task - \(task.title)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(.taskCancelled, taskId: task.id, taskTitle: task.title)
         return task
     }
@@ -283,7 +283,7 @@ final class TaskService: ObservableObject {
             input: input
         )
 
-        print("✅ TaskService: Fetched \(tasks.count) open tasks")
+        HXLogger.info("TaskService: Fetched \(tasks.count) open tasks", category: "Task")
         return tasks
     }
 
@@ -300,7 +300,7 @@ final class TaskService: ObservableObject {
             input: ListByPosterInput(state: state?.rawValue)
         )
 
-        print("✅ TaskService: Fetched \(tasks.count) posted tasks")
+        HXLogger.info("TaskService: Fetched \(tasks.count) posted tasks", category: "Task")
         return tasks
     }
 
@@ -317,7 +317,7 @@ final class TaskService: ObservableObject {
             input: ListByWorkerInput(state: state?.rawValue)
         )
 
-        print("✅ TaskService: Fetched \(tasks.count) claimed tasks")
+        HXLogger.info("TaskService: Fetched \(tasks.count) claimed tasks", category: "Task")
         return tasks
     }
 
@@ -337,7 +337,7 @@ final class TaskService: ObservableObject {
             input: HistoryInput(state: nil) // nil state returns all tasks including completed
         )
 
-        print("✅ TaskService: Fetched \(tasks.count) history tasks")
+        HXLogger.info("TaskService: Fetched \(tasks.count) history tasks", category: "Task")
         return tasks
     }
 }
@@ -386,7 +386,7 @@ final class TaskDiscoveryService: ObservableObject {
             input: input
         )
 
-        print("✅ TaskDiscovery: Fetched feed with \(response.tasks.count) tasks")
+        HXLogger.info("TaskDiscovery: Fetched feed with \(response.tasks.count) tasks", category: "Task")
         return response
     }
 
@@ -413,8 +413,8 @@ final class TaskDiscoveryService: ObservableObject {
             latitude: latitude,
             longitude: longitude,
             category: category?.rawValue,
-            minPaymentCents: minPayment != nil ? Int(minPayment! * 100) : nil,
-            maxPaymentCents: maxPayment != nil ? Int(maxPayment! * 100) : nil
+            minPaymentCents: minPayment.map { Int($0 * 100) },
+            maxPaymentCents: maxPayment.map { Int($0 * 100) }
         )
 
         let tasks: [HXTask] = try await trpc.call(
@@ -424,7 +424,7 @@ final class TaskDiscoveryService: ObservableObject {
             input: input
         )
 
-        print("✅ TaskDiscovery: Search returned \(tasks.count) tasks")
+        HXLogger.info("TaskDiscovery: Search returned \(tasks.count) tasks", category: "Task")
         return tasks
     }
 
@@ -463,7 +463,7 @@ final class TaskDiscoveryService: ObservableObject {
             input: CalcInput(maxDistanceMiles: maxDistanceMiles)
         )
 
-        print("✅ TaskDiscovery: Calculated feed scores")
+        HXLogger.info("TaskDiscovery: Calculated feed scores", category: "Task")
         return ["calculatedCount": response.calculatedCount ?? 0]
     }
 
@@ -480,7 +480,7 @@ final class TaskDiscoveryService: ObservableObject {
             input: MatchInput(taskId: taskId)
         )
 
-        print("✅ TaskDiscovery: Matching score for task \(taskId) = \(result.score)")
+        HXLogger.info("TaskDiscovery: Matching score for task \(taskId) = \(result.score)", category: "Task")
         return result
     }
 
@@ -506,7 +506,7 @@ final class TaskDiscoveryService: ObservableObject {
             input: SaveInput(name: name, query: query, filters: filters, sortBy: sortBy)
         )
 
-        print("✅ TaskDiscovery: Saved search '\(name)'")
+        HXLogger.info("TaskDiscovery: Saved search '\(name)'", category: "Task")
         return saved
     }
 
@@ -521,7 +521,7 @@ final class TaskDiscoveryService: ObservableObject {
             input: EmptyInput()
         )
 
-        print("✅ TaskDiscovery: Fetched \(searches.count) saved searches")
+        HXLogger.info("TaskDiscovery: Fetched \(searches.count) saved searches", category: "Task")
         return searches
     }
 
@@ -541,7 +541,7 @@ final class TaskDiscoveryService: ObservableObject {
             input: DeleteInput(searchId: searchId)
         )
 
-        print("✅ TaskDiscovery: Deleted saved search \(searchId)")
+        HXLogger.info("TaskDiscovery: Deleted saved search \(searchId)", category: "Task")
     }
 
     /// Executes a saved search with its stored filters
@@ -559,7 +559,7 @@ final class TaskDiscoveryService: ObservableObject {
             input: ExecuteInput(searchId: searchId, limit: limit, offset: offset)
         )
 
-        print("✅ TaskDiscovery: Executed saved search, returned \(tasks.count) tasks")
+        HXLogger.info("TaskDiscovery: Executed saved search, returned \(tasks.count) tasks", category: "Task")
         return tasks
     }
 }

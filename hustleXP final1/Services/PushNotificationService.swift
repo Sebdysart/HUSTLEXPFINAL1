@@ -48,7 +48,7 @@ class PushNotificationService: NSObject, ObservableObject {
             }
             return granted
         } catch {
-            print("[PushNotificationService] Permission request failed: \(error)")
+            HXLogger.error("[PushNotificationService] Permission request failed: \(error)", category: "Push")
             return false
         }
     }
@@ -69,16 +69,16 @@ class PushNotificationService: NSObject, ObservableObject {
                     procedure: "registerDeviceToken",
                     input: input
                 )
-                print("[PushNotificationService] FCM token synced with backend")
+                HXLogger.info("[PushNotificationService] FCM token synced with backend", category: "Push")
             } catch {
-                print("[PushNotificationService] Token sync failed: \(error)")
+                HXLogger.error("[PushNotificationService] Token sync failed: \(error)", category: "Push")
             }
         }
     }
 
     // MARK: - Update FCM Token
     func updateFCMToken(_ token: String) {
-        print("[PushNotificationService] FCM Token: \(token)")
+        HXLogger.info("[PushNotificationService] FCM Token: \(token)", category: "Push")
         DispatchQueue.main.async {
             self.fcmToken = token
         }
@@ -90,7 +90,7 @@ class PushNotificationService: NSObject, ObservableObject {
         // Parse notification data
         guard let type = userInfo["type"] as? String else { return }
 
-        print("[PushNotificationService] Received notification type: \(type)")
+        HXLogger.info("[PushNotificationService] Received notification type: \(type)", category: "Push")
 
         // Update unread count
         DispatchQueue.main.async {
@@ -109,7 +109,7 @@ class PushNotificationService: NSObject, ObservableObject {
     func clearBadge() {
         UNUserNotificationCenter.current().setBadgeCount(0) { error in
             if let error {
-                print("[PushNotificationService] Clear badge failed: \(error)")
+                HXLogger.error("[PushNotificationService] Clear badge failed: \(error)", category: "Push")
             }
         }
         unreadCount = 0

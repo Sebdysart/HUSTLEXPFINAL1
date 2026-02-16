@@ -26,8 +26,8 @@ struct BootstrapScreen: View {
             
             // Bootstrap validation button
             Button(action: {
-                print("[BOOTSTRAP] Button tapped at \(Date())")
-                print("[BOOTSTRAP] App is stable and responsive")
+                HXLogger.debug("[BOOTSTRAP] Button tapped at \(Date())", category: "Navigation")
+                HXLogger.debug("[BOOTSTRAP] App is stable and responsive", category: "Navigation")
             }) {
                 Text("Verify Bootstrap")
                     .font(.headline)
@@ -41,7 +41,7 @@ struct BootstrapScreen: View {
             .padding(.bottom, 48)
         }
         .onAppear {
-            print("[BOOTSTRAP] BootstrapScreen rendered at \(Date())")
+            HXLogger.debug("[BOOTSTRAP] BootstrapScreen rendered at \(Date())", category: "Navigation")
         }
     }
 }

@@ -126,9 +126,9 @@ struct SkillGridSelectionScreen: View {
                 verifiedSkills = records
                 // Pre-select skills the user already has
                 selectedSkills = Set(records.map { $0.skillId })
-                print("SkillGrid: Loaded \(records.count) skills from backend")
+                HXLogger.debug("SkillGrid: Loaded \(records.count) skills from backend", category: "Skill")
             } catch {
-                print("SkillGrid: Failed to load skills - \(error.localizedDescription)")
+                HXLogger.debug("SkillGrid: Failed to load skills - \(error.localizedDescription)", category: "Skill")
             }
             isLoadingSkills = false
         }
@@ -487,9 +487,9 @@ struct SkillGridSelectionScreen: View {
             do {
                 let saved = try await skillService.addSkills(skillIds: Array(selectedSkills))
                 verifiedSkills = saved
-                print("SkillGrid: \(saved.count) skills saved to backend")
+                HXLogger.debug("SkillGrid: \(saved.count) skills saved to backend", category: "Skill")
             } catch {
-                print("SkillGrid: Backend save failed - \(error.localizedDescription)")
+                HXLogger.debug("SkillGrid: Backend save failed - \(error.localizedDescription)", category: "Skill")
             }
         }
 

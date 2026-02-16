@@ -57,7 +57,7 @@ final class MessagingService: ObservableObject {
             input: SendInput(taskId: taskId, messageType: "TEXT", content: content)
         )
 
-        print("✅ MessagingService: Sent message in task \(taskId)")
+        HXLogger.info("MessagingService: Sent message in task \(taskId)", category: "General")
         return message
     }
 
@@ -80,7 +80,7 @@ final class MessagingService: ObservableObject {
             input: GetMessagesInput(taskId: taskId)
         )
 
-        print("✅ MessagingService: Fetched \(messages.count) messages for task \(taskId)")
+        HXLogger.info("MessagingService: Fetched \(messages.count) messages for task \(taskId)", category: "General")
         return messages
     }
 
@@ -100,7 +100,7 @@ final class MessagingService: ObservableObject {
         // Update total unread count
         self.unreadCount = conversations.reduce(0) { $0 + $1.unreadCount }
 
-        print("✅ MessagingService: Fetched \(conversations.count) conversations")
+        HXLogger.info("MessagingService: Fetched \(conversations.count) conversations", category: "General")
         return conversations
     }
 
@@ -120,7 +120,7 @@ final class MessagingService: ObservableObject {
             input: MarkReadInput(taskId: taskId)
         )
 
-        print("✅ MessagingService: Marked messages as read for task \(taskId)")
+        HXLogger.info("MessagingService: Marked messages as read for task \(taskId)", category: "General")
 
         // Refresh unread count
         await refreshUnreadCount()
@@ -150,7 +150,7 @@ final class MessagingService: ObservableObject {
         do {
             _ = try await getUnreadCount()
         } catch {
-            print("⚠️ MessagingService: Failed to refresh unread count")
+            HXLogger.error("MessagingService: Failed to refresh unread count", category: "General")
         }
     }
 
@@ -177,7 +177,7 @@ final class MessagingService: ObservableObject {
             input: PhotoInput(taskId: taskId, photoUrls: photoUrls, caption: caption)
         )
 
-        print("✅ MessagingService: Sent photo message in task \(taskId)")
+        HXLogger.info("MessagingService: Sent photo message in task \(taskId)", category: "General")
         return message
     }
 
@@ -197,7 +197,7 @@ final class MessagingService: ObservableObject {
             input: MarkReadInput(messageId: messageId)
         )
 
-        print("✅ MessagingService: Marked message \(messageId) as read")
+        HXLogger.info("MessagingService: Marked message \(messageId) as read", category: "General")
         await refreshUnreadCount()
     }
 }

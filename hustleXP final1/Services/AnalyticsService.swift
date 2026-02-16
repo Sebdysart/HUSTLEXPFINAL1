@@ -223,7 +223,7 @@ final class AnalyticsService {
                     input: ABTestInput(testName: testName, variant: variant, converted: converted)
                 )
             } catch {
-                print("⚠️ AnalyticsService: Failed to track A/B test - \(error.localizedDescription)")
+                HXLogger.error("AnalyticsService: Failed to track A/B test - \(error.localizedDescription)", category: "Analytics")
             }
         }
     }
@@ -253,7 +253,7 @@ final class AnalyticsService {
                 input: BatchInput(events: apiEvents)
             )
 
-            print("✅ AnalyticsService: Flushed \(eventsToSend.count) events")
+            HXLogger.debug("AnalyticsService: Flushed \(eventsToSend.count) events", category: "Analytics")
         } catch {
             // Re-add failed events to buffer for retry
             eventBuffer.insert(contentsOf: eventsToSend, at: 0)
@@ -261,7 +261,7 @@ final class AnalyticsService {
             if eventBuffer.count > 100 {
                 eventBuffer = Array(eventBuffer.suffix(100))
             }
-            print("⚠️ AnalyticsService: Failed to flush events - \(error.localizedDescription)")
+            HXLogger.error("AnalyticsService: Failed to flush events - \(error.localizedDescription)", category: "Analytics")
         }
     }
 

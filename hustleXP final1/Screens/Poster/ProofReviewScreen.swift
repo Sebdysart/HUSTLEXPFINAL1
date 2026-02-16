@@ -92,9 +92,9 @@ struct ProofReviewScreen: View {
         .task {
             do {
                 task = try await TaskService.shared.getTask(id: taskId)
-                print("✅ ProofReview: Loaded task from API")
+                HXLogger.info("ProofReview: Loaded task from API", category: "Task")
             } catch {
-                print("⚠️ ProofReview: API failed - \(error.localizedDescription)")
+                HXLogger.error("ProofReview: API failed - \(error.localizedDescription)", category: "Task")
                 task = LiveDataService.shared.getTask(by: taskId)
             }
         }
@@ -110,9 +110,9 @@ struct ProofReviewScreen: View {
                     approved: true,
                     feedback: rating > 0 ? "Rated \(rating)/5" : nil
                 )
-                print("✅ ProofReview: Approved via API")
+                HXLogger.info("ProofReview: Approved via API", category: "Task")
             } catch {
-                print("⚠️ ProofReview: API approve failed - \(error.localizedDescription)")
+                HXLogger.error("ProofReview: API approve failed - \(error.localizedDescription)", category: "Task")
             }
             isProcessing = false
             withAnimation(.spring(response: 0.5)) {
@@ -524,9 +524,9 @@ private struct RequestChangesSheet: View {
                                         approved: false,
                                         feedback: feedback
                                     )
-                                    print("✅ ProofReview: Changes requested via API")
+                                    HXLogger.info("ProofReview: Changes requested via API", category: "Task")
                                 } catch {
-                                    print("⚠️ ProofReview: API reject failed - \(error.localizedDescription)")
+                                    HXLogger.error("ProofReview: API reject failed - \(error.localizedDescription)", category: "Task")
                                 }
                             }
                             dismiss()

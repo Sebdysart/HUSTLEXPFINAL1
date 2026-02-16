@@ -273,7 +273,7 @@ final class MockDataService {
         availableTasks.remove(at: index)
         activeTask = task
         
-        print("[MockData] Task claimed: \(task.title)")
+        HXLogger.debug("[MockData] Task claimed: \(task.title)", category: "General")
     }
     
     func updateTaskState(_ taskId: String, to state: TaskState) {
@@ -289,7 +289,7 @@ final class MockDataService {
             } else {
                 activeTask = task
             }
-            print("[MockData] Task state updated: \(state.rawValue)")
+            HXLogger.debug("[MockData] Task state updated: \(state.rawValue)", category: "General")
         }
     }
     
@@ -298,7 +298,7 @@ final class MockDataService {
         newTask.state = .posted
         availableTasks.insert(newTask, at: 0)
         currentUser.tasksPosted += 1
-        print("[MockData] Task posted: \(task.title)")
+        HXLogger.debug("[MockData] Task posted: \(task.title)", category: "General")
     }
     
     func getTask(by id: String) -> HXTask? {
@@ -359,7 +359,7 @@ final class MockDataService {
         currentUser.xpHeldBack = 0
         currentUser.unpaidTaxCents = 0
         
-        print("[MockData] Tax paid! Released \(xpReleased) XP")
+        HXLogger.debug("[MockData] Tax paid! Released \(xpReleased) XP", category: "General")
         
         return TaxPaymentResult(
             success: true,
@@ -392,7 +392,7 @@ final class MockDataService {
         
         currentUser.verificationEarnedCents = newEarned
         
-        print("[MockData] Verification progress: \(percentage)%")
+        HXLogger.debug("[MockData] Verification progress: \(percentage)%", category: "General")
     }
     
     // MARK: - v1.8.0 Insurance Actions
@@ -429,7 +429,7 @@ final class MockDataService {
             activeTask = task
         }
         
-        print("[MockData] Claim filed: \(claim.id)")
+        HXLogger.debug("[MockData] Claim filed: \(claim.id)", category: "General")
         return claim
     }
     

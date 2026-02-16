@@ -120,7 +120,7 @@ final class TutorialService: ObservableObject {
         )
 
         self.scenarios = scenarios
-        print("✅ TutorialService: Fetched \(scenarios.count) scenarios")
+        HXLogger.info("TutorialService: Fetched \(scenarios.count) scenarios", category: "General")
         return scenarios
     }
 
@@ -141,7 +141,7 @@ final class TutorialService: ObservableObject {
             input: SubmitInput(answers: answers)
         )
 
-        print("✅ TutorialService: Submitted answers - score \(result.score)/\(result.totalQuestions)")
+        HXLogger.info("TutorialService: Submitted answers - score \(result.score)/\(result.totalQuestions)", category: "General")
         return result
     }
 
@@ -162,7 +162,7 @@ final class TutorialService: ObservableObject {
             input: ScanInput(photoUrl: photoUrl)
         )
 
-        print("✅ TutorialService: Equipment scan - detected: \(result.detected)")
+        HXLogger.info("TutorialService: Equipment scan - detected: \(result.detected)", category: "General")
         return result
     }
 }

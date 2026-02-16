@@ -415,9 +415,9 @@ struct HustlerTaskDetailScreen: View {
                     currentTaskId: task.id,
                     maxResults: 5
                 )
-                print("✅ HustlerTaskDetail: Got \(suggestions.count) batch suggestions from API")
+                HXLogger.info("HustlerTaskDetail: Got \(suggestions.count) batch suggestions from API", category: "Task")
             } catch {
-                print("⚠️ HustlerTaskDetail: Batch API failed - \(error.localizedDescription)")
+                HXLogger.error("HustlerTaskDetail: Batch API failed - \(error.localizedDescription)", category: "Task")
             }
         }
 
@@ -432,7 +432,7 @@ struct HustlerTaskDetailScreen: View {
     private func openInMaps(_ task: HXTask) {
         guard let lat = task.latitude, let lon = task.longitude else { return }
         // In production, would open Apple Maps
-        print("[Maps] Opening directions to \(lat), \(lon)")
+        HXLogger.debug("[Maps] Opening directions to \(lat), \(lon)", category: "Navigation")
     }
     
     // MARK: - Poster Card
@@ -802,7 +802,7 @@ struct HustlerTaskDetailScreen: View {
                 router.navigateToHustler(.taskInProgress(taskId: task.id))
             } catch {
                 // v2.5.0: Show error alert instead of silent fallback
-                print("⚠️ TaskDetail: API accept failed - \(error.localizedDescription)")
+                HXLogger.error("TaskDetail: API accept failed - \(error.localizedDescription)", category: "Task")
                 acceptError = "Could not accept this task. Please check your connection and try again."
                 showAcceptError = true
             }
@@ -820,10 +820,10 @@ struct HustlerTaskDetailScreen: View {
     private func loadTaskFromAPI() async {
         do {
             apiTask = try await taskService.getTask(id: taskId)
-            print("✅ TaskDetail: Loaded task from API")
+            HXLogger.info("TaskDetail: Loaded task from API", category: "Task")
         } catch {
             loadError = error
-            print("⚠️ TaskDetail: API load failed, using mock - \(error.localizedDescription)")
+            HXLogger.error("TaskDetail: API load failed, using mock - \(error.localizedDescription)", category: "Task")
         }
     }
 }

@@ -81,7 +81,7 @@ final class HeatMapService: ObservableObject {
             )
         )
 
-        print("✅ HeatMapService: Fetched \(result.zones.count) heat zones")
+        HXLogger.info("HeatMapService: Fetched \(result.zones.count) heat zones", category: "General")
         return result
     }
 
@@ -105,7 +105,7 @@ final class HeatMapService: ObservableObject {
             input: AlertInput(lat: lat, lng: lng)
         )
 
-        print("✅ HeatMapService: Fetched \(alerts.count) demand alerts")
+        HXLogger.info("HeatMapService: Fetched \(alerts.count) demand alerts", category: "General")
         return alerts
     }
 }

@@ -841,7 +841,7 @@ struct ProofSubmissionScreen: View {
         gpsError = nil
         currentStep = .gps
         
-        print("[ProofSubmission] Capturing GPS coordinates...")
+        HXLogger.debug("[ProofSubmission] Capturing GPS coordinates...", category: "Task")
         
         // v2.5.0: Use real CoreLocation
         locationManager.requestLocation { result in
@@ -858,12 +858,12 @@ struct ProofSubmissionScreen: View {
                     isCapturingGPS = false
                     currentStep = .photo
                 }
-                print("[ProofSubmission] GPS captured: \(coords.latitude), \(coords.longitude) (±\(Int(coords.accuracyMeters))m)")
+                HXLogger.debug("[ProofSubmission] GPS captured: \(coords.latitude), \(coords.longitude) (±\(Int(coords.accuracyMeters))m)", category: "Task")
                 
             case .failure(let error):
                 gpsError = error.localizedDescription
                 isCapturingGPS = false
-                print("[ProofSubmission] GPS error: \(error.localizedDescription)")
+                HXLogger.debug("[ProofSubmission] GPS error: \(error.localizedDescription)", category: "Task")
             }
         }
     }
@@ -872,8 +872,8 @@ struct ProofSubmissionScreen: View {
         guard hasPhoto, let coords = gpsCoordinates else { return }
         
         isSubmitting = true
-        print("[ProofSubmission] Submitting proof for task: \(taskId)")
-        print("[ProofSubmission] GPS: \(coords.latitude), \(coords.longitude)")
+        HXLogger.debug("[ProofSubmission] Submitting proof for task: \(taskId)", category: "Task")
+        HXLogger.debug("[ProofSubmission] GPS: \(coords.latitude), \(coords.longitude)", category: "Task")
         
         // v2.2.0: Use real API to submit proof
         Task {
@@ -881,7 +881,7 @@ struct ProofSubmissionScreen: View {
                 // Upload photo if we have one
                 var photoUrls: [String] = uploadedPhotoUrls
                 if let image = capturedImage, photoUrls.isEmpty {
-                    print("[ProofSubmission] Uploading photo to R2...")
+                    HXLogger.debug("[ProofSubmission] Uploading photo to R2...", category: "Task")
                     let url = try await proofService.uploadProofPhoto(
                         image: image,
                         taskId: taskId,
@@ -889,7 +889,7 @@ struct ProofSubmissionScreen: View {
                     )
                     photoUrls = [url]
                     uploadedPhotoUrls = photoUrls
-                    print("[ProofSubmission] Photo uploaded: \(url)")
+                    HXLogger.debug("[ProofSubmission] Photo uploaded: \(url)", category: "Task")
                 }
                 
                 // Generate biometric hash
@@ -908,7 +908,7 @@ struct ProofSubmissionScreen: View {
                     biometricHash: biometricHash
                 )
 
-                print("✅ ProofSubmission: Proof submitted via API")
+                HXLogger.info("ProofSubmission: Proof submitted via API", category: "Task")
 
                 // Also submit via TaskService to update task state
                 _ = try await taskService.submitProof(
@@ -945,10 +945,10 @@ struct ProofSubmissionScreen: View {
                     showValidationFeedback = true
                 }
                 
-                print("[ProofSubmission] Validation result: \(result.recommendation.rawValue)")
+                HXLogger.debug("[ProofSubmission] Validation result: \(result.recommendation.rawValue)", category: "Task")
                 
             } catch {
-                print("⚠️ ProofSubmission: API failed - \(error.localizedDescription)")
+                HXLogger.error("ProofSubmission: API failed - \(error.localizedDescription)", category: "Task")
                 
                 // Fall back to mock validation
                 let photoURL: URL? = uploadedPhotoUrls.first.flatMap { URL(string: $0) }

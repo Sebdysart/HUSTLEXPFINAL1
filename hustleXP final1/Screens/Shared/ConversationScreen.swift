@@ -133,7 +133,7 @@ struct ConversationScreen: View {
             Button("Cancel", role: .cancel) { }
             Button("Call via Phone") {
                 // In a real app, this would use tel: URL scheme
-                print("[Conversation] Initiating call for task \(conversationId)")
+                HXLogger.debug("[Conversation] Initiating call for task \(conversationId)", category: "General")
             }
         } message: {
             Text("In-app calling is coming soon. Would you like to call via your phone app?")
@@ -175,9 +175,9 @@ struct ConversationScreen: View {
                 // Mark as read
                 try? await messagingService.markAsRead(taskId: conversationId)
                 
-                print("✅ Conversation: Loaded \(messages.count) messages from API")
+                HXLogger.info("Conversation: Loaded \(messages.count) messages from API", category: "General")
             } catch {
-                print("⚠️ Conversation: API failed, using mock - \(error.localizedDescription)")
+                HXLogger.error("Conversation: API failed, using mock - \(error.localizedDescription)", category: "General")
                 
                 // Fall back to mock messages
                 messages = [
@@ -251,9 +251,9 @@ struct ConversationScreen: View {
                     )
                 }
                 
-                print("✅ Conversation: Message sent via API")
+                HXLogger.info("Conversation: Message sent via API", category: "General")
             } catch {
-                print("⚠️ Conversation: Failed to send message - \(error.localizedDescription)")
+                HXLogger.error("Conversation: Failed to send message - \(error.localizedDescription)", category: "General")
                 // Message is already displayed optimistically, just log the error
             }
             isSending = false
@@ -264,7 +264,7 @@ struct ConversationScreen: View {
     
     private func viewProfile() {
         // Navigate to user profile - in a real app this would use the other user's ID
-        print("[Conversation] View profile for task \(conversationId)")
+        HXLogger.debug("[Conversation] View profile for task \(conversationId)", category: "General")
         // For now, show an alert or navigate to profile
     }
     
@@ -306,7 +306,7 @@ struct ConversationScreen: View {
                     messages.append(chatMessage)
                 }
                 
-                print("✅ Conversation: Photo message sent")
+                HXLogger.info("Conversation: Photo message sent", category: "General")
             } catch {
                 errorMessage = "Failed to send photo: \(error.localizedDescription)"
                 showError = true
@@ -654,7 +654,7 @@ struct ReportUserSheet: View {
             // In production, this would call a real API endpoint
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             
-            print("[Report] Submitted report for task \(taskId): \(reason.rawValue)")
+            HXLogger.debug("[Report] Submitted report for task \(taskId): \(reason.rawValue)", category: "General")
             
             isSubmitting = false
             withAnimation {

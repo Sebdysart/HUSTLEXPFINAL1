@@ -116,7 +116,7 @@ final class SkillService: ObservableObject {
             input: EmptyInput()
         )
 
-        print("✅ SkillService: Fetched \(categories.count) skill categories")
+        HXLogger.info("SkillService: Fetched \(categories.count) skill categories", category: "Skill")
         return categories
     }
 
@@ -150,7 +150,7 @@ final class SkillService: ObservableObject {
         )
 
         self.mySkills = skills
-        print("✅ SkillService: User has \(skills.count) skills")
+        HXLogger.info("SkillService: User has \(skills.count) skills", category: "Skill")
         return skills
     }
 
@@ -170,7 +170,7 @@ final class SkillService: ObservableObject {
         )
 
         self.mySkills = skills
-        print("✅ SkillService: Added \(skillIds.count) skills")
+        HXLogger.info("SkillService: Added \(skillIds.count) skills", category: "Skill")
         return skills
     }
 
@@ -194,7 +194,7 @@ final class SkillService: ObservableObject {
         // Refresh skills
         _ = try? await getMySkills()
 
-        print("✅ SkillService: Removed skill \(skillId)")
+        HXLogger.info("SkillService: Removed skill \(skillId)", category: "Skill")
     }
 
     // MARK: - License Verification
@@ -227,7 +227,7 @@ final class SkillService: ObservableObject {
             )
         )
 
-        print("✅ SkillService: Submitted license for verification")
+        HXLogger.info("SkillService: Submitted license for verification", category: "Skill")
         return submission
     }
 
@@ -280,7 +280,7 @@ final class SkillService: ObservableObject {
             skills: mySkills.isEmpty ? nil : mySkills
         )
 
-        print("✅ SkillService: Found \(response.tasks.count) eligible tasks via discovery")
+        HXLogger.info("SkillService: Found \(response.tasks.count) eligible tasks via discovery", category: "Skill")
         return response.tasks
     }
 }
@@ -315,7 +315,10 @@ extension SkillService {
         )
 
         // Upload to R2
-        var request = URLRequest(url: URL(string: presignedURL.uploadUrl)!)
+        guard let uploadURL = URL(string: presignedURL.uploadUrl) else {
+            throw ProofError.uploadFailed
+        }
+        var request = URLRequest(url: uploadURL)
         request.httpMethod = "PUT"
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
         request.httpBody = imageData

@@ -2,6 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>HustleXP needs camera access to take photos for task proof submission and license verification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>HustleXP needs photo library access to select images for task proof and license uploads.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>HustleXP needs your location to show nearby tasks, enable live radar, and verify task completion.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>HustleXP uses background location to track your progress on active tasks and provide real-time updates to task posters.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>HustleXP uses Face ID to securely authenticate payments and sensitive account actions.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

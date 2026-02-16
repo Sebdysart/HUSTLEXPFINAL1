@@ -541,7 +541,7 @@ struct LicenseUploadScreen: View {
                         photoUrl: "no-photo"
                     )
                 }
-                print("LicenseUpload: Submitted via API - \(submission.id)")
+                HXLogger.debug("LicenseUpload: Submitted via API - \(submission.id)", category: "Skill")
 
                 // Map API status to local status
                 await MainActor.run {
@@ -562,7 +562,7 @@ struct LicenseUploadScreen: View {
                     }
                 }
             } catch {
-                print("LicenseUpload: API failed, using mock - \(error.localizedDescription)")
+                HXLogger.debug("LicenseUpload: API failed, using mock - \(error.localizedDescription)", category: "Skill")
 
                 // Fallback to mock service
                 await MainActor.run {

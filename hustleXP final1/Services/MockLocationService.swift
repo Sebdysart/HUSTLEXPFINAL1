@@ -77,37 +77,43 @@ final class MockLocationService: LocationServiceProtocol {
         try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
         
         // Pick a random mock location
-        let location = mockLocations.randomElement()!
-        
+        guard let location = mockLocations.randomElement() else {
+            isCapturing = false
+            let fallback = GPSCoordinates(latitude: 37.7749, longitude: -122.4194, accuracyMeters: 100.0, timestamp: Date())
+            return (fallback, 100.0)
+        }
+
         // Add slight random offset to coordinates (within ~100m)
         let latOffset = Double.random(in: -0.001...0.001)
         let lonOffset = Double.random(in: -0.001...0.001)
-        
+
         // Generate random accuracy
         let accuracy = generateRandomAccuracy()
-        
+
         let coordinates = GPSCoordinates(
             latitude: location.coords.latitude + latOffset,
             longitude: location.coords.longitude + lonOffset,
             accuracyMeters: accuracy,
             timestamp: Date()
         )
-        
+
         // Update state
         currentLocation = coordinates
         currentAccuracy = accuracy
         captureTimestamp = Date()
         isCapturing = false
-        
-        print("[MockLocation] Captured: \(location.name) (±\(String(format: "%.1f", accuracy))m)")
-        
+
+        HXLogger.debug("[MockLocation] Captured: \(location.name) (±\(String(format: "%.1f", accuracy))m)", category: "General")
+
         return (coordinates, accuracy)
     }
-    
+
     /// Synchronous version for simpler usage - returns Result
     func getCurrentLocation() -> Result<GPSCoordinates, LocationError> {
         // Pick a random mock location
-        let location = mockLocations.randomElement()!
+        guard let location = mockLocations.randomElement() else {
+            return .failure(.locationUnavailable)
+        }
         
         // Add slight random offset to coordinates (within ~100m)
         let latOffset = Double.random(in: -0.001...0.001)
@@ -128,7 +134,7 @@ final class MockLocationService: LocationServiceProtocol {
         currentAccuracy = accuracy
         captureTimestamp = Date()
         
-        print("[MockLocation] Captured: \(location.name) (±\(String(format: "%.1f", accuracy))m)")
+        HXLogger.debug("[MockLocation] Captured: \(location.name) (±\(String(format: "%.1f", accuracy))m)", category: "General")
         
         return .success(coordinates)
     }

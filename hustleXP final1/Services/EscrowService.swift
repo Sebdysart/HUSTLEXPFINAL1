@@ -93,7 +93,7 @@ final class EscrowService: ObservableObject {
             input: CreateInput(taskId: taskId)
         )
 
-        print("✅ EscrowService: Created payment intent for task \(taskId)")
+        HXLogger.info("EscrowService: Created payment intent for task \(taskId)", category: "Payment")
         return response
     }
 
@@ -113,7 +113,7 @@ final class EscrowService: ObservableObject {
             input: ConfirmInput(escrowId: escrowId, stripePaymentIntentId: stripePaymentIntentId)
         )
 
-        print("✅ EscrowService: Confirmed funding for escrow \(escrow.id)")
+        HXLogger.info("EscrowService: Confirmed funding for escrow \(escrow.id)", category: "Payment")
         return escrow
     }
 
@@ -174,7 +174,7 @@ final class EscrowService: ObservableObject {
             input: ReleaseInput(escrowId: escrowId, stripeTransferId: stripeTransferId)
         )
 
-        print("✅ EscrowService: Released escrow \(escrow.id) to worker")
+        HXLogger.info("EscrowService: Released escrow \(escrow.id) to worker", category: "Payment")
         return escrow
     }
 
@@ -195,7 +195,7 @@ final class EscrowService: ObservableObject {
             input: RefundInput(escrowId: escrowId)
         )
 
-        print("✅ EscrowService: Refunded escrow \(escrow.id) to poster")
+        HXLogger.info("EscrowService: Refunded escrow \(escrow.id) to poster", category: "Payment")
         return escrow
     }
 
@@ -214,7 +214,7 @@ final class EscrowService: ObservableObject {
             input: HistoryInput(limit: limit)
         )
 
-        print("✅ EscrowService: Fetched \(escrows.count) payment records")
+        HXLogger.info("EscrowService: Fetched \(escrows.count) payment records", category: "Payment")
         return escrows
     }
 
@@ -254,7 +254,7 @@ final class EscrowService: ObservableObject {
             input: LockInput(escrowId: escrowId)
         )
 
-        print("✅ EscrowService: Locked escrow \(escrow.id) for dispute")
+        HXLogger.info("EscrowService: Locked escrow \(escrow.id) for dispute", category: "Payment")
         return escrow
     }
 
@@ -279,7 +279,7 @@ final class EscrowService: ObservableObject {
             input: AwardXPInput(taskId: taskId, escrowId: escrowId, baseXP: baseXP)
         )
 
-        print("✅ EscrowService: Awarded XP for escrow \(escrowId)")
+        HXLogger.info("EscrowService: Awarded XP for escrow \(escrowId)", category: "Payment")
         return result
     }
 }

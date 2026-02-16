@@ -130,7 +130,7 @@ final class BiometricService: ObservableObject {
             input: input
         )
 
-        print("✅ BiometricService: Verification result: \(result.recommendation), flags: \(result.flags)")
+        HXLogger.info("BiometricService: Verification result: \(result.recommendation), flags: \(result.flags)", category: "General")
         return result
     }
 
@@ -153,7 +153,7 @@ final class BiometricService: ObservableObject {
             input: PhotoInput(photoUrl: photoUrl)
         )
 
-        print("✅ BiometricService: Face analysis - liveness: \(result.livenessScore)")
+        HXLogger.info("BiometricService: Face analysis - liveness: \(result.livenessScore)", category: "General")
         return result
     }
 }

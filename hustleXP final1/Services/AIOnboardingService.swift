@@ -67,7 +67,7 @@ final class AIOnboardingService: ObservableObject {
             )
         )
 
-        print("✅ AIOnboarding: Submitted calibration, status: \(result.status)")
+        HXLogger.info("AIOnboarding: Submitted calibration, status: \(result.status)", category: "General")
         return result
     }
 
@@ -85,7 +85,7 @@ final class AIOnboardingService: ObservableObject {
             input: EmptyInput()
         )
 
-        print("✅ AIOnboarding: Inferred role: \(result.inferredRole ?? "pending")")
+        HXLogger.info("AIOnboarding: Inferred role: \(result.inferredRole ?? "pending")", category: "General")
         return result
     }
 
@@ -111,7 +111,7 @@ final class AIOnboardingService: ObservableObject {
             )
         )
 
-        print("✅ AIOnboarding: Role confirmed as \(result.confirmedMode)")
+        HXLogger.info("AIOnboarding: Role confirmed as \(result.confirmedMode)", category: "General")
         return result
     }
 }

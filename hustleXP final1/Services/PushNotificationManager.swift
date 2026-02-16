@@ -44,14 +44,14 @@ final class PushNotificationManager: NSObject, ObservableObject {
             isAuthorized = granted
 
             if granted {
-                print("[PushNotificationManager] Notification authorization granted")
+                HXLogger.info("[PushNotificationManager] Notification authorization granted", category: "Push")
             } else {
-                print("[PushNotificationManager] Notification authorization denied")
+                HXLogger.info("[PushNotificationManager] Notification authorization denied", category: "Push")
             }
 
             return granted
         } catch {
-            print("[PushNotificationManager] Authorization request failed: \(error.localizedDescription)")
+            HXLogger.error("[PushNotificationManager] Authorization request failed: \(error.localizedDescription)", category: "Push")
             isAuthorized = false
             return false
         }
@@ -70,7 +70,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
     /// - Parameter token: The Firebase Cloud Messaging device token.
     func handleFCMToken(_ token: String) async {
         self.fcmToken = token
-        print("[PushNotificationManager] FCM token received: \(token.prefix(20))...")
+        HXLogger.info("[PushNotificationManager] FCM token received: \(token.prefix(20))...", category: "Push")
 
         // Send token to backend for server-side push targeting
         do {
@@ -83,9 +83,9 @@ final class PushNotificationManager: NSObject, ObservableObject {
                     "deviceType": "ios"
                 ]
             )
-            print("[PushNotificationManager] Device token registered with backend")
+            HXLogger.info("[PushNotificationManager] Device token registered with backend", category: "Push")
         } catch {
-            print("[PushNotificationManager] Failed to register device token: \(error.localizedDescription)")
+            HXLogger.error("[PushNotificationManager] Failed to register device token: \(error.localizedDescription)", category: "Push")
         }
     }
 
@@ -94,7 +94,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
     /// Processes an incoming notification payload for deep linking or data updates.
     /// - Parameter userInfo: The notification payload dictionary.
     func handleNotification(_ userInfo: [AnyHashable: Any]) {
-        print("[PushNotificationManager] Handling notification: \(userInfo)")
+        HXLogger.info("[PushNotificationManager] Handling notification: \(userInfo)", category: "Push")
 
         // Parse the data payload for deep linking
         guard let data = userInfo["data"] as? [String: Any] ?? userInfo as? [String: Any] else {
@@ -105,7 +105,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
             switch type {
             case "task_assigned":
                 if let taskId = data["taskId"] as? String {
-                    print("[PushNotificationManager] Deep link -> task: \(taskId)")
+                    HXLogger.info("[PushNotificationManager] Deep link -> task: \(taskId)", category: "Push")
                     // Post notification for navigation handling
                     NotificationCenter.default.post(
                         name: .pushNotificationDeepLink,
@@ -116,7 +116,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
 
             case "escrow_released":
                 if let escrowId = data["escrowId"] as? String {
-                    print("[PushNotificationManager] Deep link -> escrow: \(escrowId)")
+                    HXLogger.info("[PushNotificationManager] Deep link -> escrow: \(escrowId)", category: "Push")
                     NotificationCenter.default.post(
                         name: .pushNotificationDeepLink,
                         object: nil,
@@ -126,7 +126,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
 
             case "dispute_update":
                 if let disputeId = data["disputeId"] as? String {
-                    print("[PushNotificationManager] Deep link -> dispute: \(disputeId)")
+                    HXLogger.info("[PushNotificationManager] Deep link -> dispute: \(disputeId)", category: "Push")
                     NotificationCenter.default.post(
                         name: .pushNotificationDeepLink,
                         object: nil,
@@ -136,7 +136,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
 
             case "xp_earned":
                 if let amount = data["amount"] as? Int {
-                    print("[PushNotificationManager] XP earned: \(amount)")
+                    HXLogger.info("[PushNotificationManager] XP earned: \(amount)", category: "Push")
                     NotificationCenter.default.post(
                         name: .pushNotificationDeepLink,
                         object: nil,
@@ -145,7 +145,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
                 }
 
             default:
-                print("[PushNotificationManager] Unhandled notification type: \(type)")
+                HXLogger.info("[PushNotificationManager] Unhandled notification type: \(type)", category: "Push")
                 NotificationCenter.default.post(
                     name: .pushNotificationDeepLink,
                     object: nil,
@@ -168,7 +168,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         let userInfo = notification.request.content.userInfo
-        print("[PushNotificationManager] Foreground notification received: \(userInfo)")
+        HXLogger.info("[PushNotificationManager] Foreground notification received: \(userInfo)", category: "Push")
 
         // Show as banner, play sound, and update badge even in foreground
         completionHandler([.banner, .sound, .badge])
@@ -181,7 +181,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        print("[PushNotificationManager] Notification tapped: \(userInfo)")
+        HXLogger.info("[PushNotificationManager] Notification tapped: \(userInfo)", category: "Push")
 
         // Convert to sendable dictionary for async capture
         let sendableUserInfo = Dictionary(uniqueKeysWithValues: userInfo.compactMap { key, value -> (String, Any)? in
@@ -213,11 +213,11 @@ extension PushNotificationManager: MessagingDelegate {
         didReceiveRegistrationToken fcmToken: String?
     ) {
         guard let token = fcmToken else {
-            print("[PushNotificationManager] FCM token is nil")
+            HXLogger.info("[PushNotificationManager] FCM token is nil", category: "Push")
             return
         }
 
-        print("[PushNotificationManager] FCM token refreshed")
+        HXLogger.info("[PushNotificationManager] FCM token refreshed", category: "Push")
 
         Task { @MainActor in
             await handleFCMToken(token)

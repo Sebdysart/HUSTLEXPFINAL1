@@ -39,7 +39,7 @@ final class TaxService: ObservableObject {
         )
 
         self.currentStatus = status
-        print("✅ TaxService: Tax status - \(status.formattedUnpaidAmount) owed, \(status.xpHeldBack) XP held")
+        HXLogger.info("TaxService: Tax status - \(status.formattedUnpaidAmount) owed, \(status.xpHeldBack) XP held", category: "Payment")
         return status
     }
 
@@ -58,7 +58,7 @@ final class TaxService: ObservableObject {
             input: EmptyInput()
         )
 
-        print("✅ TaxService: Created tax payment intent")
+        HXLogger.info("TaxService: Created tax payment intent", category: "Payment")
         return response
     }
 
@@ -80,7 +80,7 @@ final class TaxService: ObservableObject {
         // Update cached status
         self.currentStatus = result.newTaxStatus
 
-        print("✅ TaxService: Paid taxes, released \(result.xpReleased) XP")
+        HXLogger.info("TaxService: Paid taxes, released \(result.xpReleased) XP", category: "Payment")
         return result
     }
 
@@ -99,7 +99,7 @@ final class TaxService: ObservableObject {
             input: HistoryInput(limit: limit)
         )
 
-        print("✅ TaxService: Fetched \(entries.count) tax entries")
+        HXLogger.info("TaxService: Fetched \(entries.count) tax entries", category: "Payment")
         return entries
     }
 }
@@ -134,7 +134,7 @@ final class InsuranceService: ObservableObject {
         )
 
         self.poolStatus = status
-        print("✅ InsuranceService: Pool has \(status.formattedPoolBalance)")
+        HXLogger.info("InsuranceService: Pool has \(status.formattedPoolBalance)", category: "Payment")
         return status
     }
 
@@ -165,7 +165,7 @@ final class InsuranceService: ObservableObject {
             )
         )
 
-        print("✅ InsuranceService: Filed claim for \(claim.formattedRequestedAmount)")
+        HXLogger.info("InsuranceService: Filed claim for \(claim.formattedRequestedAmount)", category: "Payment")
         return claim
     }
 
@@ -184,7 +184,7 @@ final class InsuranceService: ObservableObject {
             input: GetClaimsInput(limit: limit)
         )
 
-        print("✅ InsuranceService: Fetched \(claims.count) claims")
+        HXLogger.info("InsuranceService: Fetched \(claims.count) claims", category: "Payment")
         return claims
     }
 

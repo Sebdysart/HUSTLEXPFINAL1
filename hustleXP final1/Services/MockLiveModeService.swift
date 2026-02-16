@@ -92,7 +92,7 @@ final class MockLiveModeService {
         currentSession = session
         startSessionTimer()
         
-        print("[LiveMode] Session started for worker \(workerId)")
+        HXLogger.debug("[LiveMode] Session started for worker \(workerId)", category: "LiveMode")
         return session
     }
     
@@ -100,7 +100,7 @@ final class MockLiveModeService {
     func endLiveMode() {
         guard let session = currentSession else { return }
         
-        print("[LiveMode] Session ended. Duration: \(session.sessionDurationText), Earned: $\(session.earningsThisSession)")
+        HXLogger.debug("[LiveMode] Session ended. Duration: \(session.sessionDurationText), Earned: $\(session.earningsThisSession)", category: "LiveMode")
         
         // Update stats
         workerStats.totalSessions += 1
@@ -168,7 +168,7 @@ final class MockLiveModeService {
         // Send quest pings to eligible workers
         sendQuestPings(for: quest)
         
-        print("[LiveMode] Quest Alert created: \(task.title) at $\(quest.totalPayment)")
+        HXLogger.debug("[LiveMode] Quest Alert created: \(task.title) at $\(quest.totalPayment)", category: "LiveMode")
         return quest
     }
     
@@ -182,7 +182,7 @@ final class MockLiveModeService {
         
         // Check if already claimed
         guard quest.status == .broadcasting else {
-            print("[LiveMode] Quest already claimed")
+            HXLogger.debug("[LiveMode] Quest already claimed", category: "LiveMode")
             return nil
         }
         
@@ -219,7 +219,7 @@ final class MockLiveModeService {
             currentSession = session
         }
         
-        print("[LiveMode] Quest accepted by worker \(workerId). ETA: \(tracking.currentETA)s")
+        HXLogger.debug("[LiveMode] Quest accepted by worker \(workerId). ETA: \(tracking.currentETA)s", category: "LiveMode")
         return tracking
     }
     
@@ -234,7 +234,7 @@ final class MockLiveModeService {
         tracking.status = .navigating
         activeTrackingSessions[index] = tracking
         
-        print("[LiveMode] Navigation started for tracking \(trackingId)")
+        HXLogger.debug("[LiveMode] Navigation started for tracking \(trackingId)", category: "LiveMode")
     }
     
     /// Update worker position during on-the-way
@@ -301,7 +301,7 @@ final class MockLiveModeService {
             activeQuests[questIndex] = quest
         }
         
-        print("[LiveMode] Worker arrived at destination")
+        HXLogger.debug("[LiveMode] Worker arrived at destination", category: "LiveMode")
     }
     
     // MARK: - Radar Matching
@@ -312,7 +312,7 @@ final class MockLiveModeService {
             let distance = calculateDistance(from: location, to: quest.posterLocation)
             if distance <= quest.maxRadius {
                 // Quest is within range - would trigger UI update
-                print("[LiveMode] Quest within range: \(quest.task.title) at \(Int(distance))m")
+                HXLogger.debug("[LiveMode] Quest within range: \(quest.task.title) at \(Int(distance))m", category: "LiveMode")
             }
         }
     }
@@ -405,7 +405,7 @@ final class MockLiveModeService {
         
         activeQuests[index] = quest
         
-        print("[LiveMode] Quest price boosted by $\(Int(boostAmount)). New total: $\(quest.totalPayment)")
+        HXLogger.debug("[LiveMode] Quest price boosted by $\(Int(boostAmount)). New total: $\(quest.totalPayment)", category: "LiveMode")
         
         // Send price boost ping
         sendPriceBoostPing(for: quest)
@@ -415,17 +415,17 @@ final class MockLiveModeService {
     
     private func sendQuestPings(for quest: QuestAlert) {
         // In production, would send push notifications with custom haptic
-        print("[LiveMode] Sending Quest Pings to eligible workers within \(quest.maxRadius)m")
+        HXLogger.debug("[LiveMode] Sending Quest Pings to eligible workers within \(quest.maxRadius)m", category: "LiveMode")
     }
     
     private func sendPriceBoostPing(for quest: QuestAlert) {
-        print("[LiveMode] Sending Price Boost notification for quest \(quest.id)")
+        HXLogger.debug("[LiveMode] Sending Price Boost notification for quest \(quest.id)", category: "LiveMode")
     }
     
     // MARK: - Ghosting Handling
     
     private func handleGhosting(_ tracking: OnTheWaySession) {
-        print("[LiveMode] GHOSTING DETECTED for tracking \(tracking.id)")
+        HXLogger.debug("[LiveMode] GHOSTING DETECTED for tracking \(tracking.id)", category: "LiveMode")
         
         // Strike worker's shadow level
         workerStats.ghostingStrikes += 1
@@ -500,7 +500,7 @@ final class MockLiveModeService {
         // Check tracking sessions for issues
         for tracking in activeTrackingSessions {
             if tracking.isAtRisk && tracking.status == .navigating {
-                print("[LiveMode] Warning: Worker may be ghosting on tracking \(tracking.id)")
+                HXLogger.debug("[LiveMode] Warning: Worker may be ghosting on tracking \(tracking.id)", category: "LiveMode")
             }
         }
     }

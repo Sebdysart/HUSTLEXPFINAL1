@@ -66,7 +66,7 @@ final class RatingService: ObservableObject {
             input: RatingInput(taskId: taskId, stars: rating, comment: review, tags: tags)
         )
 
-        print("✅ RatingService: Submitted \(rating)-star rating for task \(taskId)")
+        HXLogger.info("RatingService: Submitted \(rating)-star rating for task \(taskId)", category: "General")
     }
 
     /// Gets rating summary for a user
@@ -98,7 +98,7 @@ final class RatingService: ObservableObject {
             input: GetRatingsInput(limit: limit)
         )
 
-        print("✅ RatingService: Fetched \(ratings.count) ratings")
+        HXLogger.info("RatingService: Fetched \(ratings.count) ratings", category: "General")
         return ratings
     }
 
@@ -118,7 +118,7 @@ final class RatingService: ObservableObject {
             input: TaskRatingsInput(taskId: taskId)
         )
 
-        print("✅ RatingService: Fetched \(ratings.count) ratings for task \(taskId)")
+        HXLogger.info("RatingService: Fetched \(ratings.count) ratings for task \(taskId)", category: "General")
         return ratings
     }
 
@@ -136,7 +136,7 @@ final class RatingService: ObservableObject {
             input: ReceivedInput(limit: limit, offset: offset)
         )
 
-        print("✅ RatingService: Fetched \(ratings.count) ratings received")
+        HXLogger.info("RatingService: Fetched \(ratings.count) ratings received", category: "General")
         return ratings
     }
 }

@@ -18,7 +18,7 @@ final class KeychainManager {
     ///   - key: The key to store it under
     func save(_ value: String, forKey key: String) {
         guard let data = value.data(using: .utf8) else {
-            print("⚠️ Keychain: Failed to convert value to data for key: \(key)")
+            HXLogger.error("Keychain: Failed to convert value to data for key: \(key)", category: "Auth")
             return
         }
 
@@ -36,9 +36,9 @@ final class KeychainManager {
         let status = SecItemAdd(query as CFDictionary, nil)
 
         if status == errSecSuccess {
-            print("✅ Keychain: Saved value for key: \(key)")
+            HXLogger.debug("Keychain: Saved value for key: \(key)", category: "Auth")
         } else {
-            print("⚠️ Keychain: Failed to save value for key: \(key), status: \(status)")
+            HXLogger.error("Keychain: Failed to save value for key: \(key), status: \(status)", category: "Auth")
         }
     }
 
@@ -61,13 +61,13 @@ final class KeychainManager {
         if status == errSecSuccess {
             if let data = result as? Data,
                let value = String(data: data, encoding: .utf8) {
-                print("✅ Keychain: Retrieved value for key: \(key)")
+                HXLogger.debug("Keychain: Retrieved value for key: \(key)", category: "Auth")
                 return value
             }
         } else if status == errSecItemNotFound {
-            print("ℹ️ Keychain: No value found for key: \(key)")
+            HXLogger.debug("Keychain: No value found for key: \(key)", category: "Auth")
         } else {
-            print("⚠️ Keychain: Failed to retrieve value for key: \(key), status: \(status)")
+            HXLogger.error("Keychain: Failed to retrieve value for key: \(key), status: \(status)", category: "Auth")
         }
 
         return nil
@@ -86,11 +86,11 @@ final class KeychainManager {
         let status = SecItemDelete(query as CFDictionary)
 
         if status == errSecSuccess {
-            print("✅ Keychain: Deleted value for key: \(key)")
+            HXLogger.debug("Keychain: Deleted value for key: \(key)", category: "Auth")
         } else if status == errSecItemNotFound {
-            print("ℹ️ Keychain: No value to delete for key: \(key)")
+            HXLogger.debug("Keychain: No value to delete for key: \(key)", category: "Auth")
         } else {
-            print("⚠️ Keychain: Failed to delete value for key: \(key), status: \(status)")
+            HXLogger.error("Keychain: Failed to delete value for key: \(key), status: \(status)", category: "Auth")
         }
     }
 
@@ -112,7 +112,7 @@ final class KeychainManager {
             SecItemDelete(query as CFDictionary)
         }
 
-        print("🗑️ Keychain: Cleared all items")
+        HXLogger.debug("Keychain: Cleared all items", category: "Auth")
     }
 }
 

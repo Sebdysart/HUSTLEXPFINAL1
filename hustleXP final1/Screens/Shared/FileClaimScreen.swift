@@ -415,10 +415,10 @@ struct FileClaimScreen: View {
             // Load completed tasks from API (tasks eligible for claims)
             let tasks = try await TaskService.shared.getTaskHistory(role: .hustler)
             eligibleTasks = tasks.filter { $0.state == .completed }
-            print("✅ FileClaim: Loaded \(eligibleTasks.count) eligible tasks from API")
+            HXLogger.info("FileClaim: Loaded \(eligibleTasks.count) eligible tasks from API", category: "General")
         } catch {
             // v2.5.0: Fall back to mock but log the error
-            print("⚠️ FileClaim: API failed, using cached data - \(error.localizedDescription)")
+            HXLogger.error("FileClaim: API failed, using cached data - \(error.localizedDescription)", category: "General")
             loadError = error
             eligibleTasks = dataService.getCompletedTasksForClaims()
         }
@@ -442,14 +442,14 @@ struct FileClaimScreen: View {
         Task {
             do {
                 _ = try await InsuranceService.shared.fileClaim(request: request)
-                print("✅ FileClaim: Claim submitted via API")
+                HXLogger.info("FileClaim: Claim submitted via API", category: "General")
                 isSubmitting = false
                 withAnimation(.spring(response: 0.4)) {
                     showSuccess = true
                 }
             } catch {
                 // v2.5.0: Show error to user instead of silent fallback
-                print("⚠️ FileClaim: API submit failed - \(error.localizedDescription)")
+                HXLogger.error("FileClaim: API submit failed - \(error.localizedDescription)", category: "General")
                 isSubmitting = false
                 submitError = "Could not submit your claim. Please check your connection and try again."
             }

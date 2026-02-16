@@ -252,7 +252,7 @@ struct RecurringTasksScreen: View {
         do {
             series = try await RecurringTaskService.shared.getMySeries()
         } catch {
-            print("⚠️ RecurringTasks: Load failed - \(error.localizedDescription)")
+            HXLogger.error("RecurringTasks: Load failed - \(error.localizedDescription)", category: "Task")
             series = []
         }
         isLoading = false
@@ -883,7 +883,7 @@ private struct CreateRecurringTaskSheet: View {
                 )
                 dismiss()
             } catch {
-                print("⚠️ CreateRecurring: Failed - \(error.localizedDescription)")
+                HXLogger.error("CreateRecurring: Failed - \(error.localizedDescription)", category: "Task")
             }
             isCreating = false
         }

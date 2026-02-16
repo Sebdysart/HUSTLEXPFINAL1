@@ -427,7 +427,7 @@ private struct ContactRow: View {
             }
         case "Live Chat":
             // In production, this would open Intercom or similar
-            print("[Help] Opening live chat...")
+            HXLogger.debug("[Help] Opening live chat...", category: "General")
         case "Phone Support":
             if let url = URL(string: "tel://18005551234") {
                 UIApplication.shared.open(url)

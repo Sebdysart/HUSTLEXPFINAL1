@@ -74,7 +74,7 @@ final class PricingService: ObservableObject {
             )
         )
 
-        print("✅ PricingService: Calculated price \(result.finalPriceCents) cents")
+        HXLogger.info("PricingService: Calculated price \(result.finalPriceCents) cents", category: "Payment")
         return result
     }
 
@@ -93,7 +93,7 @@ final class PricingService: ObservableObject {
             input: ModifierInput(modifierPercent: modifierPercent)
         )
 
-        print("✅ PricingService: Updated modifier to \(modifierPercent)%")
+        HXLogger.info("PricingService: Updated modifier to \(modifierPercent)%", category: "Payment")
         return result
     }
 }

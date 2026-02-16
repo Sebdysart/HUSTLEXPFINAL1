@@ -189,7 +189,7 @@ final class AlphaTelemetryService: ObservableObject {
             )
         )
 
-        print("✅ AlphaTelemetry: Fetched \(rows.count) edge state distribution rows")
+        HXLogger.debug("AlphaTelemetry: Fetched \(rows.count) edge state distribution rows", category: "Analytics")
         return rows
     }
 
@@ -218,7 +218,7 @@ final class AlphaTelemetryService: ObservableObject {
             )
         )
 
-        print("✅ AlphaTelemetry: Fetched \(rows.count) time spent rows")
+        HXLogger.debug("AlphaTelemetry: Fetched \(rows.count) time spent rows", category: "Analytics")
         return rows
     }
 
@@ -241,7 +241,7 @@ final class AlphaTelemetryService: ObservableObject {
             input: DisputeInput(start_date: startDate, end_date: endDate)
         )
 
-        print("✅ AlphaTelemetry: Dispute rate = \(response.disputeRatePer100) per 100 tasks")
+        HXLogger.debug("AlphaTelemetry: Dispute rate = \(response.disputeRatePer100) per 100 tasks", category: "Analytics")
         return response
     }
 
@@ -264,7 +264,7 @@ final class AlphaTelemetryService: ObservableObject {
             input: CorrectionInput(start_date: startDate, end_date: endDate)
         )
 
-        print("✅ AlphaTelemetry: Correction success rate = \(response.correctionSuccessRate)%")
+        HXLogger.debug("AlphaTelemetry: Correction success rate = \(response.correctionSuccessRate)%", category: "Analytics")
         return response
     }
 
@@ -293,7 +293,7 @@ final class AlphaTelemetryService: ObservableObject {
             )
         )
 
-        print("✅ AlphaTelemetry: Fetched \(rows.count) trust tier movement rows")
+        HXLogger.debug("AlphaTelemetry: Fetched \(rows.count) trust tier movement rows", category: "Analytics")
         return rows
     }
 
@@ -334,7 +334,7 @@ final class AlphaTelemetryService: ObservableObject {
             )
         )
 
-        print("✅ AlphaTelemetry: Emitted edge state impression [\(state.rawValue)]")
+        HXLogger.debug("AlphaTelemetry: Emitted edge state impression [\(state.rawValue)]", category: "Analytics")
     }
 
     // MARK: - Mutation: Emit Edge State Exit
@@ -371,6 +371,6 @@ final class AlphaTelemetryService: ObservableObject {
             )
         )
 
-        print("✅ AlphaTelemetry: Emitted edge state exit [\(state.rawValue)] after \(timeOnScreenMs)ms")
+        HXLogger.debug("AlphaTelemetry: Emitted edge state exit [\(state.rawValue)] after \(timeOnScreenMs)ms", category: "Analytics")
     }
 }

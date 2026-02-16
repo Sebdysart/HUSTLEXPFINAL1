@@ -260,7 +260,7 @@ struct HustlerFeedScreen: View {
                 )
             }
         } catch {
-            print("⚠️ HustlerFeed: HeatMap API failed - \(error.localizedDescription)")
+            HXLogger.error("HustlerFeed: HeatMap API failed - \(error.localizedDescription)", category: "Task")
         }
 
         // v2.2.0: Load real skills from API, then fetch tasks with skill filtering
@@ -268,12 +268,12 @@ struct HustlerFeedScreen: View {
             let skills = try await SkillService.shared.getMySkills()
             userSkills = skills
             let skillIds = skills.map { $0.skillId }
-            print("✅ HustlerFeed: Loaded \(skills.count) skills from API")
+            HXLogger.info("HustlerFeed: Loaded \(skills.count) skills from API", category: "Task")
 
             // Fetch tasks with skill-based filtering via the discovery feed
             await loadTasksFromAPI(location: coords, skills: skillIds.isEmpty ? nil : skillIds)
         } catch {
-            print("⚠️ HustlerFeed: Skills API failed, falling back to mock - \(error.localizedDescription)")
+            HXLogger.error("HustlerFeed: Skills API failed, falling back to mock - \(error.localizedDescription)", category: "Task")
             // Fall back to mock license filtering and standard task load
             await loadTasksFromAPI(location: coords)
             licenseService.initializeProfile(for: appState.userId ?? "worker")
@@ -310,12 +310,12 @@ struct HustlerFeedScreen: View {
                             savings: savings,
                             expiresAt: Date().addingTimeInterval(30 * 60)
                         )
-                        print("✅ HustlerFeed: Built batch recommendation from API suggestions")
+                        HXLogger.info("HustlerFeed: Built batch recommendation from API suggestions", category: "Task")
                         return
                     }
                 }
             } catch {
-                print("⚠️ HustlerFeed: Batch API failed, falling back to mock - \(error.localizedDescription)")
+                HXLogger.error("HustlerFeed: Batch API failed, falling back to mock - \(error.localizedDescription)", category: "Task")
             }
 
             // Fallback: use mock batch recommendation
@@ -339,12 +339,12 @@ struct HustlerFeedScreen: View {
             )
             apiTasks = response.tasks
             apiError = nil
-            print("✅ HustlerFeed: Loaded \(apiTasks.count) tasks from API")
+            HXLogger.info("HustlerFeed: Loaded \(apiTasks.count) tasks from API", category: "Task")
         } catch {
             // v2.5.0: Show error to user instead of silent fallback
             apiError = error
             showApiError = true
-            print("⚠️ HustlerFeed: API failed - \(error.localizedDescription)")
+            HXLogger.error("HustlerFeed: API failed - \(error.localizedDescription)", category: "Task")
         }
     }
     

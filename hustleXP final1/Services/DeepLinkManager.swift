@@ -76,14 +76,14 @@ final class DeepLinkManager {
     /// Returns `true` if the URL was recognised as a valid deep link.
     @discardableResult
     func handleURL(_ url: URL) -> Bool {
-        print("[DeepLinkManager] Received URL: \(url.absoluteString)")
+        HXLogger.info("[DeepLinkManager] Received URL: \(url.absoluteString)", category: "Navigation")
 
         guard let destination = parseURL(url) else {
-            print("[DeepLinkManager] URL not recognised as deep link")
+            HXLogger.info("[DeepLinkManager] URL not recognised as deep link", category: "Navigation")
             return false
         }
 
-        print("[DeepLinkManager] Parsed destination: \(destination.analyticsName)")
+        HXLogger.info("[DeepLinkManager] Parsed destination: \(destination.analyticsName)", category: "Navigation")
         pendingDeepLink = destination
         deepLinkHistory.append(destination)
         return true
@@ -101,17 +101,21 @@ final class DeepLinkManager {
 
     /// Build a shareable universal link for a task.
     static func taskURL(taskId: String) -> URL {
-        URL(string: "https://hustlexp.app/task/\(taskId)")!
+        // Percent-encode the dynamic segment to guard against invalid URL characters
+        let encoded = taskId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? taskId
+        return URL(string: "https://hustlexp.app/task/\(encoded)") ?? URL(string: "https://hustlexp.app")!
     }
 
     /// Build a shareable universal link for a user profile.
     static func profileURL(userId: String) -> URL {
-        URL(string: "https://hustlexp.app/profile/\(userId)")!
+        let encoded = userId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? userId
+        return URL(string: "https://hustlexp.app/profile/\(encoded)") ?? URL(string: "https://hustlexp.app")!
     }
 
     /// Build a shareable universal link for a referral code.
     static func referralURL(code: String) -> URL {
-        URL(string: "https://hustlexp.app/ref/\(code)")!
+        let encoded = code.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? code
+        return URL(string: "https://hustlexp.app/ref/\(encoded)") ?? URL(string: "https://hustlexp.app")!
     }
 
     // MARK: - Parsing
@@ -182,7 +186,7 @@ extension Router {
     /// stack to push onto (hustler vs poster). Shared routes (like task detail)
     /// exist in both stacks so the correct one is chosen automatically.
     func navigate(to destination: DeepLinkDestination, appState: AppState) {
-        print("[Router] Navigating to deep link: \(destination.analyticsName)")
+        HXLogger.info("[Router] Navigating to deep link: \(destination.analyticsName)", category: "Navigation")
 
         switch destination {
         case .task(let taskId):
@@ -214,7 +218,7 @@ extension Router {
         case .referral(let code):
             // Navigate to the referrals settings screen
             navigateToSettings(.referrals)
-            print("[Router] Referral code received: \(code)")
+            HXLogger.info("[Router] Referral code received: \(code)", category: "Navigation")
         }
     }
 }

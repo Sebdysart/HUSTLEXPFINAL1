@@ -509,9 +509,9 @@ struct AITaskCreationScreen: View {
                     category: taskDraft.category,
                     requiredTier: taskDraft.requiredTier
                 )
-                print("✅ AITaskCreation: Task posted via API")
+                HXLogger.info("AITaskCreation: Task posted via API", category: "Task")
             } catch {
-                print("⚠️ AITaskCreation: API failed, using mock - \(error.localizedDescription)")
+                HXLogger.error("AITaskCreation: API failed, using mock - \(error.localizedDescription)", category: "Task")
                 let newTask = taskDraft.toHXTask(
                     posterId: "current-user",
                     posterName: "You",

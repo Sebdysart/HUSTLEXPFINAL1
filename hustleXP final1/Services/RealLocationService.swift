@@ -59,7 +59,7 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
            let timestamp = captureTimestamp,
            Date().timeIntervalSince(timestamp) < 5.0 {
             isCapturing = false
-            print("[RealLocation] Using cached location (age: \(String(format: "%.1f", Date().timeIntervalSince(timestamp)))s)")
+            HXLogger.debug("[RealLocation] Using cached location (age: \(String(format: "%.1f", Date().timeIntervalSince(timestamp)))s)", category: "General")
             return (coordinates: current, accuracy: currentAccuracy)
         }
 
@@ -75,7 +75,7 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
         isCapturing = false
         locationManager.stopUpdatingLocation()
 
-        print("[RealLocation] Captured: (\(String(format: "%.4f", result.coordinates.latitude)), \(String(format: "%.4f", result.coordinates.longitude))) (+-\(String(format: "%.1f", result.accuracy))m)")
+        HXLogger.debug("[RealLocation] Captured: (\(String(format: "%.4f", result.coordinates.latitude)), \(String(format: "%.4f", result.coordinates.longitude))) (+-\(String(format: "%.1f", result.accuracy))m)", category: "General")
 
         return result
     }
@@ -97,7 +97,7 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
 
         // Return cached location if available
         if let current = currentLocation {
-            print("[RealLocation] Returning cached location (+-\(String(format: "%.1f", currentAccuracy))m)")
+            HXLogger.debug("[RealLocation] Returning cached location (+-\(String(format: "%.1f", currentAccuracy))m)", category: "General")
             return .success(current)
         }
 
@@ -132,7 +132,7 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("[RealLocation] Location error: \(error.localizedDescription)")
+        HXLogger.debug("[RealLocation] Location error: \(error.localizedDescription)", category: "General")
 
         Task { @MainActor in
             isCapturing = false
@@ -158,7 +158,7 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
             case .authorizedWhenInUse, .authorizedAlways:
                 locationManager.startUpdatingLocation()
             case .denied, .restricted:
-                print("[RealLocation] Location permission denied")
+                HXLogger.debug("[RealLocation] Location permission denied", category: "General")
             default:
                 break
             }

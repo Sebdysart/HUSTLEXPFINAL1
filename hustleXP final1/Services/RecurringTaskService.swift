@@ -77,7 +77,7 @@ final class RecurringTaskService: ObservableObject {
             input: input
         )
 
-        print("✅ RecurringTaskService: Created series '\(title)' (\(pattern.rawValue))")
+        HXLogger.info("RecurringTaskService: Created series '\(title)' (\(pattern.rawValue))", category: "Task")
         return series
     }
 
@@ -91,7 +91,7 @@ final class RecurringTaskService: ObservableObject {
             input: EmptyInput()
         )
 
-        print("✅ RecurringTaskService: Fetched \(series.count) series")
+        HXLogger.info("RecurringTaskService: Fetched \(series.count) series", category: "Task")
         return series
     }
 
@@ -128,7 +128,7 @@ final class RecurringTaskService: ObservableObject {
             input: PauseInput(id: id)
         )
 
-        print("✅ RecurringTaskService: Paused series \(id)")
+        HXLogger.info("RecurringTaskService: Paused series \(id)", category: "Task")
     }
 
     func resumeSeries(id: String) async throws {
@@ -149,7 +149,7 @@ final class RecurringTaskService: ObservableObject {
             input: ResumeInput(id: id)
         )
 
-        print("✅ RecurringTaskService: Resumed series \(id)")
+        HXLogger.info("RecurringTaskService: Resumed series \(id)", category: "Task")
     }
 
     func cancelSeries(id: String) async throws {
@@ -170,7 +170,7 @@ final class RecurringTaskService: ObservableObject {
             input: CancelInput(id: id)
         )
 
-        print("✅ RecurringTaskService: Cancelled series \(id)")
+        HXLogger.info("RecurringTaskService: Cancelled series \(id)", category: "Task")
     }
 
     // MARK: - Occurrences
@@ -208,7 +208,7 @@ final class RecurringTaskService: ObservableObject {
             input: SkipInput(occurrenceId: occurrenceId)
         )
 
-        print("✅ RecurringTaskService: Skipped occurrence")
+        HXLogger.info("RecurringTaskService: Skipped occurrence", category: "Task")
     }
 
     // MARK: - Preferred Worker
@@ -232,6 +232,6 @@ final class RecurringTaskService: ObservableObject {
             input: SetWorkerInput(seriesId: seriesId, workerId: workerId)
         )
 
-        print("✅ RecurringTaskService: Set preferred worker for series \(seriesId)")
+        HXLogger.info("RecurringTaskService: Set preferred worker for series \(seriesId)", category: "Task")
     }
 }

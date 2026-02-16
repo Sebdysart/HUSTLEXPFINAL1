@@ -128,9 +128,9 @@ struct HeatMapFullscreenScreen: View {
                         lastUpdated: Date()
                     )
                 }
-                print("✅ HeatMapFullscreen: Loaded \(response.zones.count) zones from API")
+                HXLogger.info("HeatMapFullscreen: Loaded \(response.zones.count) zones from API", category: "General")
             } catch {
-                print("⚠️ HeatMapFullscreen: API failed, using mock - \(error.localizedDescription)")
+                HXLogger.error("HeatMapFullscreen: API failed, using mock - \(error.localizedDescription)", category: "General")
             }
         }
     }

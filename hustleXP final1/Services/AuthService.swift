@@ -91,7 +91,7 @@ final class AuthService: ObservableObject {
             self.isAuthenticated = true
             appState?.login(userId: mockUser.id, role: mockUser.role)
 
-            print("✅ Auth [DEMO]: User signed up successfully - \(mockUser.name)")
+            HXLogger.info("Auth [DEMO]: User signed up successfully - \(mockUser.name)", category: "Auth")
             return
         }
 
@@ -135,13 +135,13 @@ final class AuthService: ObservableObject {
             self.isAuthenticated = true
             appState?.login(userId: user.id, role: user.role)
 
-            print("✅ Auth: User signed up successfully - \(user.name)")
+            HXLogger.info("Auth: User signed up successfully - \(user.name)", category: "Auth")
             AnalyticsService.shared.track(.signUp, properties: ["method": "email"])
         } catch let error as NSError {
             self.error = error
-            print("❌ Auth: Sign up failed - \(error.localizedDescription)")
-            print("❌ Auth: Error domain: \(error.domain), code: \(error.code)")
-            print("❌ Auth: Full error: \(error)")
+            HXLogger.error("Auth: Sign up failed - \(error.localizedDescription)", category: "Auth")
+            HXLogger.error("Auth: Error domain: \(error.domain), code: \(error.code)", category: "Auth")
+            HXLogger.error("Auth: Full error: \(error)", category: "Auth")
             AnalyticsService.shared.trackError(error.localizedDescription, context: "signUp")
             throw error
         }
@@ -185,7 +185,7 @@ final class AuthService: ObservableObject {
             self.isAuthenticated = true
             appState?.login(userId: mockUser.id, role: mockUser.role)
 
-            print("✅ Auth [DEMO]: User signed in successfully - \(mockUser.name)")
+            HXLogger.info("Auth [DEMO]: User signed in successfully - \(mockUser.name)", category: "Auth")
             return
         }
 
@@ -206,13 +206,13 @@ final class AuthService: ObservableObject {
             // Step 4: Load user from backend
             await loadCurrentUser()
 
-            print("✅ Auth: User signed in successfully")
+            HXLogger.info("Auth: User signed in successfully", category: "Auth")
             AnalyticsService.shared.track(.signIn, properties: ["method": "email"])
         } catch let error as NSError {
             self.error = error
-            print("❌ Auth: Sign in failed - \(error.localizedDescription)")
-            print("❌ Auth: Error domain: \(error.domain), code: \(error.code)")
-            print("❌ Auth: Full error: \(error)")
+            HXLogger.error("Auth: Sign in failed - \(error.localizedDescription)", category: "Auth")
+            HXLogger.error("Auth: Error domain: \(error.domain), code: \(error.code)", category: "Auth")
+            HXLogger.error("Auth: Full error: \(error)", category: "Auth")
             AnalyticsService.shared.trackError(error.localizedDescription, context: "signIn")
             throw error
         }
@@ -253,7 +253,7 @@ final class AuthService: ObservableObject {
             // Try to load existing user from backend (silentFail: user may not exist yet)
             await loadCurrentUser(silentFail: true)
             if isAuthenticated {
-                print("✅ Auth: Apple Sign-In successful (existing user)")
+                HXLogger.info("Auth: Apple Sign-In successful (existing user)", category: "Auth")
                 return
             }
 
@@ -292,11 +292,11 @@ final class AuthService: ObservableObject {
             self.isAuthenticated = true
             appState?.login(userId: user.id, role: user.role)
 
-            print("✅ Auth: Apple Sign-In successful (new user) - \(user.name)")
+            HXLogger.info("Auth: Apple Sign-In successful (new user) - \(user.name)", category: "Auth")
             AnalyticsService.shared.track(.signUp, properties: ["method": "apple"])
         } catch let error as NSError {
             self.error = error
-            print("❌ Auth: Apple Sign-In failed - \(error.localizedDescription)")
+            HXLogger.error("Auth: Apple Sign-In failed - \(error.localizedDescription)", category: "Auth")
             AnalyticsService.shared.trackError(error.localizedDescription, context: "appleSignIn")
             throw error
         }
@@ -333,7 +333,7 @@ final class AuthService: ObservableObject {
             // Try to load existing user from backend (silentFail: user may not exist yet)
             await loadCurrentUser(silentFail: true)
             if isAuthenticated {
-                print("✅ Auth: Google Sign-In successful (existing user)")
+                HXLogger.info("Auth: Google Sign-In successful (existing user)", category: "Auth")
                 return
             }
 
@@ -352,7 +352,7 @@ final class AuthService: ObservableObject {
                 defaultMode: UserRole.hustler.rawValue
             )
 
-            print("🔄 Auth: Registering new Google user - uid: \(authResult.user.uid), email: \(authResult.user.email ?? "nil")")
+            HXLogger.info("Auth: Registering new Google user - uid: \(authResult.user.uid), email: \(authResult.user.email ?? "nil")", category: "Auth")
 
             let user: HXUser = try await trpc.call(
                 router: "user",
@@ -365,11 +365,11 @@ final class AuthService: ObservableObject {
             self.isAuthenticated = true
             appState?.login(userId: user.id, role: user.role)
 
-            print("✅ Auth: Google Sign-In successful (new user) - \(user.name)")
+            HXLogger.info("Auth: Google Sign-In successful (new user) - \(user.name)", category: "Auth")
             AnalyticsService.shared.track(.signUp, properties: ["method": "google"])
         } catch let error as NSError {
             self.error = error
-            print("❌ Auth: Google Sign-In failed - \(error.localizedDescription)")
+            HXLogger.error("Auth: Google Sign-In failed - \(error.localizedDescription)", category: "Auth")
             AnalyticsService.shared.trackError(error.localizedDescription, context: "googleSignIn")
             throw error
         }
@@ -384,7 +384,7 @@ final class AuthService: ObservableObject {
             currentUser = nil
             isAuthenticated = false
             appState?.logout()
-            print("✅ Auth [DEMO]: User signed out successfully")
+            HXLogger.info("Auth [DEMO]: User signed out successfully", category: "Auth")
             return
         }
 
@@ -399,11 +399,11 @@ final class AuthService: ObservableObject {
             isAuthenticated = false
             appState?.logout()
 
-            print("✅ Auth: User signed out successfully")
+            HXLogger.info("Auth: User signed out successfully", category: "Auth")
             AnalyticsService.shared.track(.signOut)
             Task { await AnalyticsService.shared.flush() }
         } catch {
-            print("⚠️ Auth: Sign out error - \(error.localizedDescription)")
+            HXLogger.error("Auth: Sign out error - \(error.localizedDescription)", category: "Auth")
         }
     }
 
@@ -431,9 +431,9 @@ final class AuthService: ObservableObject {
             // Store user ID
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
 
-            print("✅ Auth: Loaded current user - \(user.name)")
+            HXLogger.info("Auth: Loaded current user - \(user.name)", category: "Auth")
         } catch {
-            print("⚠️ Auth: Failed to load current user - \(error.localizedDescription)")
+            HXLogger.error("Auth: Failed to load current user - \(error.localizedDescription)", category: "Auth")
             if silentFail {
                 // Caller will handle registration; don't destroy auth token
                 return
@@ -455,7 +455,7 @@ final class AuthService: ObservableObject {
         let idToken = try await firebaseUser.getIDToken(forcingRefresh: true)
         trpc.setAuthToken(idToken)
 
-        print("✅ Auth: Token refreshed successfully")
+        HXLogger.info("Auth: Token refreshed successfully", category: "Auth")
     }
 
     // MARK: - Password Reset
@@ -464,7 +464,7 @@ final class AuthService: ObservableObject {
     /// - Parameter email: User's email address
     func sendPasswordReset(email: String) async throws {
         try await Auth.auth().sendPasswordReset(withEmail: email)
-        print("✅ Auth: Password reset email sent to \(email)")
+        HXLogger.info("Auth: Password reset email sent to \(email)", category: "Auth")
     }
 
     // MARK: - Crypto Helpers

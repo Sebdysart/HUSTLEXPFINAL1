@@ -125,11 +125,11 @@ final class LiveModeService: ObservableObject {
 
         if status.isActive {
             startPolling()
-            print("✅ LiveModeService: Live mode ACTIVATED")
+            HXLogger.info("LiveModeService: Live mode ACTIVATED", category: "LiveMode")
         } else {
             stopPolling()
             self.broadcasts = []
-            print("✅ LiveModeService: Live mode DEACTIVATED")
+            HXLogger.info("LiveModeService: Live mode DEACTIVATED", category: "LiveMode")
         }
 
         return status
@@ -172,7 +172,7 @@ final class LiveModeService: ObservableObject {
         )
 
         self.broadcasts = broadcasts
-        print("✅ LiveModeService: Found \(broadcasts.count) live broadcasts")
+        HXLogger.info("LiveModeService: Found \(broadcasts.count) live broadcasts", category: "LiveMode")
         return broadcasts
     }
 
@@ -187,7 +187,7 @@ final class LiveModeService: ObservableObject {
                 do {
                     _ = try await getStatus()
                 } catch {
-                    print("⚠️ LiveModeService: Poll failed - \(error.localizedDescription)")
+                    HXLogger.error("LiveModeService: Poll failed - \(error.localizedDescription)", category: "LiveMode")
                 }
                 try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
             }
@@ -234,7 +234,7 @@ final class InstantModeService: ObservableObject {
         )
 
         self.availableTasks = tasks
-        print("✅ InstantModeService: Found \(tasks.count) instant tasks")
+        HXLogger.info("InstantModeService: Found \(tasks.count) instant tasks", category: "LiveMode")
         return tasks
     }
 
@@ -258,7 +258,7 @@ final class InstantModeService: ObservableObject {
         // Remove from available list
         availableTasks.removeAll { $0.id == taskId }
 
-        print("✅ InstantModeService: Accepted instant task - \(task.title)")
+        HXLogger.info("InstantModeService: Accepted instant task - \(task.title)", category: "LiveMode")
         return task
     }
 
@@ -281,7 +281,7 @@ final class InstantModeService: ObservableObject {
         // Remove from available list
         availableTasks.removeAll { $0.id == taskId }
 
-        print("✅ InstantModeService: Dismissed instant task \(taskId)")
+        HXLogger.info("InstantModeService: Dismissed instant task \(taskId)", category: "LiveMode")
     }
 
     // MARK: - Metrics (Debug/Testing)

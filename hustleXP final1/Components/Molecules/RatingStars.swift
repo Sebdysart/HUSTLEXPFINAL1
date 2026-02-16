@@ -71,7 +71,7 @@ struct RatingStars: View {
         RatingStars(rating: 4.5, mode: .display)
         RatingStars(rating: 3.0, mode: .display)
         RatingStars(rating: 0, mode: .input) { rating in
-            print("Selected: \(rating)")
+            HXLogger.debug("Selected: \(rating)", category: "UI")
         }
     }
     .padding()

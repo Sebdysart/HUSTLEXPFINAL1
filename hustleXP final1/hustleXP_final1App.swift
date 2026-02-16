@@ -23,7 +23,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         // Initialize Firebase
         FirebaseApp.configure()
-        print("✅ Firebase configured successfully")
+        HXLogger.info("Firebase configured successfully", category: "General")
 
         // Set up push notification delegates
         UNUserNotificationCenter.current().delegate = PushNotificationManager.shared
@@ -34,7 +34,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
         // Initialize Stripe
         StripePaymentManager.shared.configure()
-        print("✅ Stripe configured successfully")
+        HXLogger.info("Stripe configured successfully", category: "Payment")
 
         return true
     }
@@ -45,7 +45,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
         Messaging.messaging().apnsToken = deviceToken
-        print("✅ APNs device token registered with Firebase")
+        HXLogger.info("APNs device token registered with Firebase", category: "Push")
     }
 
     /// Logs remote notification registration failures.
@@ -53,7 +53,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        print("❌ Failed to register for remote notifications: \(error.localizedDescription)")
+        HXLogger.error("Failed to register for remote notifications: \(error.localizedDescription)", category: "Push")
     }
 }
 

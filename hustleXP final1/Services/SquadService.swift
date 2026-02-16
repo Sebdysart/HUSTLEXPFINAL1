@@ -37,7 +37,7 @@ final class SquadService: ObservableObject {
             input: CreateSquadInput(name: name, emoji: emoji, tagline: tagline)
         )
 
-        print("✅ SquadService: Created squad '\(name)'")
+        HXLogger.info("SquadService: Created squad '\(name)'", category: "General")
         return squad
     }
 
@@ -51,7 +51,7 @@ final class SquadService: ObservableObject {
             input: EmptyInput()
         )
 
-        print("✅ SquadService: Fetched \(squads.count) squads")
+        HXLogger.info("SquadService: Fetched \(squads.count) squads", category: "General")
         return squads
     }
 
@@ -86,7 +86,7 @@ final class SquadService: ObservableObject {
             input: DisbandInput(id: id)
         )
 
-        print("✅ SquadService: Disbanded squad \(id)")
+        HXLogger.info("SquadService: Disbanded squad \(id)", category: "General")
     }
 
     // MARK: - Squad Invites
@@ -106,7 +106,7 @@ final class SquadService: ObservableObject {
             input: InviteInput(squadId: squadId, inviteeId: userId)
         )
 
-        print("✅ SquadService: Invited \(userId) to squad")
+        HXLogger.info("SquadService: Invited \(userId) to squad", category: "General")
         return invite
     }
 
@@ -127,7 +127,7 @@ final class SquadService: ObservableObject {
             input: RespondInput(inviteId: inviteId, accept: accept)
         )
 
-        print("✅ SquadService: \(accept ? "Accepted" : "Declined") invite")
+        HXLogger.info("SquadService: \(accept ? "Accepted" : "Declined") invite", category: "General")
     }
 
     func getPendingInvites() async throws -> [SquadInvite] {
@@ -176,7 +176,7 @@ final class SquadService: ObservableObject {
             input: AcceptTaskInput(squadTaskId: squadTaskId)
         )
 
-        print("✅ SquadService: Accepted squad task")
+        HXLogger.info("SquadService: Accepted squad task", category: "General")
     }
 
     // MARK: - Leaderboard
