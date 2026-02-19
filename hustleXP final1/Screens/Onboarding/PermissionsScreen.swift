@@ -2,7 +2,7 @@
 //  PermissionsScreen.swift
 //  hustleXP final1
 //
-//  Archetype: D (Calibration/Capability)
+//  Clean permissions request screen
 //
 
 import SwiftUI
@@ -15,59 +15,19 @@ struct PermissionsScreen: View {
 
     @State private var locationEnabled: Bool = false
     @State private var notificationsEnabled: Bool = false
-    @State private var showContent = false
     @StateObject private var locationDelegate = LocationPermissionDelegate()
 
     var body: some View {
         GeometryReader { geometry in
-            // Use safe area-adjusted height for compact detection
-            let usableHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
-            let isCompact = usableHeight < 600
+            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+            let isCompact = safeHeight < 600
 
             ZStack {
-                // Premium background
-                Color.brandBlack
-                    .ignoresSafeArea()
-                
-                // Animated gradient orbs
-                VStack {
-                    HStack {
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [Color.brandPurple.opacity(0.2), Color.clear],
-                                    center: .center,
-                                    startRadius: 0,
-                                    endRadius: 150
-                                )
-                            )
-                            .frame(width: 300, height: 300)
-                            .blur(radius: 60)
-                            .offset(x: -80, y: -50)
-                        Spacer()
-                    }
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [Color.infoBlue.opacity(0.12), Color.clear],
-                                    center: .center,
-                                    startRadius: 0,
-                                    endRadius: 120
-                                )
-                            )
-                            .frame(width: 250, height: 250)
-                            .blur(radius: 50)
-                            .offset(x: 60, y: 80)
-                    }
-                }
-                .ignoresSafeArea()
+                Color.brandBlack.ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: isCompact ? 24 : 32) {
-                        // Progress bar
+                        // Progress
                         OnboardingProgressBar(
                             currentStep: OnboardingRoute.permissions.stepIndex,
                             totalSteps: OnboardingRoute.totalSteps
@@ -75,81 +35,59 @@ struct PermissionsScreen: View {
                         .padding(.top, 8)
 
                         // Header
-                        VStack(spacing: isCompact ? 8 : 12) {
+                        VStack(spacing: 8) {
                             Text("Enable Permissions")
-                                .font(.system(size: isCompact ? 24 : 28, weight: .bold))
-                                .minimumScaleFactor(0.7)
+                                .font(.system(size: isCompact ? 22 : 26, weight: .bold))
                                 .foregroundStyle(Color.textPrimary)
                             
                             Text("These help us give you the best experience")
-                                .font(.system(size: isCompact ? 14 : 15))
-                                .minimumScaleFactor(0.7)
+                                .font(.subheadline)
                                 .foregroundStyle(Color.textSecondary)
                         }
-                        .padding(.top, isCompact ? 16 : 24)
+                        .padding(.top, isCompact ? 8 : 16)
                         
-                        // Permission toggles
+                        // Permission cards
                         VStack(spacing: isCompact ? 12 : 16) {
                             PermissionCard(
                                 icon: "location.fill",
                                 title: "Location",
-                                description: "Find nearby tasks and enable EN_ROUTE tracking for task verification",
-                                benefit: "Required for most tasks",
+                                description: "Find nearby tasks and verify task completion",
                                 isEnabled: $locationEnabled
                             )
-                            .opacity(showContent ? 1 : 0)
-                            .offset(y: showContent ? 0 : 20)
-                            .animation(.easeOut(duration: 0.4).delay(0.1), value: showContent)
                             
                             PermissionCard(
                                 icon: "bell.fill",
                                 title: "Notifications",
-                                description: "Get alerts for new tasks, messages, and payment updates",
-                                benefit: "Never miss an opportunity",
+                                description: "Get alerts for new tasks and messages",
                                 isEnabled: $notificationsEnabled
                             )
-                            .opacity(showContent ? 1 : 0)
-                            .offset(y: showContent ? 0 : 20)
-                            .animation(.easeOut(duration: 0.4).delay(0.2), value: showContent)
                         }
-                        .padding(.horizontal, isCompact ? 18 : 24)
+                        .padding(.horizontal, 20)
                         
-                        // Info note
-                        HStack(spacing: 12) {
+                        // Privacy note
+                        HStack(spacing: 10) {
                             Image(systemName: "shield.fill")
+                                .font(.system(size: 14))
                                 .foregroundStyle(Color.brandPurple)
                             
-                            Text("Your data is encrypted and never sold. See our Privacy Policy for details.")
-                                .font(.system(size: isCompact ? 11 : 12))
+                            Text("Your data is encrypted and never sold")
+                                .font(.caption)
                                 .foregroundStyle(Color.textSecondary)
                         }
-                        .padding(isCompact ? 12 : 16)
-                        .background(Color.surfaceSecondary)
-                        .cornerRadius(12)
-                        .padding(.horizontal, isCompact ? 18 : 24)
-                        .opacity(showContent ? 1 : 0)
-                        .animation(.easeOut(duration: 0.4).delay(0.3), value: showContent)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 10))
+                        .padding(.horizontal, 20)
                         
-                        Spacer(minLength: isCompact ? 20 : 40)
-                        
-                        // Continue button
-                        VStack(spacing: isCompact ? 12 : 16) {
-                            HXButton("Continue", variant: .primary) {
-                                router.navigateToOnboarding(.profileSetup)
-                            }
-                            .accessibilityLabel("Continue to profile setup")
-                            
-                            Button(action: { router.navigateToOnboarding(.profileSetup) }) {
-                                Text("Skip for now")
-                                    .font(.system(size: isCompact ? 13 : 14))
-                                    .minimumScaleFactor(0.7)
-                                    .foregroundStyle(Color.textSecondary)
-                            }
-                            .accessibilityLabel("Skip permissions setup")
-                        }
-                        .padding(.horizontal, isCompact ? 18 : 24)
-                        .padding(.bottom, max(24, geometry.safeAreaInsets.bottom + 16))
+                        Spacer(minLength: 40)
                     }
+                    .frame(minHeight: safeHeight)
+                }
+                
+                // Bottom CTA
+                VStack {
+                    Spacer()
+                    bottomBar(isCompact: isCompact, bottomInset: geometry.safeAreaInsets.bottom)
                 }
             }
         }
@@ -159,71 +97,94 @@ struct PermissionsScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .onAppear {
-            withAnimation {
-                showContent = true
+    }
+    
+    // MARK: - Bottom Bar
+    
+    private func bottomBar(isCompact: Bool, bottomInset: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            Divider()
+                .background(Color.borderSubtle)
+            
+            VStack(spacing: 12) {
+                Button(action: { router.navigateToOnboarding(.profileSetup) }) {
+                    HStack(spacing: 8) {
+                        Text("Continue")
+                            .font(.body.weight(.semibold))
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.brandPurple)
+                    )
+                }
+                .accessibilityLabel("Continue to profile setup")
+                
+                Button(action: { router.navigateToOnboarding(.profileSetup) }) {
+                    Text("Skip for now")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .accessibilityLabel("Skip permissions")
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, max(16, bottomInset))
+            .background(Color.brandBlack)
         }
     }
 }
 
 // MARK: - Permission Card
+
 private struct PermissionCard: View {
     let icon: String
     let title: String
     let description: String
-    let benefit: String
     @Binding var isEnabled: Bool
     
     var body: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(isEnabled ? Color.brandPurple.opacity(0.2) : Color.surfaceSecondary)
-                        .frame(width: 48, height: 48)
-                    
+        HStack(spacing: 14) {
+            // Icon
+            Circle()
+                .fill(isEnabled ? Color.brandPurple.opacity(0.15) : Color.surfaceSecondary)
+                .frame(width: 44, height: 44)
+                .overlay(
                     Image(systemName: icon)
-                        .font(.system(size: 20))
+                        .font(.system(size: 18))
                         .foregroundStyle(isEnabled ? Color.brandPurple : Color.textSecondary)
-                }
+                )
+            
+            // Text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.textPrimary)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    HXText(title, style: .headline)
-                    HXText(description, style: .caption, color: .textSecondary)
-                }
-                
-                Spacer()
-                
-                Toggle("", isOn: $isEnabled)
-                    .labelsHidden()
-                    .tint(Color.brandPurple)
-                    .disabled(isEnabled) // Once granted, can't toggle off from here
-                    .accessibilityLabel("Toggle \(title) permission")
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(Color.textSecondary)
+                    .lineLimit(2)
             }
             
-            if isEnabled {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.successGreen)
-                    
-                    HXText(benefit, style: .caption, color: .successGreen)
-                    
-                    Spacer()
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
+            Spacer()
+            
+            // Toggle
+            Toggle("", isOn: $isEnabled)
+                .labelsHidden()
+                .tint(Color.brandPurple)
+                .accessibilityLabel("Enable \(title)")
         }
-        .padding(20)
-        .background(Color.surfaceElevated)
-        .cornerRadius(16)
+        .padding(16)
+        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 14))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(isEnabled ? Color.brandPurple.opacity(0.5) : Color.borderSubtle, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(isEnabled ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
         )
-        .animation(.easeInOut(duration: 0.2), value: isEnabled)
     }
 }
 

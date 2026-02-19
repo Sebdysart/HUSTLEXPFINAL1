@@ -271,11 +271,11 @@ private struct ConfettiView: View {
         for i in 0..<50 {
             let particle = ConfettiParticle(
                 id: i,
-                color: colors.randomElement()!,
+                color: colors.randomElement() ?? .brandPurple,
                 size: CGFloat.random(in: 5...14),
                 position: CGPoint(x: CGFloat.random(in: 0...screenWidth), y: -20),
                 opacity: 1.0,
-                shape: shapes.randomElement()!,
+                shape: shapes.randomElement() ?? .circle,
                 rotation: Double.random(in: 0...360)
             )
             particles.append(particle)
