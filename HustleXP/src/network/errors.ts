@@ -12,7 +12,8 @@ export type NetworkErrorCode =
   | 'INVALID_JSON'
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
-  | 'NOT_FOUND';
+  | 'NOT_FOUND'
+  | 'SSL_PINNING_FAILURE';
 
 export interface NetworkError {
   code: NetworkErrorCode;
@@ -34,6 +35,7 @@ export function toObservabilityErrorCode(networkCode: NetworkErrorCode): ErrorCo
     UNAUTHORIZED: ERROR_CODES.UNAUTHORIZED,
     FORBIDDEN: ERROR_CODES.FORBIDDEN,
     NOT_FOUND: ERROR_CODES.NOT_FOUND,
+    SSL_PINNING_FAILURE: ERROR_CODES.NETWORK_ERROR,
   };
   return mapping[networkCode];
 }

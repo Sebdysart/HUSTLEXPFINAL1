@@ -5,6 +5,10 @@
 /**
  * API base URL.
  * TODO: Replace with actual backend URL when available.
+ *
+ * SSL Pinning: This hostname is automatically registered as a pinned host
+ * in ssl-pinning.ts. If you change this URL, the pinned hostnames list
+ * and SPKI hashes in ssl-pinning.ts must be updated to match.
  */
 export const API_BASE_URL = 'https://api.hustlexp.com';
 

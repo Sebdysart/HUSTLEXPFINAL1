@@ -2,10 +2,19 @@
  * Network client — fetch wrapper with Result-style output.
  * Handles timeouts, non-2xx responses, and invalid JSON.
  * Never throws; all failures normalized to NetworkError.
+ *
+ * SSL PINNING INTEGRATION
+ * -----------------------
+ * Phase 1 (current): validateCertificate() enforces HTTPS for pinned hosts
+ * and attaches an X-SSL-Pin-Phase header for server-side observability.
+ *
+ * Phase 2: Replace the native fetch() call below with the pinned fetch from
+ * react-native-ssl-pinning. See ssl-pinning.ts for full instructions.
  */
 
 import type { NetworkError } from './errors';
 import { errorFromStatus } from './errors';
+import { validateCertificate, getSSLPinningHeaders } from './ssl-pinning';
 
 export type NetworkResult<T> =
   | { ok: true; data: T }
@@ -64,15 +73,32 @@ export async function request<T>(
 
   const { method = 'GET', headers = {}, body, timeout = DEFAULT_TIMEOUT } = config;
 
+  // --- SSL Pinning: pre-request validation ---
+  const sslResult = validateCertificate(url);
+  if (!sslResult.valid) {
+    return {
+      ok: false,
+      error: {
+        code: 'SSL_PINNING_FAILURE',
+        message: sslResult.reason ?? 'SSL certificate pinning validation failed',
+      },
+    };
+  }
+
+  const sslHeaders = getSSLPinningHeaders(url);
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
+    // Phase 2 TODO: Replace this fetch() with pinnedFetch() from
+    // react-native-ssl-pinning. See ssl-pinning.ts for instructions.
     const response = await fetch(url, {
       method,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        ...sslHeaders,
         ...headers,
       },
       body: body ? JSON.stringify(body) : undefined,
