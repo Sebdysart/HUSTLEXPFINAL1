@@ -41,7 +41,9 @@ final class TRPCClient: ObservableObject {
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 300
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
-        self.session = URLSession(configuration: config)
+        config.urlCache = URLCache(memoryCapacity: 10 * 1024 * 1024, diskCapacity: 50 * 1024 * 1024)
+        config.waitsForConnectivity = true
+        self.session = URLSession(configuration: config, delegate: SSLPinningDelegate(), delegateQueue: nil)
     }
 
     /// tRPC procedure type – determines HTTP method

@@ -33,7 +33,40 @@ final class MessagingService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
+    private var sseCancellable: AnyCancellable?
+
     private init() {}
+
+    // MARK: - SSE Realtime Subscription
+
+    /// Subscribe to realtime message events via SSE
+    func subscribeToRealtimeMessages(forTaskId taskId: String, onMessage: @escaping (HXMessage) -> Void) {
+        sseCancellable = RealtimeSSEClient.shared.messageReceived
+            .filter { $0.event == "message.new" }
+            .compactMap { sseMessage -> SSENewMessagePayload? in
+                try? JSONDecoder().decode(SSENewMessagePayload.self, from: sseMessage.data)
+            }
+            .filter { $0.taskId == taskId }
+            .sink { [weak self] payload in
+                // Fetch the full message from the API to get complete data
+                Task {
+                    do {
+                        let messages = try await self?.getTaskMessages(taskId: taskId)
+                        if let latest = messages?.last {
+                            onMessage(latest)
+                        }
+                    } catch {
+                        HXLogger.error("SSE: Failed to fetch message after realtime event: \(error)", category: "Network")
+                    }
+                }
+            }
+    }
+
+    /// Unsubscribe from realtime message events
+    func unsubscribeFromRealtimeMessages() {
+        sseCancellable?.cancel()
+        sseCancellable = nil
+    }
 
     // MARK: - Send Message
 
@@ -200,6 +233,16 @@ final class MessagingService: ObservableObject {
         HXLogger.info("MessagingService: Marked message \(messageId) as read", category: "General")
         await refreshUnreadCount()
     }
+}
+
+// MARK: - SSE Payload
+
+private struct SSENewMessagePayload: Codable {
+    let messageId: String
+    let taskId: String
+    let senderId: String
+    let content: String?
+    let createdAt: String
 }
 
 // NOTE: RatingService has been moved to its own file: RatingService.swift
