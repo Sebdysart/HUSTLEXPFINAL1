@@ -361,14 +361,34 @@ final class TaskDiscoveryService: ObservableObject {
         longitude: Double,
         radiusMeters: Double = 16093, // 10 miles
         skills: [String]? = nil,
-        limit: Int = 20
+        limit: Int = 50,
+        filters: FeedFilterParams? = nil
     ) async throws -> TaskFeedResponse {
+        struct FeedFiltersInput: Codable {
+            let category: String?
+            let min_price: Int?
+            let max_price: Int?
+            let max_distance_miles: Double?
+            let sort_by: String?
+        }
+
         struct FeedInput: Codable {
             let latitude: Double
             let longitude: Double
             let radiusMeters: Double
             let skills: [String]?
             let limit: Int
+            let filters: FeedFiltersInput?
+        }
+
+        let filtersInput: FeedFiltersInput? = filters.map { f in
+            FeedFiltersInput(
+                category: f.category?.rawValue,
+                min_price: f.minPriceCents,
+                max_price: f.maxPriceCents,
+                max_distance_miles: f.maxDistanceMiles,
+                sort_by: f.sortBy?.rawValue
+            )
         }
 
         let input = FeedInput(
@@ -376,7 +396,8 @@ final class TaskDiscoveryService: ObservableObject {
             longitude: longitude,
             radiusMeters: radiusMeters,
             skills: skills,
-            limit: limit
+            limit: limit,
+            filters: filtersInput
         )
 
         let response: TaskFeedResponse = try await trpc.call(
@@ -573,6 +594,48 @@ struct SavedSearch: Codable, Identifiable {
     let filters: [String: String]?
     let sortBy: String?
     let createdAt: Date?
+}
+
+// MARK: - Feed Filter Types
+
+enum FeedSortOption: String, CaseIterable, Identifiable {
+    case relevance = "relevance"
+    case price = "price"
+    case distance = "distance"
+    case deadline = "deadline"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .relevance: return "Best Match"
+        case .price: return "Highest Pay"
+        case .distance: return "Nearest"
+        case .deadline: return "Ending Soon"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .relevance: return "sparkles"
+        case .price: return "dollarsign"
+        case .distance: return "location"
+        case .deadline: return "clock"
+        }
+    }
+}
+
+struct FeedFilterParams {
+    var category: TaskCategory? = nil
+    var minPriceCents: Int? = nil   // USD cents
+    var maxPriceCents: Int? = nil   // USD cents
+    var maxDistanceMiles: Double? = nil
+    var sortBy: FeedSortOption? = nil
+
+    var isActive: Bool {
+        category != nil || minPriceCents != nil || maxPriceCents != nil
+            || maxDistanceMiles != nil || (sortBy != nil && sortBy != .relevance)
+    }
 }
 
 // MARK: - Response Types

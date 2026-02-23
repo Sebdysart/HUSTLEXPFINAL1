@@ -20,6 +20,7 @@ struct HustlerFeedScreen: View {
     @State private var selectedFilter: TaskFilter = .all
     @State private var isLoading: Bool = false
     @State private var showFilters: Bool = false
+    @State private var feedFilters = FeedFilterParams()
     @State private var apiTasks: [HXTask] = []
     @State private var apiError: Error?
     @State private var showApiError: Bool = false
@@ -100,7 +101,12 @@ struct HustlerFeedScreen: View {
                 
                 // Filter chips
                 filterSection
-                
+
+                // v2.6.0: Active filter summary banner
+                if feedFilters.isActive {
+                    activeFilterBanner
+                }
+
                 // v1.9.0: Toggle between list and map view
                 if showMapView {
                     mapViewSection
@@ -191,16 +197,34 @@ struct HustlerFeedScreen: View {
                 Button(action: { showFilters.toggle() }) {
                     ZStack {
                         Circle()
-                            .fill(Color.surfaceElevated)
+                            .fill(feedFilters.isActive ? Color.brandPurple : Color.surfaceElevated)
                             .frame(width: 36, height: 36)
 
                         Image(systemName: "slider.horizontal.3")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.brandPurple)
+                            .foregroundStyle(feedFilters.isActive ? .white : Color.brandPurple)
+
+                        if feedFilters.isActive {
+                            Circle()
+                                .fill(Color.warningOrange)
+                                .frame(width: 10, height: 10)
+                                .offset(x: 12, y: -12)
+                        }
                     }
                 }
                 .accessibilityLabel("Filter tasks")
             }
+        }
+        .sheet(isPresented: $showFilters) {
+            FeedFilterSheet(
+                isPresented: $showFilters,
+                filters: $feedFilters,
+                onApply: {
+                    Task { await refreshWithFilters() }
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .task {
             await loadLocationData()
@@ -335,7 +359,8 @@ struct HustlerFeedScreen: View {
                 longitude: location?.longitude ?? -122.4194,
                 radiusMeters: 16093, // 10 miles
                 skills: skills,
-                limit: 50
+                limit: 50,
+                filters: feedFilters.isActive ? feedFilters : nil
             )
             apiTasks = response.tasks
             apiError = nil
@@ -346,6 +371,14 @@ struct HustlerFeedScreen: View {
             showApiError = true
             HXLogger.error("HustlerFeed: API failed - \(error.localizedDescription)", category: "Task")
         }
+    }
+
+    // v2.6.0: Refresh feed with updated filter params
+    private func refreshWithFilters() async {
+        isLoading = true
+        let skillIds = userSkills.isEmpty ? nil : userSkills.map { $0.skillId }
+        await loadTasksFromAPI(location: currentLocation, skills: skillIds)
+        isLoading = false
     }
     
     // MARK: - Feed Header
@@ -412,6 +445,48 @@ struct HustlerFeedScreen: View {
         }
     }
     
+    // MARK: - Active Filter Banner (v2.6.0)
+
+    private var activeFilterBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.brandPurple)
+
+            Text(filterSummaryText)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.textSecondary)
+                .lineLimit(1)
+
+            Spacer()
+
+            Button {
+                feedFilters = FeedFilterParams()
+                Task { await refreshWithFilters() }
+            } label: {
+                Text("Clear")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.brandPurple)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+        .background(Color.brandPurple.opacity(0.08))
+    }
+
+    private var filterSummaryText: String {
+        var parts: [String] = []
+        if let cat = feedFilters.category { parts.append(cat.displayName) }
+        if feedFilters.minPriceCents != nil || feedFilters.maxPriceCents != nil {
+            let min = feedFilters.minPriceCents.map { "$\($0 / 100)" } ?? "$0"
+            let max = feedFilters.maxPriceCents.map { "$\($0 / 100)" } ?? "$500+"
+            parts.append("\(min)-\(max)")
+        }
+        if let dist = feedFilters.maxDistanceMiles { parts.append("\(Int(dist)) mi") }
+        if let sort = feedFilters.sortBy, sort != .relevance { parts.append(sort.displayName) }
+        return parts.joined(separator: " · ")
+    }
+
     // MARK: - Task List Section
     
     private var taskListSection: some View {
@@ -571,7 +646,8 @@ struct HustlerFeedScreen: View {
     
     private func refreshTasksAsync() async {
         isLoading = true
-        await loadTasksFromAPI(location: currentLocation)
+        let skillIds = userSkills.isEmpty ? nil : userSkills.map { $0.skillId }
+        await loadTasksFromAPI(location: currentLocation, skills: skillIds)
         isLoading = false
     }
 }
