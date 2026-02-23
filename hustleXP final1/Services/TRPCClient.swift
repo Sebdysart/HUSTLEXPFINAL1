@@ -30,12 +30,8 @@ final class TRPCClient: ObservableObject {
     private var isRefreshingToken = false
 
     init() {
-        // Railway production backend
-        // swiftlint:disable:next force_unwrapping
-        guard let url = URL(string: "https://hustlexp-ai-backend-staging-production.up.railway.app") else {
-            fatalError("TRPCClient: Invalid hardcoded base URL — this is a programmer error")
-        }
-        self.baseURL = url
+        // Environment-aware backend URL from AppConfig
+        self.baseURL = AppConfig.backendBaseURL
 
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30

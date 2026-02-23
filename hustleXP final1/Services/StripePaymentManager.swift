@@ -23,10 +23,14 @@ final class StripePaymentManager {
     // MARK: - Configuration
 
     /// Configure Stripe with publishable key (call once at app launch)
+    ///
+    /// Reads from AppConfig to select the correct key per environment.
+    /// - Debug builds: uses test publishable key (pk_test_*)
+    /// - Release builds: uses live publishable key (pk_live_*) from AppConfig
     func configure() {
-        // Stripe test publishable key (safe to embed in client apps)
-        StripeAPI.defaultPublishableKey = "pk_test_51SCTxI9oJYlVip5Z931pD73nICDzzkhjFrKZ1pED20fJWRgwLDrVqEhkfYuosQXrt8S56WIdnjBT9Nv5oJ4SXyvB009Ajm9uRv"
-        HXLogger.info("StripePaymentManager: Configured with publishable key", category: "Payment")
+        let key = AppConfig.stripePublishableKey
+        StripeAPI.defaultPublishableKey = key
+        HXLogger.info("StripePaymentManager: Configured with \(AppConfig.isProduction ? "live" : "test") publishable key", category: "Payment")
     }
 
     // MARK: - Payment Sheet
