@@ -24,6 +24,7 @@ struct HustlerTaskDetailScreen: View {
     @State private var loadError: Error?
     @State private var acceptError: String?
     @State private var showAcceptError: Bool = false
+    @State private var showRatingSheet = false
     
     // v1.9.0 Spatial Intelligence
     @State private var userLocation: GPSCoordinates?
@@ -110,6 +111,17 @@ struct HustlerTaskDetailScreen: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text(acceptError ?? "An unexpected error occurred. You can try again or continue in offline mode.")
+            }
+            // v2.6.0: Worker → Poster rating sheet
+            .sheet(isPresented: $showRatingSheet) {
+                RateTaskSheet(
+                    taskId: task.id,
+                    taskTitle: task.title,
+                    otherUserName: task.posterName,
+                    isPresented: $showRatingSheet
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
         } else {
             loadingOrErrorView
@@ -636,47 +648,73 @@ struct HustlerTaskDetailScreen: View {
                 .accessibilityLabel("Save task")
                 
                 // Main action button
-                Button(action: {
-                    if task.state == .posted {
-                        acceptTask(task)
-                    } else {
-                        router.navigateToHustler(.taskInProgress(taskId: task.id))
-                    }
-                }) {
-                    HStack(spacing: 8) {
-                        if isAccepting {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Image(systemName: task.state == .posted ? "checkmark.circle.fill" : "arrow.right.circle.fill")
+                if task.state == .completed {
+                    // v2.6.0: Rate poster for completed tasks
+                    Button(action: { showRatingSheet = true }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "star.fill")
                                 .font(.system(size: 18, weight: .semibold))
+                            Text("Rate \(task.posterName)")
+                                .font(.headline.weight(.semibold))
                         }
-                        
-                        Text(task.state == .posted ? "Accept Task" : "View Progress")
-                            .font(.headline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.warningOrange, Color.warningOrange.opacity(0.8)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                        .shadow(color: Color.warningOrange.opacity(0.3), radius: 12, y: 4)
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(
-                                isEligible
-                                    ? LinearGradient(
-                                        colors: [Color.brandPurple, Color.brandPurpleLight],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                    : LinearGradient(
-                                        colors: [Color.textMuted, Color.textMuted],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                            )
-                    )
-                    .shadow(color: isEligible ? Color.brandPurple.opacity(0.3) : .clear, radius: 12, y: 4)
+                } else {
+                    Button(action: {
+                        if task.state == .posted {
+                            acceptTask(task)
+                        } else {
+                            router.navigateToHustler(.taskInProgress(taskId: task.id))
+                        }
+                    }) {
+                        HStack(spacing: 8) {
+                            if isAccepting {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: task.state == .posted ? "checkmark.circle.fill" : "arrow.right.circle.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                            }
+
+                            Text(task.state == .posted ? "Accept Task" : "View Progress")
+                                .font(.headline.weight(.semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(
+                                    isEligible
+                                        ? LinearGradient(
+                                            colors: [Color.brandPurple, Color.brandPurpleLight],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                        : LinearGradient(
+                                            colors: [Color.textMuted, Color.textMuted],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                )
+                        )
+                        .shadow(color: isEligible ? Color.brandPurple.opacity(0.3) : .clear, radius: 12, y: 4)
+                    }
+                    .disabled(!isEligible || isAccepting)
                 }
-                .disabled(!isEligible || isAccepting)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)

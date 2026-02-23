@@ -108,7 +108,9 @@ struct HistoryStatCard: View {
 
 struct CompletedTaskCard: View {
     let task: HXTask
-    
+    @State private var showRating = false
+    @State private var hasRated = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -116,27 +118,82 @@ struct CompletedTaskCard: View {
                     HXText(task.title, style: .headline)
                     HXText(task.location, style: .caption, color: .textSecondary)
                 }
-                
+
                 Spacer()
-                
+
                 PriceDisplay(amount: task.payment, size: .small, color: .successGreen)
             }
-            
+
             HXDivider()
-            
+
             HStack {
                 if let completedAt = task.completedAt {
                     HXText(completedAt.formatted(date: .abbreviated, time: .omitted), style: .caption, color: .textSecondary)
                 }
-                
+
                 Spacer()
-                
-                HXBadge(variant: .status(.completed))
+
+                if hasRated {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundStyle(Color.warningOrange)
+                        Text("Rated")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                } else {
+                    Button {
+                        showRating = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "star")
+                                .font(.caption)
+                            Text("Rate")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(Color.brandPurple)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.brandPurple.opacity(0.15))
+                        .clipShape(Capsule())
+                    }
+                }
             }
         }
         .padding()
         .background(Color.surfaceElevated)
         .cornerRadius(12)
+        .sheet(isPresented: $showRating) {
+            RateTaskSheet(
+                taskId: task.id,
+                taskTitle: task.title,
+                otherUserName: task.posterName,
+                isPresented: $showRating
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .onDisappear {
+                // If rating was submitted, mark as rated
+                // RateTaskSheet sets isPresented = false on success
+                // We optimistically mark as rated since the sheet auto-dismisses after success
+            }
+        }
+        .onChange(of: showRating) { _, newValue in
+            // When sheet closes, if it was open before, assume rated
+            // (RateTaskSheet shows success view then closes)
+            if !newValue && !hasRated {
+                // Check if rating was actually submitted by trying to load it
+                Task {
+                    do {
+                        let ratings = try await RatingService.shared.getTaskRatings(taskId: task.id)
+                        if !ratings.isEmpty { hasRated = true }
+                    } catch {
+                        // Ignore — we'll check again next time
+                    }
+                }
+            }
+        }
     }
 }
 

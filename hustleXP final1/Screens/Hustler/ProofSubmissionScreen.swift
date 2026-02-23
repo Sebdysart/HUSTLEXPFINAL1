@@ -22,6 +22,7 @@ struct ProofSubmissionScreen: View {
     let taskId: String
 
     @State private var viewModel: ProofSubmissionViewModel
+    @State private var showRatingSheet = false
 
     init(taskId: String) {
         self.taskId = taskId
@@ -691,6 +692,42 @@ struct ProofSubmissionScreen: View {
                 .cornerRadius(8)
             }
 
+            // v2.6.0: Rate the poster prompt
+            if let task = viewModel.task {
+                Button {
+                    showRatingSheet = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Color.warningOrange)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Rate \(task.posterName)")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.textPrimary)
+                            Text("How was your experience?")
+                                .font(.caption)
+                                .foregroundStyle(Color.textSecondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    .padding(16)
+                    .background(Color.surfaceElevated)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.warningOrange.opacity(0.3), lineWidth: 1)
+                    )
+                }
+                .padding(.horizontal, 24)
+            }
+
             Spacer()
 
             HXButton("Back to Home") {
@@ -700,6 +737,18 @@ struct ProofSubmissionScreen: View {
             .padding(.bottom, 32)
         }
         .navigationBarBackButtonHidden(true)
+        .sheet(isPresented: $showRatingSheet) {
+            if let task = viewModel.task {
+                RateTaskSheet(
+                    taskId: task.id,
+                    taskTitle: task.title,
+                    otherUserName: task.posterName,
+                    isPresented: $showRatingSheet
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+        }
     }
 }
 
