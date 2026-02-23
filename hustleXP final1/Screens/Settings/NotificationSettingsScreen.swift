@@ -3,123 +3,122 @@
 //  hustleXP final1
 //
 //  Archetype: D (Calibration/Capability)
+//  Wired to backend notification.updatePreferences via NotificationService
 //
 
 import SwiftUI
 
 struct NotificationSettingsScreen: View {
+    @StateObject private var notificationService = NotificationService.shared
+
     @State private var pushEnabled: Bool = true
     @State private var taskAlerts: Bool = true
     @State private var messageAlerts: Bool = true
     @State private var paymentAlerts: Bool = true
-    @State private var reminderAlerts: Bool = true
     @State private var emailEnabled: Bool = true
     @State private var marketingEmails: Bool = false
-    
+    @State private var isLoadingPrefs = true
+    @State private var isSaving = false
+    @State private var saveError: String?
+    @State private var showSaveError = false
+
     var body: some View {
         ZStack {
             Color.brandBlack
                 .ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Push Notifications Section
-                    SettingsSection(title: "Push Notifications") {
-                        NotificationToggleRow(
-                            icon: "bell.fill",
-                            iconColor: .brandPurple,
-                            title: "Push Notifications",
-                            subtitle: "Receive notifications on your device",
-                            isOn: $pushEnabled
-                        )
-                    }
-                    
-                    // Alert Types Section
-                    SettingsSection(title: "Alert Types") {
-                        VStack(spacing: 0) {
+
+            if isLoadingPrefs {
+                LoadingState(message: "Loading preferences...")
+            } else {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Push Notifications Section
+                        SettingsSection(title: "Push Notifications") {
                             NotificationToggleRow(
-                                icon: "briefcase.fill",
-                                iconColor: .infoBlue,
-                                title: "New Task Opportunities",
-                                subtitle: "Tasks matching your skills nearby",
-                                isOn: $taskAlerts
-                            )
-                            
-                            HXDivider()
-                                .padding(.leading, 56)
-                            
-                            NotificationToggleRow(
-                                icon: "message.fill",
+                                icon: "bell.fill",
                                 iconColor: .brandPurple,
-                                title: "Messages",
-                                subtitle: "Chat messages from posters/hustlers",
-                                isOn: $messageAlerts
-                            )
-                            
-                            HXDivider()
-                                .padding(.leading, 56)
-                            
-                            NotificationToggleRow(
-                                icon: "dollarsign.circle.fill",
-                                iconColor: .moneyGreen,
-                                title: "Payments",
-                                subtitle: "Payment received and payout updates",
-                                isOn: $paymentAlerts
-                            )
-                            
-                            HXDivider()
-                                .padding(.leading, 56)
-                            
-                            NotificationToggleRow(
-                                icon: "clock.fill",
-                                iconColor: .warningOrange,
-                                title: "Reminders",
-                                subtitle: "Task deadlines and follow-ups",
-                                isOn: $reminderAlerts
+                                title: "Push Notifications",
+                                subtitle: "Receive notifications on your device",
+                                isOn: $pushEnabled
                             )
                         }
-                    }
-                    .opacity(pushEnabled ? 1 : 0.5)
-                    .disabled(!pushEnabled)
-                    
-                    // Email Section
-                    SettingsSection(title: "Email") {
-                        VStack(spacing: 0) {
-                            NotificationToggleRow(
-                                icon: "envelope.fill",
-                                iconColor: .infoBlue,
-                                title: "Email Notifications",
-                                subtitle: "Summaries and important updates",
-                                isOn: $emailEnabled
-                            )
-                            
-                            HXDivider()
-                                .padding(.leading, 56)
-                            
-                            NotificationToggleRow(
-                                icon: "megaphone.fill",
-                                iconColor: .accentPurple,
-                                title: "Marketing & Promotions",
-                                subtitle: "Tips, promotions, and new features",
-                                isOn: $marketingEmails
+
+                        // Alert Types Section
+                        SettingsSection(title: "Alert Types") {
+                            VStack(spacing: 0) {
+                                NotificationToggleRow(
+                                    icon: "briefcase.fill",
+                                    iconColor: .infoBlue,
+                                    title: "New Task Opportunities",
+                                    subtitle: "Tasks matching your skills nearby",
+                                    isOn: $taskAlerts
+                                )
+
+                                HXDivider()
+                                    .padding(.leading, 56)
+
+                                NotificationToggleRow(
+                                    icon: "message.fill",
+                                    iconColor: .brandPurple,
+                                    title: "Messages",
+                                    subtitle: "Chat messages from posters/hustlers",
+                                    isOn: $messageAlerts
+                                )
+
+                                HXDivider()
+                                    .padding(.leading, 56)
+
+                                NotificationToggleRow(
+                                    icon: "dollarsign.circle.fill",
+                                    iconColor: .moneyGreen,
+                                    title: "Payments",
+                                    subtitle: "Payment received and payout updates",
+                                    isOn: $paymentAlerts
+                                )
+                            }
+                        }
+                        .opacity(pushEnabled ? 1 : 0.5)
+                        .disabled(!pushEnabled)
+
+                        // Email Section
+                        SettingsSection(title: "Email") {
+                            VStack(spacing: 0) {
+                                NotificationToggleRow(
+                                    icon: "envelope.fill",
+                                    iconColor: .infoBlue,
+                                    title: "Email Notifications",
+                                    subtitle: "Summaries and important updates",
+                                    isOn: $emailEnabled
+                                )
+
+                                HXDivider()
+                                    .padding(.leading, 56)
+
+                                NotificationToggleRow(
+                                    icon: "megaphone.fill",
+                                    iconColor: .accentPurple,
+                                    title: "Marketing & Promotions",
+                                    subtitle: "Tips, promotions, and new features",
+                                    isOn: $marketingEmails
+                                )
+                            }
+                        }
+
+                        // Info note
+                        HStack(spacing: 12) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundStyle(Color.textTertiary)
+
+                            HXText(
+                                "You can also manage notifications in your device's Settings app.",
+                                style: .caption,
+                                color: .textTertiary
                             )
                         }
+                        .padding(16)
                     }
-                    
-                    // Info note
-                    HStack(spacing: 12) {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundStyle(Color.textTertiary)
-                        
-                        HXText(
-                            "You can also manage notifications in your device's Settings app.",
-                            style: .caption,
-                            color: .textTertiary
-                        )
-                    }
-                    .padding(16)
+                    .padding(24)
                 }
-                .padding(24)
             }
         }
         .navigationTitle("Notifications")
@@ -127,6 +126,61 @@ struct NotificationSettingsScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .alert("Save Failed", isPresented: $showSaveError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(saveError ?? "Could not save notification preferences.")
+        }
+        .task {
+            await loadPreferences()
+        }
+        .onChange(of: pushEnabled) { _, _ in savePreferences() }
+        .onChange(of: taskAlerts) { _, _ in savePreferences() }
+        .onChange(of: messageAlerts) { _, _ in savePreferences() }
+        .onChange(of: paymentAlerts) { _, _ in savePreferences() }
+        .onChange(of: emailEnabled) { _, _ in savePreferences() }
+        .onChange(of: marketingEmails) { _, _ in savePreferences() }
+    }
+
+    private func loadPreferences() async {
+        isLoadingPrefs = true
+        do {
+            let prefs = try await notificationService.getPreferences()
+            pushEnabled = prefs.pushEnabled
+            emailEnabled = prefs.emailEnabled
+            taskAlerts = prefs.taskUpdates
+            messageAlerts = prefs.messageNotifications
+            paymentAlerts = prefs.paymentUpdates
+            marketingEmails = prefs.marketingEmails
+        } catch {
+            HXLogger.error("NotificationSettings: Failed to load prefs - \(error.localizedDescription)", category: "Push")
+            // Keep defaults on failure
+        }
+        isLoadingPrefs = false
+    }
+
+    private func savePreferences() {
+        guard !isLoadingPrefs else { return } // Don't save during initial load
+
+        let prefs = NotificationPreferences(
+            pushEnabled: pushEnabled,
+            emailEnabled: emailEnabled,
+            taskUpdates: taskAlerts,
+            paymentUpdates: paymentAlerts,
+            messageNotifications: messageAlerts,
+            marketingEmails: marketingEmails
+        )
+
+        Task {
+            do {
+                try await notificationService.updatePreferences(prefs)
+                HXLogger.info("NotificationSettings: Preferences saved", category: "Push")
+            } catch {
+                saveError = error.localizedDescription
+                showSaveError = true
+                HXLogger.error("NotificationSettings: Save failed - \(error.localizedDescription)", category: "Push")
+            }
+        }
     }
 }
 
@@ -134,12 +188,12 @@ struct NotificationSettingsScreen: View {
 private struct SettingsSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HXText(title, style: .caption, color: .textSecondary)
                 .padding(.leading, 4)
-            
+
             content
                 .background(Color.surfaceElevated)
                 .cornerRadius(16)
@@ -154,26 +208,26 @@ private struct NotificationToggleRow: View {
     let title: String
     let subtitle: String
     @Binding var isOn: Bool
-    
+
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
                 Circle()
                     .fill(iconColor.opacity(0.15))
                     .frame(width: 40, height: 40)
-                
+
                 Image(systemName: icon)
                     .font(.system(size: 16))
                     .foregroundStyle(iconColor)
             }
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 HXText(title, style: .body)
                 HXText(subtitle, style: .caption, color: .textSecondary)
             }
-            
+
             Spacer()
-            
+
             Toggle("", isOn: $isOn)
                 .labelsHidden()
                 .tint(Color.brandPurple)

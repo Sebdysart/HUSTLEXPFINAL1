@@ -49,6 +49,11 @@ struct PosterStack: View {
                         RecurringTasksScreen()
                     case .recurringTaskDetail(let seriesId):
                         RecurringTaskDetailScreen(seriesId: seriesId)
+                    // v2.5.0 Messaging & Notifications
+                    case .messagesInbox:
+                        MessagesInboxScreen()
+                    case .notificationCenter:
+                        NotificationCenterScreen()
                     }
                 }
         }

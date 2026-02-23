@@ -111,6 +111,20 @@ struct ProofReviewScreen: View {
                     feedback: rating > 0 ? "Rated \(rating)/5" : nil
                 )
                 HXLogger.info("ProofReview: Approved via API", category: "Task")
+
+                // Submit rating via RatingService if user gave a rating
+                if rating > 0 {
+                    do {
+                        try await RatingService.shared.submitRating(
+                            taskId: taskId,
+                            rating: rating,
+                            review: nil
+                        )
+                        HXLogger.info("ProofReview: Rating \(rating)/5 submitted via API", category: "Task")
+                    } catch {
+                        HXLogger.error("ProofReview: Rating submission failed - \(error.localizedDescription)", category: "Task")
+                    }
+                }
             } catch {
                 HXLogger.error("ProofReview: API approve failed - \(error.localizedDescription)", category: "Task")
             }

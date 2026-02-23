@@ -57,7 +57,47 @@ struct HustlerHomeScreen: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                profileButton
+                HStack(spacing: 12) {
+                    // Messages inbox
+                    Button {
+                        router.navigateToHustler(.messagesInbox)
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "bubble.left.and.bubble.right")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(Color.textSecondary)
+
+                            if MessagingService.shared.unreadCount > 0 {
+                                Circle()
+                                    .fill(Color.brandPurple)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 4, y: -4)
+                            }
+                        }
+                    }
+                    .accessibilityLabel("Messages")
+
+                    // Notification center
+                    Button {
+                        router.navigateToHustler(.notificationCenter)
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "bell")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(Color.textSecondary)
+
+                            if NotificationService.shared.unreadCount > 0 {
+                                Circle()
+                                    .fill(Color.errorRed)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 4, y: -4)
+                            }
+                        }
+                    }
+                    .accessibilityLabel("Notifications")
+
+                    profileButton
+                }
             }
         }
         .onAppear {

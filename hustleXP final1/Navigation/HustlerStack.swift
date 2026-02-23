@@ -65,6 +65,13 @@ struct HustlerStack: View {
                         SquadsHubScreen()
                     case .squadDetail(let squadId):
                         SquadDetailScreen(squadId: squadId)
+                    // v2.5.0 Messaging & Notifications
+                    case .messagesInbox:
+                        MessagesInboxScreen()
+                    case .notificationCenter:
+                        NotificationCenterScreen()
+                    case .conversation(let taskId):
+                        ConversationScreen(conversationId: taskId)
                     }
                 }
         }

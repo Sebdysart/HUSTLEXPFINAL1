@@ -13,10 +13,10 @@ struct ConversationScreen: View {
     @Environment(Router.self) private var router
     
     let conversationId: String // This is the taskId
-    
+
     // v2.2.0: Real API service
     @StateObject private var messagingService = MessagingService.shared
-    
+
     @State private var messageText: String = ""
     @State private var messages: [ChatMessage] = []
     @State private var apiMessages: [HXMessage] = []
@@ -29,6 +29,8 @@ struct ConversationScreen: View {
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var isOtherUserTyping = false
+    @State private var otherUserName: String = ""
+    @State private var taskTitle: String = ""
     @FocusState private var isInputFocused: Bool
     
     var body: some View {
@@ -39,7 +41,10 @@ struct ConversationScreen: View {
                 
                 VStack(spacing: 0) {
                     // Task context header
-                    TaskContextHeader()
+                    TaskContextHeader(
+                        otherUserName: otherUserName,
+                        taskTitle: taskTitle
+                    )
                     
                     // Messages list
                     ScrollViewReader { proxy in
@@ -153,33 +158,43 @@ struct ConversationScreen: View {
     
     private func loadMessages() {
         isLoading = true
-        
-        // v2.2.0: Load messages from real API
+        let currentUserId = appState.userId ?? ""
+
         Task {
+            // Load conversation metadata for header
+            do {
+                let conversations = try await messagingService.getConversations()
+                if let conv = conversations.first(where: { $0.taskId == conversationId }) {
+                    otherUserName = conv.otherUserName
+                    taskTitle = conv.taskTitle
+                }
+            } catch {
+                HXLogger.error("Conversation: Failed to load metadata - \(error.localizedDescription)", category: "General")
+            }
+
+            // Load messages from real API
             do {
                 let hxMessages = try await messagingService.getTaskMessages(taskId: conversationId)
                 apiMessages = hxMessages
-                
-                // Convert HXMessage to ChatMessage for display
-                // Note: We determine isFromCurrentUser by checking if senderId matches current user
+
+                // Convert HXMessage to ChatMessage — use senderId for accurate ownership
                 messages = hxMessages.map { msg in
                     ChatMessage(
                         id: msg.id,
                         text: msg.content,
-                        isFromCurrentUser: msg.senderName == "You", // Simplified check
+                        isFromCurrentUser: msg.senderId == currentUserId,
                         timestamp: msg.timestamp,
                         senderName: msg.senderName
                     )
                 }
-                
+
                 // Mark as read
                 try? await messagingService.markAsRead(taskId: conversationId)
-                
+
                 HXLogger.info("Conversation: Loaded \(messages.count) messages from API", category: "General")
             } catch {
                 HXLogger.error("Conversation: API failed, using mock - \(error.localizedDescription)", category: "General")
-                
-                // Fall back to mock messages
+
                 messages = [
                     ChatMessage(
                         id: "1",
@@ -193,20 +208,6 @@ struct ConversationScreen: View {
                         text: "Great! Let me know when you arrive.",
                         isFromCurrentUser: true,
                         timestamp: Date().addingTimeInterval(-3500),
-                        senderName: "You"
-                    ),
-                    ChatMessage(
-                        id: "3",
-                        text: "I'm here now. The package is ready for pickup?",
-                        isFromCurrentUser: false,
-                        timestamp: Date().addingTimeInterval(-1800),
-                        senderName: "Jane D."
-                    ),
-                    ChatMessage(
-                        id: "4",
-                        text: "Yes, it's at the front desk. Ask for the brown box labeled 'Smith'.",
-                        isFromCurrentUser: true,
-                        timestamp: Date().addingTimeInterval(-1700),
                         senderName: "You"
                     )
                 ]
@@ -328,17 +329,27 @@ struct ChatMessage: Identifiable {
 
 // MARK: - Task Context Header
 private struct TaskContextHeader: View {
+    let otherUserName: String
+    let taskTitle: String
+
+    private var initials: String {
+        let parts = otherUserName.split(separator: " ")
+        let first = parts.first?.prefix(1) ?? ""
+        let last = parts.count > 1 ? parts.last!.prefix(1) : ""
+        return "\(first)\(last)".uppercased()
+    }
+
     var body: some View {
         HStack(spacing: 12) {
-            HXAvatar(initials: "JD", size: .small)
-            
+            HXAvatar(initials: initials.isEmpty ? "?" : initials, size: .small)
+
             VStack(alignment: .leading, spacing: 2) {
-                HXText("Jane Doe", style: .subheadline)
-                HXText("Deliver Package Downtown", style: .caption, color: .textSecondary)
+                HXText(otherUserName.isEmpty ? "Loading..." : otherUserName, style: .subheadline)
+                HXText(taskTitle.isEmpty ? "Task conversation" : taskTitle, style: .caption, color: .textSecondary)
             }
-            
+
             Spacer()
-            
+
             HXBadge(variant: .status(.inProgress))
         }
         .padding(16)

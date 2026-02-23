@@ -69,6 +69,10 @@ enum HustlerRoute: Hashable {
     // v2.4.0 Squads Mode (Gold-tier unlockable)
     case squadsHub
     case squadDetail(squadId: String)
+    // v2.5.0 Messaging & Notifications
+    case messagesInbox
+    case notificationCenter
+    case conversation(taskId: String)
 }
 
 enum PosterRoute: Hashable {
@@ -88,6 +92,9 @@ enum PosterRoute: Hashable {
     // v2.4.0 Recurring Tasks (Silver-tier unlockable)
     case recurringTasks
     case recurringTaskDetail(seriesId: String)
+    // v2.5.0 Messaging & Notifications
+    case messagesInbox
+    case notificationCenter
 }
 
 enum SharedRoute: Hashable {
