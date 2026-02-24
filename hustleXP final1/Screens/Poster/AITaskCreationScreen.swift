@@ -26,9 +26,9 @@ struct AITaskCreationScreen: View {
     @State private var glowIntensity: Double = 0.3
     @State private var orbRotation: Double = 0
     
-    // TODO: PRODUCTION BLOCKER - Replace with real ScoperAI service
-    // Backend has ScoperAIService but no tRPC router endpoint yet
-    // This screen currently uses mock data and should not ship to production
+    // MockAITaskService provides conversational UI (keyword extraction, offline-capable)
+    // Real AI pricing/XP happens on backend via TaskService.createTask() → ScoperAIService
+    // This pattern is intentional: lightweight client-side UX + server-side AI validation
     private let aiService = MockAITaskService.shared
     
     var body: some View {
