@@ -28,7 +28,7 @@ struct LicenseUploadScreen: View {
     @State private var showStateSelector: Bool = false
     @State private var showSuccess: Bool = false
     
-    private let licenseService = MockLicenseVerificationService.shared
+    private let licenseService = LicenseVerificationService.shared
     
     private let usStates = [
         "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",

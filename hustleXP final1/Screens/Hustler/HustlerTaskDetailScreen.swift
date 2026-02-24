@@ -434,7 +434,7 @@ struct HustlerTaskDetailScreen: View {
         }
 
         // Check for batch recommendations (mock fallback for UI)
-        batchRecommendation = MockTaskBatchingService.shared.generateRecommendation(
+        batchRecommendation = TaskBatchingService.shared.generateRecommendation(
             for: task,
             availableTasks: dataService.availableTasks,
             userLocation: coords

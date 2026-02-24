@@ -32,7 +32,7 @@ struct HustlerFeedScreen: View {
     
     // v2.1.0 Professional Licensing - Eligibility Filtering
     @State private var matchmakerResult: AIMatchmakerResult?
-    private let licenseService = MockLicenseVerificationService.shared
+    private let licenseService = LicenseVerificationService.shared
 
     // v2.2.0: Real skill data for filtering
     @State private var userSkills: [WorkerSkillRecord] = []
@@ -323,7 +323,7 @@ struct HustlerFeedScreen: View {
                     if !nearbyTasks.isEmpty {
                         let allTasks = [firstTask] + nearbyTasks
                         let totalPayment = allTasks.reduce(0.0) { $0 + $1.payment }
-                        let savings = MockTaskBatchingService.shared.calculateBatchSavings(tasks: allTasks)
+                        let savings = TaskBatchingService.shared.calculateBatchSavings(tasks: allTasks)
 
                         batchRecommendation = BatchRecommendation(
                             id: "batch_\(firstTask.id)_\(UUID().uuidString.prefix(8))",
@@ -343,7 +343,7 @@ struct HustlerFeedScreen: View {
             }
 
             // Fallback: use mock batch recommendation
-            batchRecommendation = MockTaskBatchingService.shared.generateRecommendation(
+            batchRecommendation = TaskBatchingService.shared.generateRecommendation(
                 for: firstTask,
                 availableTasks: apiTasks.isEmpty ? dataService.availableTasks : apiTasks,
                 userLocation: coords

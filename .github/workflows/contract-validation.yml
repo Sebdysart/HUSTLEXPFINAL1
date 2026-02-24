@@ -1,0 +1,25 @@
+name: Contract Validation
+
+on:
+  repository_dispatch:
+    types: [backend-pr-ready]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-contracts:
+    name: Validate iOS-Backend Contract
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Backend Type Manifest (from dispatch)
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          echo '${{ toJSON(github.event.client_payload) }}' > backend-payload.json
+          echo "Backend PR: $(cat backend-payload.json | jq -r .pr_number)"
+          echo "Backend SHA: $(cat backend-payload.json | jq -r .backend_sha)"
+
+      - name: Validate tRPC Coverage
+        run: swift scripts/validate-trpc-coverage.swift
+        continue-on-error: true

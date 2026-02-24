@@ -236,7 +236,7 @@ struct TaskInProgressScreen: View {
     }
     
     private func startMovementTracking(for task: HXTask) {
-        movementSession = MockMovementTrackingService.shared.startTracking(
+        movementSession = MovementTrackingService.shared.startTracking(
             taskId: task.id,
             hustlerId: dataService.currentUser.id
         )
@@ -244,7 +244,7 @@ struct TaskInProgressScreen: View {
     
     private func cleanupSpatialIntelligence() {
         MockGeofenceService.shared.removeGeofence(taskId: taskId)
-        _ = MockMovementTrackingService.shared.stopTracking()
+        _ = MovementTrackingService.shared.stopTracking()
     }
     
     // MARK: - Progress Steps

@@ -345,7 +345,7 @@ struct BatchDetailsScreen: View {
             // v2.2.0: Try loading batch from real API first
             do {
                 // Use the first task from current recommendation (or available tasks) to fetch suggestions
-                let primaryTask: HXTask? = MockTaskBatchingService.shared.currentRecommendation?.primaryTask
+                let primaryTask: HXTask? = TaskBatchingService.shared.currentRecommendation?.primaryTask
                     ?? dataService.availableTasks.first
 
                 if let task = primaryTask {
@@ -362,7 +362,7 @@ struct BatchDetailsScreen: View {
                         if !nearbyTasks.isEmpty {
                             let allTasks = [task] + nearbyTasks
                             let totalPayment = allTasks.reduce(0.0) { $0 + $1.payment }
-                            let savings = MockTaskBatchingService.shared.calculateBatchSavings(tasks: allTasks)
+                            let savings = TaskBatchingService.shared.calculateBatchSavings(tasks: allTasks)
 
                             batch = BatchRecommendation(
                                 id: batchId,
@@ -383,7 +383,7 @@ struct BatchDetailsScreen: View {
             }
 
             // Fallback: use mock current recommendation
-            batch = MockTaskBatchingService.shared.currentRecommendation
+            batch = TaskBatchingService.shared.currentRecommendation
         }
     }
     

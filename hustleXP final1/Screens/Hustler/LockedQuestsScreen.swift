@@ -259,7 +259,7 @@ struct LockedQuestsScreen: View {
             HXLogger.debug("LockedQuests: API failed, using mock - \(error.localizedDescription)", category: "Skill")
 
             // Fallback to mock
-            let mockService = MockLicenseVerificationService.shared
+            let mockService = LicenseVerificationService.shared
             mockService.initializeProfile(for: appState.userId ?? "worker")
             let result = mockService.filterEligibleTasks(
                 allTasks: dataService.availableTasks,
