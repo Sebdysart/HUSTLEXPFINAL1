@@ -32,7 +32,7 @@ struct ASAPTaskCreationScreen: View {
         case title, description, location
     }
     
-    private let liveModeService = MockLiveModeService.shared
+    private let liveModeService = LiveModeService.shared
     
     @State private var apiPrice: PriceCalculation?
 

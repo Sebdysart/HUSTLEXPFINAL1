@@ -22,7 +22,7 @@ struct OnTheWayTrackingScreen: View {
     @State private var pathProgress: CGFloat = 0
     @State private var workerPosition: CGFloat = 0
     
-    private let liveModeService = MockLiveModeService.shared
+    private let liveModeService = LiveModeService.shared
     
     var body: some View {
         ZStack {

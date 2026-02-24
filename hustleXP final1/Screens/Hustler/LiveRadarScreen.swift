@@ -23,7 +23,7 @@ struct LiveRadarScreen: View {
     @State private var selectedCategories: Set<LiveTaskCategory> = Set(LiveTaskCategory.allCases)
     @State private var showCategoryPicker = false
     
-    private let liveModeService = MockLiveModeService.shared
+    private let liveModeService = LiveModeService.shared
     
     // Eligibility check
     private var isEligible: Bool {
