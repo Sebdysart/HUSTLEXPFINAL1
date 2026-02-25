@@ -306,8 +306,14 @@ final class TRPCClient: ObservableObject {
               let queue = try? JSONDecoder().decode([QueuedRequest].self, from: data) else {
             return
         }
-        offlineQueue = queue
-        pendingOfflineCount = queue.count
+        // Filter out stale requests (>24h) on load to prevent indefinite accumulation
+        let fresh = queue.filter { Date().timeIntervalSince($0.enqueuedAt) <= 86_400 }
+        offlineQueue = fresh
+        pendingOfflineCount = fresh.count
+        // Re-persist if stale entries were pruned
+        if fresh.count != queue.count {
+            persistOfflineQueue()
+        }
     }
 }
 
