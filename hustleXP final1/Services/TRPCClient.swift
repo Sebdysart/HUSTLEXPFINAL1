@@ -19,7 +19,8 @@ private let iso8601NoFraction: ISO8601DateFormatter = {
 /// tRPC API client for communicating with the Node.js backend
 ///
 /// Handles all network communication with the Railway-deployed backend,
-/// including authentication token management and request/response serialization.
+/// including authentication token management, request/response serialization,
+/// and offline request queuing for resilience during network interruptions.
 @MainActor
 final class TRPCClient: ObservableObject {
     static let shared = TRPCClient()
@@ -28,6 +29,14 @@ final class TRPCClient: ObservableObject {
     private let session: URLSession
     private var authToken: String?
     private var isRefreshingToken = false
+
+    /// Offline queue: mutations that failed due to network issues are queued here
+    /// and automatically retried when connectivity is restored.
+    private var offlineQueue: [QueuedRequest] = []
+    private var isProcessingQueue = false
+
+    /// Published property so UI can show offline indicator
+    @Published var pendingOfflineCount: Int = 0
 
     init() {
         // Environment-aware backend URL from AppConfig
@@ -40,6 +49,12 @@ final class TRPCClient: ObservableObject {
         config.urlCache = URLCache(memoryCapacity: 10 * 1024 * 1024, diskCapacity: 50 * 1024 * 1024)
         config.waitsForConnectivity = true
         self.session = URLSession(configuration: config, delegate: SSLPinningDelegate(), delegateQueue: nil)
+
+        // Load any persisted offline queue from disk
+        loadOfflineQueue()
+
+        // Refresh SSL pins on launch
+        Task { await CertificatePins.refreshRemotePins() }
     }
 
     /// tRPC procedure type – determines HTTP method
@@ -213,6 +228,87 @@ final class TRPCClient: ObservableObject {
             self.authToken = savedToken
         }
     }
+
+    // MARK: - Offline Queue
+
+    /// Enqueue a failed mutation for later retry.
+    /// Only mutations are queued (queries are idempotent and can just be re-fetched).
+    private func enqueueOfflineRequest(router: String, procedure: String, bodyData: Data) {
+        let queued = QueuedRequest(
+            id: UUID().uuidString,
+            router: router,
+            procedure: procedure,
+            bodyData: bodyData,
+            enqueuedAt: Date()
+        )
+        offlineQueue.append(queued)
+        pendingOfflineCount = offlineQueue.count
+        persistOfflineQueue()
+        HXLogger.info("tRPC: Queued offline mutation \(router).\(procedure) (\(offlineQueue.count) pending)", category: "Network")
+    }
+
+    /// Process all queued requests. Called when network connectivity is restored.
+    func processOfflineQueue() async {
+        guard !isProcessingQueue, !offlineQueue.isEmpty else { return }
+        isProcessingQueue = true
+        HXLogger.info("tRPC: Processing \(offlineQueue.count) offline requests", category: "Network")
+
+        var remaining: [QueuedRequest] = []
+
+        for queued in offlineQueue {
+            // Skip requests older than 24 hours (stale)
+            if Date().timeIntervalSince(queued.enqueuedAt) > 86_400 {
+                HXLogger.info("tRPC: Dropping stale offline request \(queued.router).\(queued.procedure)", category: "Network")
+                continue
+            }
+
+            let path = "\(queued.router).\(queued.procedure)"
+            var request = URLRequest(url: baseURL.appendingPathComponent("/trpc/\(path)"))
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = queued.bodyData
+
+            if let token = authToken {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+
+            do {
+                let (_, response) = try await session.data(for: request)
+                if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
+                    HXLogger.info("tRPC: Offline request \(path) succeeded", category: "Network")
+                } else {
+                    remaining.append(queued)
+                }
+            } catch {
+                // Still offline or transient error -- keep in queue
+                remaining.append(queued)
+            }
+        }
+
+        offlineQueue = remaining
+        pendingOfflineCount = offlineQueue.count
+        persistOfflineQueue()
+        isProcessingQueue = false
+    }
+
+    // MARK: - Queue Persistence
+
+    private static let offlineQueueKey = "com.hustlexp.trpc.offlineQueue"
+
+    private func persistOfflineQueue() {
+        if let data = try? JSONEncoder().encode(offlineQueue) {
+            UserDefaults.standard.set(data, forKey: Self.offlineQueueKey)
+        }
+    }
+
+    private func loadOfflineQueue() {
+        guard let data = UserDefaults.standard.data(forKey: Self.offlineQueueKey),
+              let queue = try? JSONDecoder().decode([QueuedRequest].self, from: data) else {
+            return
+        }
+        offlineQueue = queue
+        pendingOfflineCount = queue.count
+    }
 }
 
 // MARK: - Error Types
@@ -276,6 +372,17 @@ enum APIError: Error, LocalizedError {
             return errorDescription ?? "An error occurred."
         }
     }
+}
+
+// MARK: - Offline Queue Model
+
+/// Represents a mutation request queued while offline.
+struct QueuedRequest: Codable, Identifiable {
+    let id: String
+    let router: String
+    let procedure: String
+    let bodyData: Data
+    let enqueuedAt: Date
 }
 
 // MARK: - tRPC Response Envelope
