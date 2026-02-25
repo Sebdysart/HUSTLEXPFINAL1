@@ -354,11 +354,19 @@ final class TRPCClient: ObservableObject {
                                 retryReq.setValue("Bearer \(freshToken)", forHTTPHeaderField: "Authorization")
                             }
                             let (_, retryResp) = try await session.data(for: retryReq)
-                            if let retryHttp = retryResp as? HTTPURLResponse, (200...299).contains(retryHttp.statusCode) {
-                                HXLogger.info("tRPC: Offline request \(path) succeeded after token refresh", category: "Network")
+                            if let retryHttp = retryResp as? HTTPURLResponse {
+                                if (200...299).contains(retryHttp.statusCode) {
+                                    HXLogger.info("tRPC: Offline request \(path) succeeded after token refresh", category: "Network")
+                                } else if (400...499).contains(retryHttp.statusCode) {
+                                    // Permanent client error after fresh token — drop
+                                    HXLogger.error("tRPC: Offline request \(path) permanently rejected (\(retryHttp.statusCode)) after token refresh — dropping", category: "Network")
+                                } else {
+                                    // 5xx / transient — re-queue for next connectivity event
+                                    HXLogger.warning("tRPC: Offline request \(path) got \(retryHttp.statusCode) after token refresh — re-queuing", category: "Network")
+                                    remaining.append(queued)
+                                }
                             } else {
-                                // Still failing after refresh — drop to avoid infinite loop
-                                HXLogger.error("tRPC: Offline request \(path) failed after token refresh — dropping", category: "Network")
+                                remaining.append(queued)
                             }
                         } catch {
                             // Token refresh failed — keep in queue for next connectivity event
