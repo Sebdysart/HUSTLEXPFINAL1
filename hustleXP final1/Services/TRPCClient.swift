@@ -266,19 +266,22 @@ final class TRPCClient: ObservableObject {
 
     // MARK: - Offline Queue
 
-    /// Returns true if the URLError indicates a connectivity/offline issue (as opposed to a server error).
-    /// NOTE: `.timedOut` is intentionally excluded — a timeout does NOT guarantee the server
-    /// never received the request. Re-queuing a timed-out mutation risks duplicate execution
-    /// (double charges, duplicate task creation, etc.) since no idempotency key is attached.
+    /// Returns true if the URLError indicates a pre-connection failure where the server
+    /// **definitely never received** the request. Only these codes are safe for blind replay
+    /// because the request never left the device.
+    ///
+    /// Excluded (unsafe for replay without idempotency keys):
+    /// - `.timedOut` — server may have received and processed the request before the client gave up.
+    /// - `.networkConnectionLost` — connection can drop *after* the request body is sent and
+    ///   the server has begun (or completed) processing. Replaying risks double execution.
     private func isOfflineError(_ error: URLError) -> Bool {
         let offlineCodes: Set<URLError.Code> = [
-            .notConnectedToInternet,
-            .networkConnectionLost,
-            .cannotFindHost,
-            .cannotConnectToHost,
-            .dnsLookupFailed,
-            .dataNotAllowed,
-            .internationalRoamingOff,
+            .notConnectedToInternet,   // No network interface at all — request never sent
+            .cannotFindHost,           // DNS resolution failed — request never sent
+            .cannotConnectToHost,      // TCP handshake failed — request never sent
+            .dnsLookupFailed,          // DNS failed — request never sent
+            .dataNotAllowed,           // Cellular data disabled — request never sent
+            .internationalRoamingOff,  // Roaming disabled — request never sent
         ]
         return offlineCodes.contains(error.code)
     }
