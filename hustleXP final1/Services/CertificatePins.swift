@@ -102,10 +102,10 @@ enum CertificatePins {
         }
 
         do {
-            // Use a plain session (no pinning) to fetch the pin manifest.
+            // Use the shared session (no pinning) to fetch the pin manifest.
             // The manifest itself is integrity-checked by TLS to the system trust store.
-            let plainSession = URLSession(configuration: .default)
-            let (data, response) = try await plainSession.data(from: manifestURL)
+            // NOTE: Using .shared avoids resource leaks from un-invalidated sessions.
+            let (data, response) = try await URLSession.shared.data(from: manifestURL)
 
             guard let http = response as? HTTPURLResponse,
                   (200...299).contains(http.statusCode) else {
