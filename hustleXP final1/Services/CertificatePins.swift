@@ -3,10 +3,13 @@ import CryptoKit
 
 /// SSL certificate pins for the HustleXP backend (Railway TLS).
 ///
-/// HOW TO GET REAL PINS:
-/// 1. Run: `openssl s_client -connect hustlexp-ai-backend-production.up.railway.app:443 < /dev/null 2>/dev/null | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | base64`
-/// 2. Copy the output as the primary pin.
+/// HOW TO GET REAL PINS (hex-encoded SHA-256):
+/// 1. Run: `openssl s_client -connect hustlexp-ai-backend-production.up.railway.app:443 < /dev/null 2>/dev/null | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 | awk '{print $2}'`
+/// 2. Copy the 64-char hex string as the primary pin.
 /// 3. Repeat for the backup pin (use a different certificate in the chain).
+///
+/// NOTE: Pins use hex encoding (not base64) to match the internal sha256(of:) function.
+/// The remote /api/ssl-pins endpoint MUST also serve hex-encoded pins.
 ///
 /// Pinning is only enforced in release builds (see AppConfig.sslPinningEnabled).
 /// Debug/TestFlight builds bypass pinning for development flexibility.
@@ -44,8 +47,9 @@ enum CertificatePins {
     /// Cache TTL: 24 hours (pins refresh daily)
     private static let cacheTTL: TimeInterval = 86_400
 
-    /// Remote manifest URL -- serves a JSON array of valid pin hashes.
-    /// Example response: `{ "pins": ["abc123...", "def456..."], "version": 2 }`
+    /// Remote manifest URL -- serves a JSON array of valid hex-encoded SHA-256 pin hashes.
+    /// Example response: `{ "pins": ["a1b2c3d4...64chars", "e5f6a7b8...64chars"], "version": 2 }`
+    /// IMPORTANT: Pins must be hex-encoded (not base64) to match the internal sha256(of:) output.
     /// Host this on a CDN or your backend at a stable, non-pinned endpoint.
     static let remotePinManifestURL: URL? = {
         URL(string: "\(AppConfig.backendBaseURL.absoluteString)/api/ssl-pins")

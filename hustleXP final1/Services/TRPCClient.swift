@@ -52,7 +52,9 @@ final class TRPCClient: ObservableObject {
         config.timeoutIntervalForResource = 300
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.urlCache = URLCache(memoryCapacity: 10 * 1024 * 1024, diskCapacity: 50 * 1024 * 1024)
-        config.waitsForConnectivity = true
+        // NOTE: waitsForConnectivity must be false so that URLError is thrown immediately
+        // when offline, allowing the offline queue to capture failed mutations.
+        config.waitsForConnectivity = false
         self.session = URLSession(configuration: config, delegate: SSLPinningDelegate(), delegateQueue: nil)
 
         // Load any persisted offline queue from disk
@@ -322,8 +324,16 @@ final class TRPCClient: ObservableObject {
 
             do {
                 let (_, response) = try await session.data(for: request)
-                if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
-                    HXLogger.info("tRPC: Offline request \(path) succeeded", category: "Network")
+                if let http = response as? HTTPURLResponse {
+                    if (200...299).contains(http.statusCode) {
+                        HXLogger.info("tRPC: Offline request \(path) succeeded", category: "Network")
+                    } else if (400...499).contains(http.statusCode) {
+                        // Permanent client error (400, 409, 422, etc.) — drop, will never succeed on retry
+                        HXLogger.error("tRPC: Offline request \(path) permanently rejected (HTTP \(http.statusCode)) — dropping", category: "Network")
+                    } else {
+                        // Server error (5xx) — keep for retry
+                        remaining.append(queued)
+                    }
                 } else {
                     remaining.append(queued)
                 }
