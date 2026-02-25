@@ -318,12 +318,17 @@ final class TRPCClient: ObservableObject {
         let snapshotIDs = Set(snapshot.map(\.id))
         HXLogger.info("tRPC: Processing \(snapshot.count) offline requests", category: "Network")
 
-        var remaining: [QueuedRequest] = []
+        // Track which snapshot items have been fully processed (success or permanent drop).
+        // After each mutation, persist immediately so an app kill mid-loop can't cause
+        // double-execution of already-succeeded mutations.
+        var processedIDs = Set<String>()
 
         for queued in snapshot {
             // Skip requests older than 24 hours (stale)
             if Date().timeIntervalSince(queued.enqueuedAt) > 86_400 {
                 HXLogger.info("tRPC: Dropping stale offline request \(queued.router).\(queued.procedure)", category: "Network")
+                processedIDs.insert(queued.id)
+                persistQueueProgress(snapshot: snapshot, processedIDs: processedIDs, snapshotIDs: snapshotIDs)
                 continue
             }
 
@@ -342,6 +347,7 @@ final class TRPCClient: ObservableObject {
                 if let http = response as? HTTPURLResponse {
                     if (200...299).contains(http.statusCode) {
                         HXLogger.info("tRPC: Offline request \(path) succeeded", category: "Network")
+                        processedIDs.insert(queued.id)
                     } else if http.statusCode == 401 {
                         // 401 Unauthorized — token likely expired while queued.
                         // Attempt token refresh and retry this one request.
@@ -357,45 +363,52 @@ final class TRPCClient: ObservableObject {
                             if let retryHttp = retryResp as? HTTPURLResponse {
                                 if (200...299).contains(retryHttp.statusCode) {
                                     HXLogger.info("tRPC: Offline request \(path) succeeded after token refresh", category: "Network")
+                                    processedIDs.insert(queued.id)
                                 } else if (400...499).contains(retryHttp.statusCode) {
                                     // Permanent client error after fresh token — drop
                                     HXLogger.error("tRPC: Offline request \(path) permanently rejected (\(retryHttp.statusCode)) after token refresh — dropping", category: "Network")
-                                } else {
-                                    // 5xx / transient — re-queue for next connectivity event
-                                    HXLogger.warning("tRPC: Offline request \(path) got \(retryHttp.statusCode) after token refresh — re-queuing", category: "Network")
-                                    remaining.append(queued)
+                                    processedIDs.insert(queued.id)
                                 }
-                            } else {
-                                remaining.append(queued)
+                                // else: 5xx — leave in queue (not added to processedIDs)
                             }
                         } catch {
                             // Token refresh failed — keep in queue for next connectivity event
                             HXLogger.error("tRPC: Token refresh failed for \(path) — re-queuing", category: "Network")
-                            remaining.append(queued)
                         }
                     } else if (400...499).contains(http.statusCode) {
                         // Permanent client error (400, 409, 422, etc.) — drop, will never succeed on retry
                         HXLogger.error("tRPC: Offline request \(path) permanently rejected (HTTP \(http.statusCode)) — dropping", category: "Network")
-                    } else {
-                        // Server error (5xx) — keep for retry
-                        remaining.append(queued)
+                        processedIDs.insert(queued.id)
                     }
-                } else {
-                    remaining.append(queued)
+                    // else: 5xx or non-HTTP — leave in queue (not added to processedIDs)
                 }
             } catch {
                 // Still offline or transient error -- keep in queue
-                remaining.append(queued)
             }
+
+            // Persist after each mutation so app termination can't replay succeeded items
+            persistQueueProgress(snapshot: snapshot, processedIDs: processedIDs, snapshotIDs: snapshotIDs)
         }
 
-        // Merge: keep retryable items from the snapshot PLUS any items that were
-        // enqueued during processing (their IDs won't be in snapshotIDs).
+        // Final merge: unprocessed snapshot items + items enqueued during processing
+        let remaining = snapshot.filter { !processedIDs.contains($0.id) }
         let enqueuedDuringProcessing = offlineQueue.filter { !snapshotIDs.contains($0.id) }
         offlineQueue = remaining + enqueuedDuringProcessing
         pendingOfflineCount = offlineQueue.count
         persistOfflineQueue()
         isProcessingQueue = false
+    }
+
+    /// Persist current queue progress to disk after each mutation.
+    /// This ensures that if the app is killed mid-loop, already-succeeded mutations
+    /// are removed from the persisted queue and won't be replayed.
+    private func persistQueueProgress(snapshot: [QueuedRequest], processedIDs: Set<String>, snapshotIDs: Set<String>) {
+        let remaining = snapshot.filter { !processedIDs.contains($0.id) }
+        let enqueuedDuringProcessing = offlineQueue.filter { !snapshotIDs.contains($0.id) }
+        let currentQueue = remaining + enqueuedDuringProcessing
+        if let data = try? JSONEncoder().encode(currentQueue) {
+            UserDefaults.standard.set(data, forKey: Self.offlineQueueKey)
+        }
     }
 
     // MARK: - Queue Persistence
