@@ -267,11 +267,13 @@ final class TRPCClient: ObservableObject {
     // MARK: - Offline Queue
 
     /// Returns true if the URLError indicates a connectivity/offline issue (as opposed to a server error).
+    /// NOTE: `.timedOut` is intentionally excluded — a timeout does NOT guarantee the server
+    /// never received the request. Re-queuing a timed-out mutation risks duplicate execution
+    /// (double charges, duplicate task creation, etc.) since no idempotency key is attached.
     private func isOfflineError(_ error: URLError) -> Bool {
         let offlineCodes: Set<URLError.Code> = [
             .notConnectedToInternet,
             .networkConnectionLost,
-            .timedOut,
             .cannotFindHost,
             .cannotConnectToHost,
             .dnsLookupFailed,
@@ -327,6 +329,29 @@ final class TRPCClient: ObservableObject {
                 if let http = response as? HTTPURLResponse {
                     if (200...299).contains(http.statusCode) {
                         HXLogger.info("tRPC: Offline request \(path) succeeded", category: "Network")
+                    } else if http.statusCode == 401 {
+                        // 401 Unauthorized — token likely expired while queued.
+                        // Attempt token refresh and retry this one request.
+                        HXLogger.info("tRPC: Offline request \(path) got 401 — refreshing token", category: "Network")
+                        do {
+                            try await AuthService.shared.refreshToken()
+                            // Retry with fresh token
+                            var retryReq = request
+                            if let freshToken = authToken {
+                                retryReq.setValue("Bearer \(freshToken)", forHTTPHeaderField: "Authorization")
+                            }
+                            let (_, retryResp) = try await session.data(for: retryReq)
+                            if let retryHttp = retryResp as? HTTPURLResponse, (200...299).contains(retryHttp.statusCode) {
+                                HXLogger.info("tRPC: Offline request \(path) succeeded after token refresh", category: "Network")
+                            } else {
+                                // Still failing after refresh — drop to avoid infinite loop
+                                HXLogger.error("tRPC: Offline request \(path) failed after token refresh — dropping", category: "Network")
+                            }
+                        } catch {
+                            // Token refresh failed — keep in queue for next connectivity event
+                            HXLogger.error("tRPC: Token refresh failed for \(path) — re-queuing", category: "Network")
+                            remaining.append(queued)
+                        }
                     } else if (400...499).contains(http.statusCode) {
                         // Permanent client error (400, 409, 422, etc.) — drop, will never succeed on retry
                         HXLogger.error("tRPC: Offline request \(path) permanently rejected (HTTP \(http.statusCode)) — dropping", category: "Network")
