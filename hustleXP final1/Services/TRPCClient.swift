@@ -368,8 +368,16 @@ final class TRPCClient: ObservableObject {
                                     // Permanent client error after fresh token — drop
                                     HXLogger.error("tRPC: Offline request \(path) permanently rejected (\(retryHttp.statusCode)) after token refresh — dropping", category: "Network")
                                     processedIDs.insert(queued.id)
+                                } else {
+                                    // 5xx after token refresh — server received request, count as server retry
+                                    if let idx = offlineQueue.firstIndex(where: { $0.id == queued.id }) {
+                                        offlineQueue[idx].retryCount += 1
+                                    }
+                                    if queued.retryCount + 1 >= QueuedRequest.maxServerRetries {
+                                        HXLogger.error("tRPC: Offline request \(path) exceeded max server retries after 5xx (post-401 refresh) — dropping", category: "Network")
+                                        processedIDs.insert(queued.id)
+                                    }
                                 }
-                                // else: 5xx — leave in queue (not added to processedIDs)
                             }
                         } catch {
                             // Token refresh failed — keep in queue for next connectivity event
@@ -379,11 +387,23 @@ final class TRPCClient: ObservableObject {
                         // Permanent client error (400, 409, 422, etc.) — drop, will never succeed on retry
                         HXLogger.error("tRPC: Offline request \(path) permanently rejected (HTTP \(http.statusCode)) — dropping", category: "Network")
                         processedIDs.insert(queued.id)
+                    } else {
+                        // 5xx — server received the request but failed.
+                        // Retry is risky (server may have partially executed the mutation),
+                        // so we limit retries to prevent double execution of financial ops.
+                        if let idx = offlineQueue.firstIndex(where: { $0.id == queued.id }) {
+                            offlineQueue[idx].retryCount += 1
+                        }
+                        if queued.retryCount + 1 >= QueuedRequest.maxServerRetries {
+                            HXLogger.error("tRPC: Offline request \(path) exceeded max server retries (\(QueuedRequest.maxServerRetries)) after 5xx — dropping to prevent double execution", category: "Network")
+                            processedIDs.insert(queued.id)
+                        } else {
+                            HXLogger.warning("tRPC: Offline request \(path) got 5xx (retry \(queued.retryCount + 1)/\(QueuedRequest.maxServerRetries)) — will retry", category: "Network")
+                        }
                     }
-                    // else: 5xx or non-HTTP — leave in queue (not added to processedIDs)
                 }
             } catch {
-                // Still offline or transient error -- keep in queue
+                // Network error (still offline) — safe to keep in queue since server never received it
             }
 
             // Persist after each mutation so app termination can't replay succeeded items
@@ -513,6 +533,15 @@ struct QueuedRequest: Codable, Identifiable {
     let procedure: String
     let bodyData: Data
     let enqueuedAt: Date
+    /// Number of times this request has been retried after receiving a server response.
+    /// Once a server responds (even 5xx), the server MAY have partially processed the mutation,
+    /// so unlimited retries risk double execution of non-idempotent operations (payments, escrow).
+    /// After maxRetries (2), the request is dropped to prevent duplicate financial mutations.
+    var retryCount: Int = 0
+
+    /// Maximum retries after a server-received response (5xx).
+    /// Kept low because 5xx means the server received the request and may have partially executed it.
+    static let maxServerRetries = 2
 }
 
 // MARK: - tRPC Response Envelope
