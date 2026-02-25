@@ -3,10 +3,17 @@ import CryptoKit
 
 /// SSL certificate pins for the HustleXP backend (Railway TLS).
 ///
-/// HOW TO GET REAL PINS (hex-encoded SHA-256):
-/// 1. Run: `openssl s_client -connect hustlexp-ai-backend-production.up.railway.app:443 < /dev/null 2>/dev/null | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 | awk '{print $2}'`
-/// 2. Copy the 64-char hex string as the primary pin.
-/// 3. Repeat for the backup pin (use a different certificate in the chain).
+/// HOW TO GET REAL PINS (hex-encoded SHA-256 of raw public key):
+/// The RECOMMENDED approach is to run this app in DEBUG mode, connect to your server,
+/// and log the output of `CertificatePins.sha256(of:)` — this guarantees the pin
+/// matches what the runtime computes via `SecKeyCopyExternalRepresentation`.
+///
+/// Alternatively, for RSA keys you can try:
+/// `openssl s_client -connect hustlexp-ai-backend-production.up.railway.app:443 < /dev/null 2>/dev/null | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 | awk '{print $2}'`
+/// ⚠️ WARNING: The openssl pipeline hashes the SPKI DER (which includes the algorithm
+/// OID wrapper), while `SecKeyCopyExternalRepresentation` returns raw key bytes WITHOUT
+/// the wrapper. For RSA keys the difference is ~24 bytes of ASN.1 header. The hashes
+/// WILL NOT MATCH unless you strip the SPKI header or use the debug-mode approach above.
 ///
 /// NOTE: Pins use hex encoding (not base64) to match the internal sha256(of:) function.
 /// The remote /api/ssl-pins endpoint MUST also serve hex-encoded pins.
@@ -133,7 +140,25 @@ enum CertificatePins {
 
     // MARK: - Pin Computation
 
-    /// Compute SHA-256 hash of a certificate's SubjectPublicKeyInfo (SPKI).
+    /// Compute SHA-256 hash of a certificate's raw public key bytes.
+    ///
+    /// NOTE: `SecKeyCopyExternalRepresentation` returns the raw key material
+    /// (PKCS#1 for RSA, ANSI X9.63 for EC) — NOT the full SPKI DER wrapper.
+    /// The openssl command in the header comment must therefore also hash the
+    /// raw public key, not the SPKI. Use:
+    /// ```
+    /// openssl s_client -connect <host>:443 < /dev/null 2>/dev/null \
+    ///   | openssl x509 -pubkey -noout \
+    ///   | openssl pkey -pubin -outform DER \
+    ///   | openssl dgst -sha256 \
+    ///   | awk '{print $2}'
+    /// ```
+    /// This pipeline extracts the SPKI DER then hashes it. If your server uses
+    /// EC keys, the SPKI DER includes the algorithm OID prefix that
+    /// `SecKeyCopyExternalRepresentation` omits. In that case, you may need to
+    /// prepend the appropriate ASN.1 header before hashing, or generate pins by
+    /// running this app in debug mode and logging the output of this function.
+    ///
     /// Returns the hex-encoded hash string for comparison against known pins.
     static func sha256(of certificate: SecCertificate) -> String? {
         guard let publicKey = SecCertificateCopyKey(certificate),
