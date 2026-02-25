@@ -11,9 +11,14 @@ final class RealtimeSSEClient: ObservableObject {
     let messageReceived = PassthroughSubject<SSEMessage, Never>()
 
     private var task: URLSessionDataTask?
+    private var sseSession: URLSession?
     private var retryCount = 0
     private let maxRetries = 10
-    private let baseURL = "https://hustlexp-ai-backend-staging-production.up.railway.app/realtime/stream"
+
+    /// Derive SSE stream URL from AppConfig (environment-aware: staging vs production)
+    private var streamURL: String {
+        AppConfig.backendBaseURL.absoluteString + "/realtime/stream"
+    }
 
     struct SSEMessage {
         let event: String
@@ -25,7 +30,7 @@ final class RealtimeSSEClient: ObservableObject {
     func connect(authToken: String) {
         guard task == nil else { return }
 
-        guard var components = URLComponents(string: baseURL) else { return }
+        guard var components = URLComponents(string: streamURL) else { return }
         components.queryItems = [URLQueryItem(name: "token", value: authToken)]
         guard let url = components.url else { return }
 
@@ -33,12 +38,16 @@ final class RealtimeSSEClient: ObservableObject {
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 0 // No timeout for SSE
 
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = TimeInterval(INT_MAX)
-        config.timeoutIntervalForResource = TimeInterval(INT_MAX)
-        let session = URLSession(configuration: config)
+        // Reuse a single session to avoid URLSession resource leaks.
+        // Each connect() previously created a new session without invalidation.
+        if sseSession == nil {
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = TimeInterval(INT_MAX)
+            config.timeoutIntervalForResource = TimeInterval(INT_MAX)
+            sseSession = URLSession(configuration: config)
+        }
 
-        task = session.dataTask(with: request) { [weak self] data, response, error in
+        task = sseSession?.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             Task { @MainActor in
@@ -62,6 +71,9 @@ final class RealtimeSSEClient: ObservableObject {
     func disconnect() {
         task?.cancel()
         task = nil
+        // Invalidate the session to release resources (delegate, socket, cache)
+        sseSession?.invalidateAndCancel()
+        sseSession = nil
         isConnected = false
     }
 

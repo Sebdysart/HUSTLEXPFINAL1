@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Network
 
 // MARK: - ISO 8601 with fractional seconds
 
@@ -19,7 +20,8 @@ private let iso8601NoFraction: ISO8601DateFormatter = {
 /// tRPC API client for communicating with the Node.js backend
 ///
 /// Handles all network communication with the Railway-deployed backend,
-/// including authentication token management and request/response serialization.
+/// including authentication token management, request/response serialization,
+/// and offline request queuing for resilience during network interruptions.
 @MainActor
 final class TRPCClient: ObservableObject {
     static let shared = TRPCClient()
@@ -28,6 +30,18 @@ final class TRPCClient: ObservableObject {
     private let session: URLSession
     private var authToken: String?
     private var isRefreshingToken = false
+
+    /// Offline queue: mutations that failed due to network issues are queued here
+    /// and automatically retried when connectivity is restored.
+    private var offlineQueue: [QueuedRequest] = []
+    private var isProcessingQueue = false
+
+    /// Published property so UI can show offline indicator
+    @Published var pendingOfflineCount: Int = 0
+
+    /// Network path monitor for automatic offline queue replay
+    private let networkMonitor = NWPathMonitor()
+    private let monitorQueue = DispatchQueue(label: "com.hustlexp.networkMonitor")
 
     init() {
         // Environment-aware backend URL from AppConfig
@@ -38,8 +52,34 @@ final class TRPCClient: ObservableObject {
         config.timeoutIntervalForResource = 300
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.urlCache = URLCache(memoryCapacity: 10 * 1024 * 1024, diskCapacity: 50 * 1024 * 1024)
-        config.waitsForConnectivity = true
+        // NOTE: waitsForConnectivity must be false so that URLError is thrown immediately
+        // when offline, allowing the offline queue to capture failed mutations.
+        config.waitsForConnectivity = false
         self.session = URLSession(configuration: config, delegate: SSLPinningDelegate(), delegateQueue: nil)
+
+        // Load any persisted offline queue from disk
+        loadOfflineQueue()
+
+        // Refresh SSL pins on launch
+        Task { await CertificatePins.refreshRemotePins() }
+
+        // Start monitoring network connectivity for offline queue replay
+        startNetworkMonitor()
+    }
+
+    deinit {
+        networkMonitor.cancel()
+    }
+
+    /// Start monitoring network path changes to replay queued mutations when connectivity returns.
+    private func startNetworkMonitor() {
+        networkMonitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor [weak self] in
+                await self?.processOfflineQueue()
+            }
+        }
+        networkMonitor.start(queue: monitorQueue)
     }
 
     /// tRPC procedure type – determines HTTP method
@@ -111,8 +151,18 @@ final class TRPCClient: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        // Make request
-        let (data, response) = try await session.data(for: request)
+        // Make request — catch network errors for mutation offline queuing
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let urlError as URLError where type == .mutation && !isRetry && isOfflineError(urlError) {
+            // Queue the mutation for later retry when connectivity returns
+            if let bodyData = request.httpBody {
+                enqueueOfflineRequest(router: router, procedure: procedure, bodyData: bodyData)
+            }
+            throw APIError.networkError(urlError)
+        }
 
         // Validate response
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -213,6 +263,202 @@ final class TRPCClient: ObservableObject {
             self.authToken = savedToken
         }
     }
+
+    // MARK: - Offline Queue
+
+    /// Returns true if the URLError indicates a pre-connection failure where the server
+    /// **definitely never received** the request. Only these codes are safe for blind replay
+    /// because the request never left the device.
+    ///
+    /// Excluded (unsafe for replay without idempotency keys):
+    /// - `.timedOut` — server may have received and processed the request before the client gave up.
+    /// - `.networkConnectionLost` — connection can drop *after* the request body is sent and
+    ///   the server has begun (or completed) processing. Replaying risks double execution.
+    private func isOfflineError(_ error: URLError) -> Bool {
+        let offlineCodes: Set<URLError.Code> = [
+            .notConnectedToInternet,   // No network interface at all — request never sent
+            .cannotFindHost,           // DNS resolution failed — request never sent
+            .cannotConnectToHost,      // TCP handshake failed — request never sent
+            .dnsLookupFailed,          // DNS failed — request never sent
+            .dataNotAllowed,           // Cellular data disabled — request never sent
+            .internationalRoamingOff,  // Roaming disabled — request never sent
+        ]
+        return offlineCodes.contains(error.code)
+    }
+
+    /// Enqueue a failed mutation for later retry.
+    /// Only mutations are queued (queries are idempotent and can just be re-fetched).
+    private func enqueueOfflineRequest(router: String, procedure: String, bodyData: Data) {
+        let queued = QueuedRequest(
+            id: UUID().uuidString,
+            router: router,
+            procedure: procedure,
+            bodyData: bodyData,
+            enqueuedAt: Date()
+        )
+        offlineQueue.append(queued)
+        pendingOfflineCount = offlineQueue.count
+        persistOfflineQueue()
+        HXLogger.info("tRPC: Queued offline mutation \(router).\(procedure) (\(offlineQueue.count) pending)", category: "Network")
+    }
+
+    /// Process all queued requests. Called when network connectivity is restored.
+    ///
+    /// Race-condition safety: Swift arrays are value types, so the `for queued in snapshot`
+    /// loop iterates a frozen copy. New items can be appended to `self.offlineQueue` via
+    /// `enqueueOfflineRequest` at any `await` suspension point. After the loop we merge
+    /// `remaining` (retryable items from the snapshot) with any items that were enqueued
+    /// during processing, so nothing is silently dropped.
+    func processOfflineQueue() async {
+        guard !isProcessingQueue, !offlineQueue.isEmpty else { return }
+        isProcessingQueue = true
+
+        // Snapshot the current queue — value-type copy, won't see later appends.
+        let snapshot = offlineQueue
+        let snapshotIDs = Set(snapshot.map(\.id))
+        HXLogger.info("tRPC: Processing \(snapshot.count) offline requests", category: "Network")
+
+        // Track which snapshot items have been fully processed (success or permanent drop).
+        // After each mutation, persist immediately so an app kill mid-loop can't cause
+        // double-execution of already-succeeded mutations.
+        var processedIDs = Set<String>()
+
+        for queued in snapshot {
+            // Skip requests older than 24 hours (stale)
+            if Date().timeIntervalSince(queued.enqueuedAt) > 86_400 {
+                HXLogger.info("tRPC: Dropping stale offline request \(queued.router).\(queued.procedure)", category: "Network")
+                processedIDs.insert(queued.id)
+                persistQueueProgress(snapshot: snapshot, processedIDs: processedIDs, snapshotIDs: snapshotIDs)
+                continue
+            }
+
+            let path = "\(queued.router).\(queued.procedure)"
+            var request = URLRequest(url: baseURL.appendingPathComponent("/trpc/\(path)"))
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = queued.bodyData
+
+            if let token = authToken {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+
+            do {
+                let (_, response) = try await session.data(for: request)
+                if let http = response as? HTTPURLResponse {
+                    if (200...299).contains(http.statusCode) {
+                        HXLogger.info("tRPC: Offline request \(path) succeeded", category: "Network")
+                        processedIDs.insert(queued.id)
+                    } else if http.statusCode == 401 {
+                        // 401 Unauthorized — token likely expired while queued.
+                        // Attempt token refresh and retry this one request.
+                        HXLogger.info("tRPC: Offline request \(path) got 401 — refreshing token", category: "Network")
+                        do {
+                            try await AuthService.shared.refreshToken()
+                            // Retry with fresh token
+                            var retryReq = request
+                            if let freshToken = authToken {
+                                retryReq.setValue("Bearer \(freshToken)", forHTTPHeaderField: "Authorization")
+                            }
+                            let (_, retryResp) = try await session.data(for: retryReq)
+                            if let retryHttp = retryResp as? HTTPURLResponse {
+                                if (200...299).contains(retryHttp.statusCode) {
+                                    HXLogger.info("tRPC: Offline request \(path) succeeded after token refresh", category: "Network")
+                                    processedIDs.insert(queued.id)
+                                } else if (400...499).contains(retryHttp.statusCode) {
+                                    // Permanent client error after fresh token — drop
+                                    HXLogger.error("tRPC: Offline request \(path) permanently rejected (\(retryHttp.statusCode)) after token refresh — dropping", category: "Network")
+                                    processedIDs.insert(queued.id)
+                                } else {
+                                    // 5xx after token refresh — server received request, count as server retry
+                                    if let idx = offlineQueue.firstIndex(where: { $0.id == queued.id }) {
+                                        offlineQueue[idx].retryCount += 1
+                                    }
+                                    if queued.retryCount + 1 >= QueuedRequest.maxServerRetries {
+                                        HXLogger.error("tRPC: Offline request \(path) exceeded max server retries after 5xx (post-401 refresh) — dropping", category: "Network")
+                                        processedIDs.insert(queued.id)
+                                    }
+                                }
+                            }
+                        } catch {
+                            // Token refresh failed — keep in queue for next connectivity event
+                            HXLogger.error("tRPC: Token refresh failed for \(path) — re-queuing", category: "Network")
+                        }
+                    } else if (400...499).contains(http.statusCode) {
+                        // Permanent client error (400, 409, 422, etc.) — drop, will never succeed on retry
+                        HXLogger.error("tRPC: Offline request \(path) permanently rejected (HTTP \(http.statusCode)) — dropping", category: "Network")
+                        processedIDs.insert(queued.id)
+                    } else {
+                        // 5xx — server received the request but failed.
+                        // Retry is risky (server may have partially executed the mutation),
+                        // so we limit retries to prevent double execution of financial ops.
+                        if let idx = offlineQueue.firstIndex(where: { $0.id == queued.id }) {
+                            offlineQueue[idx].retryCount += 1
+                        }
+                        if queued.retryCount + 1 >= QueuedRequest.maxServerRetries {
+                            HXLogger.error("tRPC: Offline request \(path) exceeded max server retries (\(QueuedRequest.maxServerRetries)) after 5xx — dropping to prevent double execution", category: "Network")
+                            processedIDs.insert(queued.id)
+                        } else {
+                            HXLogger.warning("tRPC: Offline request \(path) got 5xx (retry \(queued.retryCount + 1)/\(QueuedRequest.maxServerRetries)) — will retry", category: "Network")
+                        }
+                    }
+                }
+            } catch {
+                // Network error (still offline) — safe to keep in queue since server never received it
+            }
+
+            // Persist after each mutation so app termination can't replay succeeded items
+            persistQueueProgress(snapshot: snapshot, processedIDs: processedIDs, snapshotIDs: snapshotIDs)
+        }
+
+        // Final merge: unprocessed snapshot items + items enqueued during processing
+        let remaining = snapshot.filter { !processedIDs.contains($0.id) }
+        let enqueuedDuringProcessing = offlineQueue.filter { !snapshotIDs.contains($0.id) }
+        offlineQueue = remaining + enqueuedDuringProcessing
+        pendingOfflineCount = offlineQueue.count
+        persistOfflineQueue()
+        isProcessingQueue = false
+    }
+
+    /// Persist current queue progress to disk after each mutation.
+    /// This ensures that if the app is killed mid-loop, already-succeeded mutations
+    /// are removed from the persisted queue and won't be replayed.
+    private func persistQueueProgress(snapshot: [QueuedRequest], processedIDs: Set<String>, snapshotIDs: Set<String>) {
+        let remaining = snapshot.filter { !processedIDs.contains($0.id) }
+        let enqueuedDuringProcessing = offlineQueue.filter { !snapshotIDs.contains($0.id) }
+        let currentQueue = remaining + enqueuedDuringProcessing
+        if let data = try? JSONEncoder().encode(currentQueue) {
+            UserDefaults.standard.set(data, forKey: Self.offlineQueueKey)
+        }
+    }
+
+    // MARK: - Queue Persistence
+
+    // SECURITY NOTE: The offline queue stores mutation bodyData in UserDefaults, which is
+    // protected by iOS Data Protection (NSFileProtectionCompleteUntilFirstUserAuthentication)
+    // but may be included in iCloud backups. For v2, consider migrating to Keychain-based
+    // or encrypted file storage for financial mutation data (escrow, payments).
+    private static let offlineQueueKey = "com.hustlexp.trpc.offlineQueue"
+
+    private func persistOfflineQueue() {
+        if let data = try? JSONEncoder().encode(offlineQueue) {
+            UserDefaults.standard.set(data, forKey: Self.offlineQueueKey)
+        }
+    }
+
+    private func loadOfflineQueue() {
+        guard let data = UserDefaults.standard.data(forKey: Self.offlineQueueKey),
+              let queue = try? JSONDecoder().decode([QueuedRequest].self, from: data) else {
+            return
+        }
+        // Filter out stale requests (>24h) on load to prevent indefinite accumulation
+        let fresh = queue.filter { Date().timeIntervalSince($0.enqueuedAt) <= 86_400 }
+        offlineQueue = fresh
+        pendingOfflineCount = fresh.count
+        // Re-persist if stale entries were pruned
+        if fresh.count != queue.count {
+            persistOfflineQueue()
+        }
+    }
 }
 
 // MARK: - Error Types
@@ -276,6 +522,26 @@ enum APIError: Error, LocalizedError {
             return errorDescription ?? "An error occurred."
         }
     }
+}
+
+// MARK: - Offline Queue Model
+
+/// Represents a mutation request queued while offline.
+struct QueuedRequest: Codable, Identifiable {
+    let id: String
+    let router: String
+    let procedure: String
+    let bodyData: Data
+    let enqueuedAt: Date
+    /// Number of times this request has been retried after receiving a server response.
+    /// Once a server responds (even 5xx), the server MAY have partially processed the mutation,
+    /// so unlimited retries risk double execution of non-idempotent operations (payments, escrow).
+    /// After maxRetries (2), the request is dropped to prevent duplicate financial mutations.
+    var retryCount: Int = 0
+
+    /// Maximum retries after a server-received response (5xx).
+    /// Kept low because 5xx means the server received the request and may have partially executed it.
+    static let maxServerRetries = 2
 }
 
 // MARK: - tRPC Response Envelope
