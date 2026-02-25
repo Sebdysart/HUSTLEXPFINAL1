@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Network
 
 // MARK: - ISO 8601 with fractional seconds
 
@@ -38,6 +39,10 @@ final class TRPCClient: ObservableObject {
     /// Published property so UI can show offline indicator
     @Published var pendingOfflineCount: Int = 0
 
+    /// Network path monitor for automatic offline queue replay
+    private let networkMonitor = NWPathMonitor()
+    private let monitorQueue = DispatchQueue(label: "com.hustlexp.networkMonitor")
+
     init() {
         // Environment-aware backend URL from AppConfig
         self.baseURL = AppConfig.backendBaseURL
@@ -55,6 +60,24 @@ final class TRPCClient: ObservableObject {
 
         // Refresh SSL pins on launch
         Task { await CertificatePins.refreshRemotePins() }
+
+        // Start monitoring network connectivity for offline queue replay
+        startNetworkMonitor()
+    }
+
+    deinit {
+        networkMonitor.cancel()
+    }
+
+    /// Start monitoring network path changes to replay queued mutations when connectivity returns.
+    private func startNetworkMonitor() {
+        networkMonitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor [weak self] in
+                await self?.processOfflineQueue()
+            }
+        }
+        networkMonitor.start(queue: monitorQueue)
     }
 
     /// tRPC procedure type – determines HTTP method
@@ -126,8 +149,18 @@ final class TRPCClient: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        // Make request
-        let (data, response) = try await session.data(for: request)
+        // Make request — catch network errors for mutation offline queuing
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let urlError as URLError where type == .mutation && !isRetry && isOfflineError(urlError) {
+            // Queue the mutation for later retry when connectivity returns
+            if let bodyData = request.httpBody {
+                enqueueOfflineRequest(router: router, procedure: procedure, bodyData: bodyData)
+            }
+            throw APIError.networkError(urlError)
+        }
 
         // Validate response
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -230,6 +263,21 @@ final class TRPCClient: ObservableObject {
     }
 
     // MARK: - Offline Queue
+
+    /// Returns true if the URLError indicates a connectivity/offline issue (as opposed to a server error).
+    private func isOfflineError(_ error: URLError) -> Bool {
+        let offlineCodes: Set<URLError.Code> = [
+            .notConnectedToInternet,
+            .networkConnectionLost,
+            .timedOut,
+            .cannotFindHost,
+            .cannotConnectToHost,
+            .dnsLookupFailed,
+            .dataNotAllowed,
+            .internationalRoamingOff,
+        ]
+        return offlineCodes.contains(error.code)
+    }
 
     /// Enqueue a failed mutation for later retry.
     /// Only mutations are queued (queries are idempotent and can just be re-fetched).

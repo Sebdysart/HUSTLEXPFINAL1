@@ -103,9 +103,9 @@ enum CertificatePins {
 
             let manifest = try JSONDecoder().decode(PinManifest.self, from: data)
 
-            // Validate: pins must be non-empty hex strings of expected length
+            // Validate: pins must be exactly 64 hex chars (SHA-256 = 32 bytes = 64 hex digits)
             let validPins = manifest.pins.filter { pin in
-                pin.count >= 32 && pin.allSatisfy { $0.isHexDigit }
+                pin.count == 64 && pin.allSatisfy { $0.isHexDigit }
             }
 
             guard !validPins.isEmpty else { return }
