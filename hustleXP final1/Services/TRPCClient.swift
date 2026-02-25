@@ -413,6 +413,10 @@ final class TRPCClient: ObservableObject {
 
     // MARK: - Queue Persistence
 
+    // SECURITY NOTE: The offline queue stores mutation bodyData in UserDefaults, which is
+    // protected by iOS Data Protection (NSFileProtectionCompleteUntilFirstUserAuthentication)
+    // but may be included in iCloud backups. For v2, consider migrating to Keychain-based
+    // or encrypted file storage for financial mutation data (escrow, payments).
     private static let offlineQueueKey = "com.hustlexp.trpc.offlineQueue"
 
     private func persistOfflineQueue() {
