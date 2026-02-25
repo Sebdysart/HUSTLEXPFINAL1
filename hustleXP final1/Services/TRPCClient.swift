@@ -303,14 +303,24 @@ final class TRPCClient: ObservableObject {
     }
 
     /// Process all queued requests. Called when network connectivity is restored.
+    ///
+    /// Race-condition safety: Swift arrays are value types, so the `for queued in snapshot`
+    /// loop iterates a frozen copy. New items can be appended to `self.offlineQueue` via
+    /// `enqueueOfflineRequest` at any `await` suspension point. After the loop we merge
+    /// `remaining` (retryable items from the snapshot) with any items that were enqueued
+    /// during processing, so nothing is silently dropped.
     func processOfflineQueue() async {
         guard !isProcessingQueue, !offlineQueue.isEmpty else { return }
         isProcessingQueue = true
-        HXLogger.info("tRPC: Processing \(offlineQueue.count) offline requests", category: "Network")
+
+        // Snapshot the current queue — value-type copy, won't see later appends.
+        let snapshot = offlineQueue
+        let snapshotIDs = Set(snapshot.map(\.id))
+        HXLogger.info("tRPC: Processing \(snapshot.count) offline requests", category: "Network")
 
         var remaining: [QueuedRequest] = []
 
-        for queued in offlineQueue {
+        for queued in snapshot {
             // Skip requests older than 24 hours (stale)
             if Date().timeIntervalSince(queued.enqueuedAt) > 86_400 {
                 HXLogger.info("tRPC: Dropping stale offline request \(queued.router).\(queued.procedure)", category: "Network")
@@ -371,7 +381,10 @@ final class TRPCClient: ObservableObject {
             }
         }
 
-        offlineQueue = remaining
+        // Merge: keep retryable items from the snapshot PLUS any items that were
+        // enqueued during processing (their IDs won't be in snapshotIDs).
+        let enqueuedDuringProcessing = offlineQueue.filter { !snapshotIDs.contains($0.id) }
+        offlineQueue = remaining + enqueuedDuringProcessing
         pendingOfflineCount = offlineQueue.count
         persistOfflineQueue()
         isProcessingQueue = false
