@@ -305,13 +305,13 @@ extension SkillService {
         struct GetURLInput: Codable {
             let filename: String
             let contentType: String
-            let purpose: String
+            let purpose: UploadPurpose
         }
 
         let presignedURL: PresignedUploadURL = try await trpc.call(
             router: "upload",
             procedure: "getPresignedUrl",
-            input: GetURLInput(filename: filename, contentType: "image/jpeg", purpose: "license")
+            input: GetURLInput(filename: filename, contentType: "image/jpeg", purpose: .license)
         )
 
         // Upload to R2
