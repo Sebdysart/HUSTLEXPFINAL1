@@ -90,6 +90,7 @@ final class AuthService: ObservableObject {
             self.currentUser = mockUser
             self.isAuthenticated = true
             appState?.login(userId: mockUser.id, role: mockUser.role)
+            Task { await PushNotificationManager.shared.flushPendingToken() }
 
             HXLogger.info("Auth [DEMO]: User signed up successfully - \(mockUser.name)", category: "Auth")
             return
@@ -134,6 +135,7 @@ final class AuthService: ObservableObject {
             self.currentUser = user
             self.isAuthenticated = true
             appState?.login(userId: user.id, role: user.role)
+            Task { await PushNotificationManager.shared.flushPendingToken() }
 
             HXLogger.info("Auth: User signed up successfully - \(user.name)", category: "Auth")
             AnalyticsService.shared.track(.signUp, properties: ["method": "email"])
@@ -184,6 +186,7 @@ final class AuthService: ObservableObject {
             self.currentUser = mockUser
             self.isAuthenticated = true
             appState?.login(userId: mockUser.id, role: mockUser.role)
+            Task { await PushNotificationManager.shared.flushPendingToken() }
 
             HXLogger.info("Auth [DEMO]: User signed in successfully - \(mockUser.name)", category: "Auth")
             return
@@ -291,6 +294,7 @@ final class AuthService: ObservableObject {
             self.currentUser = user
             self.isAuthenticated = true
             appState?.login(userId: user.id, role: user.role)
+            Task { await PushNotificationManager.shared.flushPendingToken() }
 
             HXLogger.info("Auth: Apple Sign-In successful (new user) - \(user.name)", category: "Auth")
             AnalyticsService.shared.track(.signUp, properties: ["method": "apple"])
@@ -364,6 +368,7 @@ final class AuthService: ObservableObject {
             self.currentUser = user
             self.isAuthenticated = true
             appState?.login(userId: user.id, role: user.role)
+            Task { await PushNotificationManager.shared.flushPendingToken() }
 
             HXLogger.info("Auth: Google Sign-In successful (new user) - \(user.name)", category: "Auth")
             AnalyticsService.shared.track(.signUp, properties: ["method": "google"])
@@ -379,6 +384,9 @@ final class AuthService: ObservableObject {
 
     /// Signs out the current user and clears all stored credentials
     func signOut() {
+        // Deregister push token before clearing credentials
+        Task { await PushNotificationManager.shared.deregisterCurrentToken() }
+
         // Demo mode - just clear state
         if Self.isDemoMode {
             currentUser = nil
@@ -427,6 +435,7 @@ final class AuthService: ObservableObject {
             self.currentUser = user
             self.isAuthenticated = true
             appState?.login(userId: user.id, role: user.role)
+            Task { await PushNotificationManager.shared.flushPendingToken() }
 
             // Store user ID
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
