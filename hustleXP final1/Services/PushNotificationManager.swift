@@ -87,7 +87,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
 
     /// Called after every successful login. Flushes any pending FCM token to the backend.
     func flushPendingToken() async {
-        guard let token = UserDefaults.standard.string(forKey: Self.pendingTokenKey) ?? fcmToken
+        guard let token = fcmToken ?? UserDefaults.standard.string(forKey: Self.pendingTokenKey)
         else { return }
 
         do {
@@ -101,7 +101,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
 
     /// Called on logout. Deregisters the current token from the backend and clears local state.
     func deregisterCurrentToken() async {
-        let token = UserDefaults.standard.string(forKey: Self.pendingTokenKey) ?? fcmToken
+        let token = fcmToken ?? UserDefaults.standard.string(forKey: Self.pendingTokenKey)
         guard let token else { return }
 
         do {
@@ -112,12 +112,11 @@ final class PushNotificationManager: NSObject, ObservableObject {
                 input: ["fcmToken": token]
             )
             HXLogger.info("[PushNotificationManager] Device token deregistered", category: "Push")
+            UserDefaults.standard.removeObject(forKey: Self.pendingTokenKey)
+            self.fcmToken = nil
         } catch {
             HXLogger.error("[PushNotificationManager] Token deregistration failed: \(error.localizedDescription)", category: "Push")
         }
-
-        UserDefaults.standard.removeObject(forKey: Self.pendingTokenKey)
-        self.fcmToken = nil
     }
 
     // Private helper: raw backend registration call
