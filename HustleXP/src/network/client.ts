@@ -91,7 +91,7 @@ export async function request<T>(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    // Phase 2 TODO: Replace this fetch() with pinnedFetch() from
+    // Phase 2 PLANNED: Replace this fetch() with pinnedFetch() from
     // react-native-ssl-pinning. See ssl-pinning.ts for instructions.
     const response = await fetch(url, {
       method,

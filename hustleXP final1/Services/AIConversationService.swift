@@ -1,8 +1,10 @@
 //
-//  MockAITaskService.swift
+//  AIConversationService.swift
 //  hustleXP final1
 //
-//  Mock AI service for conversational task creation
+//  Client-side conversational UX for AI-powered task creation
+//  Handles keyword extraction, category detection, and field parsing offline.
+//  Real AI pricing/XP happens on backend via TaskService.createTask() -> ScoperAIService
 //
 
 import Foundation
@@ -15,7 +17,7 @@ struct AIConversationMessage: Identifiable {
     let isFromAI: Bool
     let isBold: Bool
     let timestamp: Date
-    
+
     init(content: String, isFromAI: Bool, isBold: Bool = false) {
         self.content = content
         self.isFromAI = isFromAI
@@ -35,15 +37,15 @@ class AITaskDraft {
     var duration: String = ""
     var category: TaskCategory?
     var requiredTier: TrustTier = .rookie
-    
+
     var hasBasicInfo: Bool {
         !title.isEmpty && !description.isEmpty
     }
-    
+
     var isReadyToPost: Bool {
         !title.isEmpty && !description.isEmpty && payment != nil && !location.isEmpty
     }
-    
+
     var completionPercentage: Double {
         var completed = 0.0
         if !title.isEmpty { completed += 0.25 }
@@ -52,7 +54,7 @@ class AITaskDraft {
         if !location.isEmpty { completed += 0.25 }
         return completed
     }
-    
+
     var missingFields: [String] {
         var missing: [String] = []
         if payment == nil { missing.append("payment") }
@@ -60,7 +62,7 @@ class AITaskDraft {
         if duration.isEmpty { missing.append("duration") }
         return missing
     }
-    
+
     func toHXTask(posterId: String, posterName: String, posterRating: Double) -> HXTask {
         HXTask(
             id: "task-\(UUID().uuidString.prefix(8))",
@@ -86,15 +88,17 @@ class AITaskDraft {
     }
 }
 
-// MARK: - Mock AI Task Service
+// MARK: - AI Conversation Service
 
+/// Client-side conversational task creation with keyword extraction and field parsing.
+/// Lightweight NLP for responsive UX; server-side AI handles pricing and validation.
 @MainActor
 @Observable
-final class MockAITaskService {
-    static let shared = MockAITaskService()
-    
+final class AIConversationService {
+    static let shared = AIConversationService()
+
     // MARK: - Initial Message
-    
+
     func getInitialMessage() -> AIConversationMessage {
         AIConversationMessage(
             content: "What do you need done?",
@@ -102,58 +106,58 @@ final class MockAITaskService {
             isBold: true
         )
     }
-    
+
     // MARK: - Process User Input
-    
+
     func processUserInput(_ input: String, currentDraft: AITaskDraft) -> (updatedDraft: AITaskDraft, response: AIConversationMessage) {
         let updatedDraft = currentDraft
-        
+
         // First message - extract initial task info
         if currentDraft.title.isEmpty {
             return processInitialDescription(input, draft: updatedDraft)
         }
-        
+
         // Subsequent messages - look for specific details or refinements
         return processRefinement(input, draft: updatedDraft)
     }
-    
+
     // MARK: - Process Initial Description
-    
+
     private func processInitialDescription(_ input: String, draft: AITaskDraft) -> (AITaskDraft, AIConversationMessage) {
         let lowercased = input.lowercased()
-        
+
         // Extract category and generate title
         let category = detectCategory(from: lowercased)
         draft.category = category
         draft.title = generateTitle(from: input, category: category)
         draft.description = input
-        
+
         // Try to extract location if mentioned
         if let location = extractLocation(from: input) {
             draft.location = location
         }
-        
+
         // Try to extract payment if mentioned
         if let payment = extractPayment(from: input) {
             draft.payment = payment
         }
-        
+
         // Try to extract duration if mentioned
         if let duration = extractDuration(from: input) {
             draft.duration = duration
         }
-        
+
         // Generate follow-up response
         let response = generateFollowUpResponse(draft: draft, category: category)
-        
+
         return (draft, response)
     }
-    
+
     // MARK: - Process Refinement
-    
+
     private func processRefinement(_ input: String, draft: AITaskDraft) -> (AITaskDraft, AIConversationMessage) {
         let lowercased = input.lowercased()
-        
+
         // Check for confirmation
         if isConfirmation(lowercased) {
             let response = AIConversationMessage(
@@ -162,7 +166,7 @@ final class MockAITaskService {
             )
             return (draft, response)
         }
-        
+
         // Check for title change request
         if lowercased.contains("title") || lowercased.contains("catchy") || lowercased.contains("rename") {
             draft.title = generateCatchyTitle(for: draft)
@@ -172,25 +176,25 @@ final class MockAITaskService {
             )
             return (draft, response)
         }
-        
+
         // Try to extract any missing fields from the input
         if let payment = extractPayment(from: input) {
             draft.payment = payment
         }
-        
+
         if let location = extractLocation(from: input) {
             draft.location = location
         }
-        
+
         if let duration = extractDuration(from: input) {
             draft.duration = duration
         }
-        
+
         // Check if description should be updated
         if lowercased.contains("add") || lowercased.contains("include") || lowercased.contains("mention") {
             draft.description = "\(draft.description). Additional details: \(input)"
         }
-        
+
         // Generate appropriate response based on what was updated
         let response: AIConversationMessage
         if draft.isReadyToPost {
@@ -201,12 +205,12 @@ final class MockAITaskService {
         } else {
             response = generateMissingFieldsResponse(draft: draft)
         }
-        
+
         return (draft, response)
     }
-    
+
     // MARK: - Category Detection
-    
+
     private func detectCategory(from text: String) -> TaskCategory {
         if text.contains("deliver") || text.contains("pickup") || text.contains("drop off") || text.contains("package") {
             return .delivery
@@ -227,9 +231,9 @@ final class MockAITaskService {
         }
         return .other
     }
-    
+
     // MARK: - Title Generation
-    
+
     private func generateTitle(from input: String, category: TaskCategory) -> String {
         let keywords: [String: String] = [
             "grocery": "Grocery Pickup & Delivery",
@@ -248,22 +252,22 @@ final class MockAITaskService {
             "computer": "Tech Support",
             "fix": "Repair Task"
         ]
-        
+
         let lowercased = input.lowercased()
         for (keyword, title) in keywords {
             if lowercased.contains(keyword) {
                 return title
             }
         }
-        
+
         // Default based on category
         return "\(category.displayName) Task"
     }
-    
+
     private func generateCatchyTitle(for draft: AITaskDraft) -> String {
         let catchyPrefixes = ["Quick", "Easy", "Help Needed:", "Looking for:", "Urgent:"]
         let prefix = catchyPrefixes.randomElement() ?? "Quick"
-        
+
         if let category = draft.category {
             switch category {
             case .delivery:
@@ -286,12 +290,12 @@ final class MockAITaskService {
                 return "\(prefix) Task Help"
             }
         }
-        
+
         return "\(prefix) \(draft.title)"
     }
-    
+
     // MARK: - Field Extraction
-    
+
     private func extractPayment(from text: String) -> Double? {
         // Look for dollar amounts like "$35", "35 dollars", "$35.00"
         let patterns = [
@@ -300,7 +304,7 @@ final class MockAITaskService {
             "pay\\s*([0-9]+)",
             "offer\\s*([0-9]+)"
         ]
-        
+
         for pattern in patterns {
             if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
                 let range = NSRange(text.startIndex..., in: text)
@@ -314,21 +318,21 @@ final class MockAITaskService {
         }
         return nil
     }
-    
+
     private func extractLocation(from text: String) -> String? {
         // Common location patterns
         let locationKeywords = ["from", "at", "to", "near", "in"]
         let knownPlaces = ["whole foods", "target", "walmart", "costco", "safeway", "cvs", "walgreens", "home depot", "lowes", "apartment", "house", "office", "downtown", "midtown"]
-        
+
         let lowercased = text.lowercased()
-        
+
         // Check for known places first
         for place in knownPlaces {
             if lowercased.contains(place) {
                 return place.capitalized
             }
         }
-        
+
         // Try to extract location after keywords
         for keyword in locationKeywords {
             if let range = lowercased.range(of: "\(keyword) ") {
@@ -339,13 +343,13 @@ final class MockAITaskService {
                 }
             }
         }
-        
+
         return nil
     }
-    
+
     private func extractDuration(from text: String) -> String? {
         let lowercased = text.lowercased()
-        
+
         // Check for time mentions
         if lowercased.contains("30 min") || lowercased.contains("half hour") {
             return "30 min"
@@ -360,46 +364,46 @@ final class MockAITaskService {
         } else if lowercased.contains("long") || lowercased.contains("big") {
             return "2 hrs"
         }
-        
+
         return nil
     }
-    
+
     // MARK: - Response Generation
-    
+
     private func generateFollowUpResponse(draft: AITaskDraft, category: TaskCategory) -> AIConversationMessage {
         var response = "Got it! \(category.displayName)."
-        
+
         if !draft.missingFields.isEmpty {
             response += "\n\nA few quick questions to finalize:"
-            
+
             if draft.payment == nil {
                 let range = category.basePriceRange
                 let low = Double(range.lowerBound) / 100.0
                 let high = Double(range.upperBound) / 100.0
                 response += "\n• How much are you looking to pay? (Similar tasks: $\(Int(low))-$\(Int(high)))"
             }
-            
+
             if draft.location.isEmpty {
                 response += "\n• Where should the hustler go?"
             }
-            
+
             if draft.duration.isEmpty {
                 response += "\n• How long do you think this will take?"
             }
         } else {
             response += "\n\nYour task looks complete! Does everything look good?"
         }
-        
+
         return AIConversationMessage(content: response, isFromAI: true)
     }
-    
+
     private func generateMissingFieldsResponse(draft: AITaskDraft) -> AIConversationMessage {
         var response = "Got it!"
-        
+
         let missing = draft.missingFields
         if !missing.isEmpty {
             response += " I still need:"
-            
+
             if missing.contains("payment") {
                 response += "\n• How much will you pay?"
             }
@@ -407,26 +411,26 @@ final class MockAITaskService {
                 response += "\n• Where is this task?"
             }
         }
-        
+
         return AIConversationMessage(content: response, isFromAI: true)
     }
-    
+
     private func isConfirmation(_ text: String) -> Bool {
         let confirmations = ["looks good", "perfect", "great", "yes", "yep", "correct", "that's right", "post it", "ready", "good to go", "let's do it", "confirm"]
         return confirmations.contains { text.contains($0) }
     }
-    
+
     // MARK: - Suggested Price
-    
+
     func getSuggestedPrice(for draft: AITaskDraft) -> Double {
         guard let category = draft.category else { return 25.0 }
-        
+
         let range = category.basePriceRange
         let midpoint = (range.lowerBound + range.upperBound) / 2
-        
+
         // Add complexity bonus based on description length
         let complexityBonus = min(draft.description.count / 50, 3) * 500
-        
+
         return Double(midpoint + complexityBonus) / 100.0
     }
 }

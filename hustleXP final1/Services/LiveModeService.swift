@@ -200,6 +200,67 @@ final class LiveModeService: ObservableObject {
         pollTask = nil
     }
 
+    // MARK: - Compatibility Wrappers (Mock-backed)
+
+    /// Temporary compatibility surface for screens still wired to mock live-mode APIs.
+    var workerStats: LiveModeStats {
+        MockLiveModeService.shared.workerStats
+    }
+
+    var maxRadiusMeters: Double {
+        MockLiveModeService.shared.maxRadiusMeters
+    }
+
+    func startLiveMode(
+        workerId: String,
+        location: GPSCoordinates,
+        categories: [LiveTaskCategory],
+        maxDistance: Double = 3218
+    ) -> LiveModeSession {
+        MockLiveModeService.shared.startLiveMode(
+            workerId: workerId,
+            location: location,
+            categories: categories,
+            maxDistance: maxDistance
+        )
+    }
+
+    func getVisibleQuests(at location: GPSCoordinates, isLiveMode: Bool) -> [QuestAlert] {
+        MockLiveModeService.shared.getVisibleQuests(at: location, isLiveMode: isLiveMode)
+    }
+
+    func createQuestAlert(
+        task: HXTask,
+        posterLocation: GPSCoordinates,
+        category: LiveTaskCategory
+    ) -> QuestAlert {
+        MockLiveModeService.shared.createQuestAlert(
+            task: task,
+            posterLocation: posterLocation,
+            category: category
+        )
+    }
+
+    func endLiveMode() {
+        MockLiveModeService.shared.endLiveMode()
+    }
+
+    func acceptQuest(_ questId: String, workerId: String, workerLocation: GPSCoordinates) -> OnTheWaySession? {
+        MockLiveModeService.shared.acceptQuest(questId, workerId: workerId, workerLocation: workerLocation)
+    }
+
+    func startNavigation(trackingId: String) {
+        MockLiveModeService.shared.startNavigation(trackingId: trackingId)
+    }
+
+    func markArrived(trackingId: String) {
+        MockLiveModeService.shared.markArrived(trackingId: trackingId)
+    }
+
+    func updateLocation(_ location: GPSCoordinates, heading: Double, speed: Double) {
+        MockLiveModeService.shared.updateLocation(location, heading: heading, speed: speed)
+    }
+
     deinit {
         pollTask?.cancel()
     }

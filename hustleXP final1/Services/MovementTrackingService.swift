@@ -84,8 +84,8 @@ final class MovementTrackingService {
             initialLocation: GPSPointInput(
                 latitude: initialLocation.latitude,
                 longitude: initialLocation.longitude,
-                accuracy: initialLocation.accuracyMeters ?? 10.0,
-                timestamp: initialLocation.timestamp ?? Date()
+                accuracy: initialLocation.accuracyMeters,
+                timestamp: initialLocation.timestamp
             )
         )
 
@@ -119,8 +119,8 @@ final class MovementTrackingService {
         let point = GPSPoint(
             latitude: location.latitude,
             longitude: location.longitude,
-            accuracy: location.accuracyMeters ?? 10.0,
-            timestamp: location.timestamp ?? Date()
+            accuracy: location.accuracyMeters,
+            timestamp: location.timestamp
         )
 
         gpsBuffer.append(point)
@@ -213,6 +213,10 @@ final class MovementTrackingService {
                     let location: GPSPointInput
                 }
 
+                struct UpdateLocationResponse: Codable {
+                    let success: Bool?
+                }
+
                 struct GPSPointInput: Codable {
                     let latitude: Double
                     let longitude: Double
@@ -230,7 +234,7 @@ final class MovementTrackingService {
                     )
                 )
 
-                _ = try await trpc.call(
+                let _: UpdateLocationResponse = try await trpc.call(
                     router: "tracking",
                     procedure: "updateLocation",
                     input: input

@@ -12,7 +12,7 @@ import SwiftUI
 
 // MARK: - Types
 
-struct BatchRecommendation: Codable, Identifiable {
+private struct TaskBatchRecommendationResponse: Codable, Identifiable {
     var id: String { primaryTask.id }
 
     let primaryTask: HXTask
@@ -27,7 +27,7 @@ struct BatchRecommendation: Codable, Identifiable {
     let reasoning: String
 }
 
-struct BatchSavings: Codable {
+private struct TaskBatchSavingsResponse: Codable {
     let totalEarnings: Int
     let combinedDuration: Int
     let individualDuration: Int
@@ -109,20 +109,23 @@ final class TaskBatchingService {
         )
 
         do {
-            let recommendation: BatchRecommendation? = try await trpc.call(
+            let recommendation: TaskBatchRecommendationResponse? = try await trpc.call(
                 router: "batching",
                 procedure: "generateRecommendation",
                 type: .query,
                 input: input
             )
 
-            self.currentRecommendation = recommendation
+            let mapped = recommendation.map { rec in
+                mapRecommendation(rec, fallbackTasks: availableTasks)
+            }
+            self.currentRecommendation = mapped
 
             if let rec = recommendation {
                 HXLogger.info("Batch recommendation: \(rec.additionalTasks.count + 1) tasks, $\(String(format: "%.0f", rec.earningsPerHour))/hr", category: "Batching")
             }
 
-            return recommendation
+            return mapped
         } catch {
             self.error = error
             HXLogger.error("Failed to generate batch recommendation: \(error.localizedDescription)", category: "Batching")
@@ -133,7 +136,7 @@ final class TaskBatchingService {
     // MARK: - Calculate Savings
 
     /// Calculate savings for specific tasks
-    func calculateBatchSavings(tasks: [HXTask]) async throws -> BatchSavings {
+    func calculateBatchSavingsFromAPI(tasks: [HXTask]) async throws -> BatchSavings {
         struct CalculateInput: Codable {
             let tasks: [TaskInput]
         }
@@ -162,17 +165,122 @@ final class TaskBatchingService {
 
         let input = CalculateInput(tasks: taskInputs)
 
-        let savings: BatchSavings = try await trpc.call(
+        let savings: TaskBatchSavingsResponse = try await trpc.call(
             router: "batching",
             procedure: "calculateSavings",
             type: .query,
             input: input
         )
 
-        return savings
+        return mapSavingsResponse(savings)
+    }
+
+    // MARK: - Local Fallbacks
+
+    /// Synchronous local recommendation used by existing UI callers.
+    func generateRecommendation(
+        for task: HXTask,
+        availableTasks: [HXTask],
+        userLocation: GPSCoordinates
+    ) -> BatchRecommendation? {
+        let nearbyTasks = availableTasks
+            .filter { $0.id != task.id && $0.isAvailable }
+            .filter { other in
+                guard let from = task.gpsCoordinates, let to = other.gpsCoordinates else { return false }
+                let distance = LocationService.current.calculateDistance(from: from, to: to)
+                return distance <= 1000
+            }
+            .sorted { lhs, rhs in
+                guard let from = task.gpsCoordinates, let lhsCoords = lhs.gpsCoordinates, let rhsCoords = rhs.gpsCoordinates else {
+                    return false
+                }
+                let lhsDistance = LocationService.current.calculateDistance(from: from, to: lhsCoords)
+                let rhsDistance = LocationService.current.calculateDistance(from: from, to: rhsCoords)
+                return lhsDistance < rhsDistance
+            }
+
+        guard !nearbyTasks.isEmpty else { return nil }
+
+        let selectedNearby = Array(nearbyTasks.prefix(2))
+        let allTasks = [task] + selectedNearby
+        let totalPayment = allTasks.reduce(0.0) { $0 + $1.payment }
+        let savings = calculateBatchSavingsLocal(tasks: allTasks)
+
+        let recommendation = BatchRecommendation(
+            id: "batch_\(task.id)_\(UUID().uuidString.prefix(8))",
+            primaryTask: task,
+            nearbyTasks: selectedNearby,
+            totalPayment: totalPayment,
+            totalEstimatedTime: "\(allTasks.count * 30) min",
+            savings: savings,
+            expiresAt: Date().addingTimeInterval(30 * 60)
+        )
+        currentRecommendation = recommendation
+        return recommendation
+    }
+
+    /// Synchronous local savings used by existing UI callers.
+    func calculateBatchSavingsLocal(tasks: [HXTask]) -> BatchSavings {
+        guard tasks.count > 1 else {
+            return BatchSavings(timeSavedMinutes: 0, extraEarnings: 0, efficiencyBoost: 0)
+        }
+
+        let tripsSaved = tasks.count - 1
+        let timeSaved = tripsSaved * 15
+        let extraEarnings = tasks.dropFirst().reduce(0.0) { $0 + $1.payment }
+        let baseTime = max(1, tasks.count * 30)
+        let efficiencyBoost = Double(timeSaved) / Double(baseTime) * 100
+
+        return BatchSavings(
+            timeSavedMinutes: timeSaved,
+            extraEarnings: extraEarnings,
+            efficiencyBoost: efficiencyBoost
+        )
     }
 
     // MARK: - Helpers
+
+    private func mapRecommendation(
+        _ response: TaskBatchRecommendationResponse,
+        fallbackTasks: [HXTask]
+    ) -> BatchRecommendation {
+        let primaryTask = fallbackTasks.first(where: { $0.id == response.primaryTask.id }) ?? response.primaryTask
+        let nearbyTasks = response.additionalTasks.map { additional in
+            fallbackTasks.first(where: { $0.id == additional.id }) ?? additional
+        }
+
+        let timeSaved = max(0, response.totalDuration - response.estimatedTravelTime)
+        let savings = BatchSavings(
+            timeSavedMinutes: timeSaved,
+            extraEarnings: Double(response.savingsVsIndividual) / 100.0,
+            efficiencyBoost: response.confidence * 100
+        )
+
+        return BatchRecommendation(
+            id: response.id,
+            primaryTask: primaryTask,
+            nearbyTasks: nearbyTasks,
+            totalPayment: Double(response.totalEarnings) / 100.0,
+            totalEstimatedTime: "\(response.totalDuration) min",
+            savings: savings,
+            expiresAt: Date().addingTimeInterval(30 * 60)
+        )
+    }
+
+    private func mapSavingsResponse(_ response: TaskBatchSavingsResponse) -> BatchSavings {
+        let efficiencyBoost: Double
+        if response.individualDuration > 0 {
+            efficiencyBoost = (Double(response.timeSaved) / Double(response.individualDuration)) * 100.0
+        } else {
+            efficiencyBoost = 0
+        }
+
+        return BatchSavings(
+            timeSavedMinutes: max(0, response.timeSaved),
+            extraEarnings: Double(response.earningsBoost) / 100.0,
+            efficiencyBoost: efficiencyBoost
+        )
+    }
 
     private func parseDuration(_ durationString: String?) -> Int? {
         guard let str = durationString else { return nil }

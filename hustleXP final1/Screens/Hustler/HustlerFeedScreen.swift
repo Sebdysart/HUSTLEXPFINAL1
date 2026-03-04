@@ -323,7 +323,7 @@ struct HustlerFeedScreen: View {
                     if !nearbyTasks.isEmpty {
                         let allTasks = [firstTask] + nearbyTasks
                         let totalPayment = allTasks.reduce(0.0) { $0 + $1.payment }
-                        let savings = TaskBatchingService.shared.calculateBatchSavings(tasks: allTasks)
+                        let savings = TaskBatchingService.shared.calculateBatchSavingsLocal(tasks: allTasks)
 
                         batchRecommendation = BatchRecommendation(
                             id: "batch_\(firstTask.id)_\(UUID().uuidString.prefix(8))",

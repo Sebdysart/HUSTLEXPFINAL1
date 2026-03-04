@@ -26,10 +26,10 @@ struct AITaskCreationScreen: View {
     @State private var glowIntensity: Double = 0.3
     @State private var orbRotation: Double = 0
     
-    // MockAITaskService provides conversational UI (keyword extraction, offline-capable)
-    // Real AI pricing/XP happens on backend via TaskService.createTask() → ScoperAIService
+    // AIConversationService provides conversational UI (keyword extraction, offline-capable)
+    // Real AI pricing/XP happens on backend via TaskService.createTask() -> ScoperAIService
     // This pattern is intentional: lightweight client-side UX + server-side AI validation
-    private let aiService = MockAITaskService.shared
+    private let aiService = AIConversationService.shared
     
     var body: some View {
         GeometryReader { geometry in

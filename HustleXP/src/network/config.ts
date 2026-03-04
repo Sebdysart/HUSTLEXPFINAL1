@@ -4,7 +4,7 @@
 
 /**
  * API base URL.
- * TODO: Replace with actual backend URL when available.
+ * NOTE: Replace with actual backend URL when available.
  *
  * SSL Pinning: This hostname is automatically registered as a pinned host
  * in ssl-pinning.ts. If you change this URL, the pinned hostnames list

@@ -362,7 +362,7 @@ struct BatchDetailsScreen: View {
                         if !nearbyTasks.isEmpty {
                             let allTasks = [task] + nearbyTasks
                             let totalPayment = allTasks.reduce(0.0) { $0 + $1.payment }
-                            let savings = TaskBatchingService.shared.calculateBatchSavings(tasks: allTasks)
+                            let savings = TaskBatchingService.shared.calculateBatchSavingsLocal(tasks: allTasks)
 
                             batch = BatchRecommendation(
                                 id: batchId,

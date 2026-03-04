@@ -164,52 +164,46 @@ struct TaskInProgressScreen: View {
             HXLogger.error("TaskInProgress: Geofence API failed - \(error.localizedDescription)", category: "Task")
         }
 
-        // Register local geofence for real-time monitoring (mock for now)
-        geofence = MockGeofenceService.shared.registerGeofence(for: task)
+        // Register local geofence for real-time monitoring
+        geofence = GeofenceService.shared.registerGeofence(for: task)
 
         // Set up geofence callbacks
-        MockGeofenceService.shared.onGeofenceEntered = { region in
+        GeofenceService.shared.onGeofenceEntered = { region in
             withAnimation(.spring(response: 0.3)) {
                 isInsideGeofence = true
             }
         }
 
-        MockGeofenceService.shared.onDwellingDetected = { region in
+        GeofenceService.shared.onDwellingDetected = { region in
             // Auto-trigger Smart Start
-            if MockGeofenceService.shared.smartStartEnabled && currentStatus == .enRoute {
+            if GeofenceService.shared.smartStartEnabled && currentStatus == .enRoute {
                 handleSmartStart(task)
             }
         }
 
-        // Simulate distance updates (production: real CLLocationManager)
+        // Poll real location for distance updates
         startDistanceUpdates(for: task)
     }
     
     private func startDistanceUpdates(for task: HXTask) {
-        // In production, this would use real location updates
-        // For demo, simulate approaching
+        // Poll real location every 5 seconds to update distance
         Task {
-            var simulatedDistance = 150.0 // Start 150m away
-            
             while currentStatus == .enRoute && !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 3_000_000_000) // Every 3 seconds
-                
-                // Simulate getting closer
-                simulatedDistance = max(0, simulatedDistance - Double.random(in: 15...25))
-                currentDistance = simulatedDistance
-                
-                // Check geofence
-                if let geofence = geofence, simulatedDistance <= geofence.radiusMeters {
-                    withAnimation(.spring(response: 0.3)) {
-                        isInsideGeofence = true
-                    }
-                    
-                    // Trigger Smart Start after dwelling
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
-                    if currentStatus == .enRoute {
-                        handleSmartStart(task)
-                    }
-                    break
+                try? await Task.sleep(nanoseconds: 5_000_000_000) // Every 5 seconds
+
+                let (coords, _) = await LocationService.current.captureLocation()
+                userLocation = coords
+
+                // Update distance via local geofence check
+                if let geofence = geofence {
+                    let distance = GeofenceService.shared.distanceToGeofence(
+                        from: coords,
+                        region: geofence
+                    )
+                    currentDistance = distance
+
+                    // Check local proximity (triggers enter/exit/dwell callbacks)
+                    _ = GeofenceService.shared.checkLocalProximity(currentLocation: coords)
                 }
             }
         }
@@ -236,15 +230,70 @@ struct TaskInProgressScreen: View {
     }
     
     private func startMovementTracking(for task: HXTask) {
-        movementSession = MovementTrackingService.shared.startTracking(
-            taskId: task.id,
-            hustlerId: dataService.currentUser.id
-        )
+        Task {
+            do {
+                let initialLocation: GPSCoordinates
+                if let userLocation {
+                    initialLocation = userLocation
+                } else {
+                    let (coords, _) = await LocationService.current.captureLocation()
+                    initialLocation = coords
+                }
+
+                let session = try await MovementTrackingService.shared.startTracking(
+                    taskId: task.id,
+                    initialLocation: initialLocation
+                )
+                movementSession = toLegacyMovementSession(session)
+            } catch {
+                HXLogger.error("TaskInProgress: Failed to start movement tracking - \(error.localizedDescription)", category: "Task")
+            }
+        }
     }
     
     private func cleanupSpatialIntelligence() {
-        MockGeofenceService.shared.removeGeofence(taskId: taskId)
-        _ = MovementTrackingService.shared.stopTracking()
+        GeofenceService.shared.removeGeofence(taskId: taskId)
+        Task {
+            do {
+                _ = try await MovementTrackingService.shared.stopTracking()
+            } catch {
+                HXLogger.error("TaskInProgress: Failed to stop movement tracking - \(error.localizedDescription)", category: "Task")
+            }
+        }
+    }
+
+    private func toLegacyMovementSession(_ session: MovementSession) -> MovementTrackingSession {
+        let mappedStatus: MovementStatus
+        switch session.status.uppercased() {
+        case "COMPLETED", "CANCELLED":
+            mappedStatus = .completed
+        case "STATIONARY":
+            mappedStatus = .stationary
+        case "SUSPICIOUS":
+            mappedStatus = .suspicious
+        default:
+            mappedStatus = .active
+        }
+
+        let locations = session.gpsTrail.map { point in
+            TrackedLocation(
+                latitude: point.latitude,
+                longitude: point.longitude,
+                timestamp: point.timestamp,
+                accuracyMeters: point.accuracy,
+                speedMps: nil
+            )
+        }
+
+        return MovementTrackingSession(
+            id: session.id,
+            taskId: session.taskId,
+            hustlerId: session.userId,
+            startedAt: session.startedAt,
+            locations: locations,
+            status: mappedStatus,
+            flags: []
+        )
     }
     
     // MARK: - Progress Steps

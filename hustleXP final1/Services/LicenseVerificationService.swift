@@ -12,7 +12,7 @@ import SwiftUI
 
 // MARK: - Types
 
-enum LicenseVerificationStatus: String, Codable {
+enum BackendLicenseVerificationStatus: String, Codable {
     case pending = "PENDING"
     case processing = "PROCESSING"
     case verified = "VERIFIED"
@@ -44,7 +44,7 @@ struct ProfessionalLicenseVerification: Codable, Identifiable {
     let licenseNumber: String
     let expirationDate: String?
     let documentUrl: String?
-    let status: LicenseVerificationStatus
+    let status: BackendLicenseVerificationStatus
     let submittedAt: Date
     let reviewedAt: Date?
     let reviewedBy: String?
@@ -60,7 +60,7 @@ struct ProfessionalLicenseVerification: Codable, Identifiable {
     }
 }
 
-struct WorkerSkillProfile: Codable {
+struct CapabilityWorkerSkillProfile: Codable {
     let workerId: String
     var selectedSkills: Set<String>
     var unlockedSkills: Set<String>
@@ -91,7 +91,7 @@ final class LicenseVerificationService {
 
     // MARK: - State
 
-    private(set) var workerProfile: WorkerSkillProfile?
+    private(set) var workerProfile: CapabilityWorkerSkillProfile?
     private(set) var licenses: [ProfessionalLicenseVerification] = []
     private(set) var isLoading = false
     private(set) var error: Error?
@@ -100,7 +100,7 @@ final class LicenseVerificationService {
 
     func initializeProfile(for workerId: String) {
         if workerProfile == nil {
-            workerProfile = WorkerSkillProfile(
+            workerProfile = CapabilityWorkerSkillProfile(
                 workerId: workerId,
                 selectedSkills: Set(SkillCatalog.basicSkills().map { $0.id }),
                 unlockedSkills: Set(SkillCatalog.basicSkills().map { $0.id }),
@@ -200,11 +200,14 @@ final class LicenseVerificationService {
         error = nil
         defer { isLoading = false }
 
+        struct EmptyInput: Codable {}
+
         do {
             let fetchedLicenses: [ProfessionalLicenseVerification] = try await trpc.call(
                 router: "capability",
                 procedure: "getLicenses",
-                type: .query
+                type: .query,
+                input: EmptyInput()
             )
 
             self.licenses = fetchedLicenses
@@ -250,6 +253,35 @@ final class LicenseVerificationService {
         )
     }
 
+    /// Synchronous compatibility wrapper used by existing screens.
+    /// Delegates to mock flow so UI paths continue to work while real API is adopted.
+    func uploadLicense(
+        type: LicenseType,
+        licenseNumber: String,
+        issuingState: String,
+        documentURL: URL? = nil
+    ) -> ProfessionalLicense {
+        MockLicenseVerificationService.shared.uploadLicense(
+            type: type,
+            licenseNumber: licenseNumber,
+            issuingState: issuingState,
+            documentURL: documentURL
+        )
+    }
+
+    /// Compatibility wrapper for existing feed filtering flow.
+    func filterEligibleTasks(
+        allTasks: [HXTask],
+        location: GPSCoordinates?,
+        settings: FeedFilterSettings? = nil
+    ) -> AIMatchmakerResult {
+        MockLicenseVerificationService.shared.filterEligibleTasks(
+            allTasks: allTasks,
+            location: location,
+            settings: settings
+        )
+    }
+
     // MARK: - Status Helpers
 
     func hasVerifiedLicense(for tradeType: String) -> Bool {
@@ -262,5 +294,10 @@ final class LicenseVerificationService {
 
     func getVerifiedLicenses() -> [ProfessionalLicenseVerification] {
         licenses.filter { $0.isVerified }
+    }
+
+    /// Compatibility wrapper for existing license status checks.
+    func getLicenseStatus(for type: LicenseType) -> LicenseVerificationStatus? {
+        MockLicenseVerificationService.shared.getLicenseStatus(for: type)
     }
 }

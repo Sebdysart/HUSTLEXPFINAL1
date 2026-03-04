@@ -8,7 +8,34 @@ import Security
 final class KeychainManager {
     static let shared = KeychainManager()
 
+    private let allowInMemoryFallback = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    private var inMemoryStore: [String: String] = [:]
+    private let inMemoryLock = NSLock()
+
     private init() {}
+
+    private func shouldUseInMemoryFallback(status: OSStatus) -> Bool {
+        return allowInMemoryFallback && status == errSecMissingEntitlement
+    }
+
+    private func saveInMemory(_ value: String, forKey key: String) {
+        inMemoryLock.lock()
+        inMemoryStore[key] = value
+        inMemoryLock.unlock()
+    }
+
+    private func readInMemory(forKey key: String) -> String? {
+        inMemoryLock.lock()
+        let value = inMemoryStore[key]
+        inMemoryLock.unlock()
+        return value
+    }
+
+    private func deleteInMemory(forKey key: String) {
+        inMemoryLock.lock()
+        inMemoryStore.removeValue(forKey: key)
+        inMemoryLock.unlock()
+    }
 
     // MARK: - Save
 
@@ -37,6 +64,9 @@ final class KeychainManager {
 
         if status == errSecSuccess {
             HXLogger.debug("Keychain: Saved value for key: \(key)", category: "Auth")
+        } else if shouldUseInMemoryFallback(status: status) {
+            saveInMemory(value, forKey: key)
+            HXLogger.debug("Keychain: Using in-memory fallback for key: \(key)", category: "Auth")
         } else {
             HXLogger.error("Keychain: Failed to save value for key: \(key), status: \(status)", category: "Auth")
         }
@@ -65,7 +95,17 @@ final class KeychainManager {
                 return value
             }
         } else if status == errSecItemNotFound {
+            if let fallback = readInMemory(forKey: key) {
+                HXLogger.debug("Keychain: Retrieved in-memory fallback for key: \(key)", category: "Auth")
+                return fallback
+            }
             HXLogger.debug("Keychain: No value found for key: \(key)", category: "Auth")
+        } else if shouldUseInMemoryFallback(status: status) {
+            if let fallback = readInMemory(forKey: key) {
+                HXLogger.debug("Keychain: Retrieved in-memory fallback for key: \(key)", category: "Auth")
+                return fallback
+            }
+            HXLogger.debug("Keychain: No in-memory fallback for key: \(key)", category: "Auth")
         } else {
             HXLogger.error("Keychain: Failed to retrieve value for key: \(key), status: \(status)", category: "Auth")
         }
@@ -88,7 +128,11 @@ final class KeychainManager {
         if status == errSecSuccess {
             HXLogger.debug("Keychain: Deleted value for key: \(key)", category: "Auth")
         } else if status == errSecItemNotFound {
+            deleteInMemory(forKey: key)
             HXLogger.debug("Keychain: No value to delete for key: \(key)", category: "Auth")
+        } else if shouldUseInMemoryFallback(status: status) {
+            deleteInMemory(forKey: key)
+            HXLogger.debug("Keychain: Deleted in-memory fallback for key: \(key)", category: "Auth")
         } else {
             HXLogger.error("Keychain: Failed to delete value for key: \(key), status: \(status)", category: "Auth")
         }
@@ -99,6 +143,10 @@ final class KeychainManager {
     /// Clears all keychain items stored by this app
     /// Use with caution - this will delete all stored credentials
     func clearAll() {
+        inMemoryLock.lock()
+        inMemoryStore.removeAll()
+        inMemoryLock.unlock()
+
         let secClasses = [
             kSecClassGenericPassword,
             kSecClassInternetPassword,

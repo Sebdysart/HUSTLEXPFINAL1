@@ -65,7 +65,7 @@ export default function WorkEligibilityScreen() {
       setLoading(true);
       setError(null);
 
-      // TODO: Replace with actual tRPC call
+      // PLANNED: Replace with actual tRPC call
       // const response = await trpc.verification.getEligibility.query();
       // const profile = await trpc.capabilityProfile.get.query();
       // const taskCount = await trpc.feed.getEligibleTaskCount.query();

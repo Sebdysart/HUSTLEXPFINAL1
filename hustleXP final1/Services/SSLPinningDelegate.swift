@@ -32,12 +32,9 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
         }
 
         // Enforce pin matching against certificate chain
-        let certificateCount = SecTrustGetCertificateCount(serverTrust)
+        let certificateChain = SecTrustCopyCertificateChain(serverTrust) as? [SecCertificate] ?? []
 
-        for index in 0..<certificateCount {
-            guard let certificate = SecTrustGetCertificateAtIndex(serverTrust, index) else {
-                continue
-            }
+        for certificate in certificateChain {
 
             if let hash = CertificatePins.sha256(of: certificate),
                CertificatePins.pins.contains(hash) {

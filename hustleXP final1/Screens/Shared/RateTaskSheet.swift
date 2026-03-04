@@ -91,7 +91,7 @@ struct RateTaskSheet: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HXText("What stood out? (optional)", style: .subheadline, color: .textSecondary)
 
-                    FlowLayout(spacing: 8) {
+                    RateTagsFlowLayout(spacing: 8) {
                         ForEach(availableTags, id: \.self) { tag in
                             Button {
                                 if selectedTags.contains(tag) {
@@ -201,7 +201,7 @@ struct RateTaskSheet: View {
 
 // MARK: - Flow Layout for Tags
 
-private struct FlowLayout: Layout {
+private struct RateTagsFlowLayout: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {

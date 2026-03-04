@@ -132,9 +132,8 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        HXLogger.debug("[RealLocation] Location error: \(error.localizedDescription)", category: "General")
-
         Task { @MainActor in
+            HXLogger.debug("[RealLocation] Location error: \(error.localizedDescription)", category: "General")
             isCapturing = false
 
             // If there's a pending continuation, provide a fallback

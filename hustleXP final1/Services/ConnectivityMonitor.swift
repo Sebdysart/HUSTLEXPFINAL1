@@ -26,7 +26,7 @@ final class ConnectivityMonitor: ObservableObject {
 
     private func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor in
+            DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 let wasConnected = self.isConnected
                 self.isConnected = path.status == .satisfied
