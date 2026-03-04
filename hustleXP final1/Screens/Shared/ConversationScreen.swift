@@ -274,27 +274,34 @@ struct ConversationScreen: View {
     }
     
     private func sendPhotoMessage(imageData: Data) {
-        guard UIImage(data: imageData) != nil else { return }
-        
+        guard let image = UIImage(data: imageData) else { return }
+
         isSending = true
-        
+
         Task {
             do {
-                // Upload photo first
-                let filename = "chat_\(conversationId)_\(Int(Date().timeIntervalSince1970)).jpg"
-                
-                // Get presigned URL and upload
-                // For now, create a mock URL - in production this would upload to R2
-                let photoUrl = "https://storage.hustlexp.com/chat/\(filename)"
-                
-                // Send photo message via API
+                let timestamp = Int(Date().timeIntervalSince1970)
+                let filename = "msg_\(conversationId)_\(timestamp).jpg"
+
+                // Step 1: Get presigned URL for message photo (uses messages/ key prefix)
+                let presignedURL = try await ProofService.shared.getUploadURL(
+                    taskId: conversationId,
+                    filename: filename,
+                    contentType: "image/jpeg",
+                    purpose: .message
+                )
+
+                // Step 2: Upload image bytes to R2
+                let publicUrl = try await ProofService.shared.uploadImage(image, to: presignedURL)
+
+                // Step 3: Send photo message via tRPC (stores real R2 URL in DB)
                 let sentMessage = try await messagingService.sendPhotoMessage(
                     taskId: conversationId,
-                    photoUrls: [photoUrl],
+                    photoUrls: [publicUrl],
                     caption: nil
                 )
-                
-                // Add to local messages
+
+                // Step 4: Append to local message list
                 let chatMessage = ChatMessage(
                     id: sentMessage.id,
                     text: "📷 Photo",
@@ -302,12 +309,12 @@ struct ConversationScreen: View {
                     timestamp: sentMessage.timestamp,
                     senderName: sentMessage.senderName
                 )
-                
+
                 withAnimation(.spring(response: 0.3)) {
                     messages.append(chatMessage)
                 }
-                
-                HXLogger.info("Conversation: Photo message sent", category: "General")
+
+                HXLogger.info("Conversation: Photo message sent (R2 key: \(presignedURL.key))", category: "General")
             } catch {
                 errorMessage = "Failed to send photo: \(error.localizedDescription)"
                 showError = true
