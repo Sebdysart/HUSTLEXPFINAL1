@@ -22,6 +22,7 @@ struct ConversationScreen: View {
     @State private var apiMessages: [HXMessage] = []
     @State private var isLoading = true
     @State private var isSending = false
+    @State private var photoUploadTask: Task<Void, Never>?
     @State private var showReportSheet = false
     @State private var showPhotosPicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -100,6 +101,7 @@ struct ConversationScreen: View {
                             if let newItem = newItem,
                                let data = try? await newItem.loadTransferable(type: Data.self) {
                                 sendPhotoMessage(imageData: data)
+                                selectedPhotoItem = nil
                             }
                         }
                     }
@@ -111,6 +113,9 @@ struct ConversationScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .onDisappear {
+            photoUploadTask?.cancel()
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
@@ -278,7 +283,7 @@ struct ConversationScreen: View {
 
         isSending = true
 
-        Task {
+        photoUploadTask = Task {
             do {
                 let timestamp = Int(Date().timeIntervalSince1970)
                 let filename = "msg_\(conversationId)_\(timestamp).jpg"
@@ -316,8 +321,10 @@ struct ConversationScreen: View {
 
                 HXLogger.info("Conversation: Photo message sent (R2 key: \(presignedURL.key))", category: "General")
             } catch {
-                errorMessage = "Failed to send photo: \(error.localizedDescription)"
-                showError = true
+                if !(error is CancellationError) {
+                    errorMessage = "Failed to send photo: \(error.localizedDescription)"
+                    showError = true
+                }
             }
             isSending = false
         }
