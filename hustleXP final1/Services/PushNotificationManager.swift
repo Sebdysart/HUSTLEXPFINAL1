@@ -66,27 +66,71 @@ final class PushNotificationManager: NSObject, ObservableObject {
 
     // MARK: - FCM Token Management
 
-    /// Handles a new FCM token by storing it locally and sending it to the backend.
-    /// - Parameter token: The Firebase Cloud Messaging device token.
+    private static let pendingTokenKey = "hx.pendingFCMToken"
+
+    /// Handles a new FCM token: tries to register immediately, falls back to UserDefaults on failure.
     func handleFCMToken(_ token: String) async {
         self.fcmToken = token
         HXLogger.info("[PushNotificationManager] FCM token received: \(token.prefix(20))...", category: "Push")
 
-        // Send token to backend for server-side push targeting
+        do {
+            try await registerToken(token)
+            // Success: clear any previously stored pending token
+            UserDefaults.standard.removeObject(forKey: Self.pendingTokenKey)
+            HXLogger.info("[PushNotificationManager] Device token registered with backend", category: "Push")
+        } catch {
+            // Pre-auth or network failure: persist for retry after login
+            UserDefaults.standard.set(token, forKey: Self.pendingTokenKey)
+            HXLogger.info("[PushNotificationManager] Token stored as pending (will retry after login): \(error.localizedDescription)", category: "Push")
+        }
+    }
+
+    /// Called after every successful login. Flushes any pending FCM token to the backend.
+    func flushPendingToken() async {
+        guard let token = UserDefaults.standard.string(forKey: Self.pendingTokenKey) ?? fcmToken
+        else { return }
+
+        do {
+            try await registerToken(token)
+            UserDefaults.standard.removeObject(forKey: Self.pendingTokenKey)
+            HXLogger.info("[PushNotificationManager] Pending FCM token flushed after login", category: "Push")
+        } catch {
+            HXLogger.error("[PushNotificationManager] Pending token flush failed: \(error.localizedDescription)", category: "Push")
+        }
+    }
+
+    /// Called on logout. Deregisters the current token from the backend and clears local state.
+    func deregisterCurrentToken() async {
+        let token = UserDefaults.standard.string(forKey: Self.pendingTokenKey) ?? fcmToken
+        guard let token else { return }
+
         do {
             let _: EmptyResponse = try await TRPCClient.shared.call(
                 router: "notification",
-                procedure: "registerDeviceToken",
+                procedure: "unregisterDeviceToken",
                 type: .mutation,
-                input: [
-                    "fcmToken": token,
-                    "deviceType": "ios"
-                ]
+                input: ["fcmToken": token]
             )
-            HXLogger.info("[PushNotificationManager] Device token registered with backend", category: "Push")
+            HXLogger.info("[PushNotificationManager] Device token deregistered", category: "Push")
         } catch {
-            HXLogger.error("[PushNotificationManager] Failed to register device token: \(error.localizedDescription)", category: "Push")
+            HXLogger.error("[PushNotificationManager] Token deregistration failed: \(error.localizedDescription)", category: "Push")
         }
+
+        UserDefaults.standard.removeObject(forKey: Self.pendingTokenKey)
+        self.fcmToken = nil
+    }
+
+    // Private helper: raw backend registration call
+    private func registerToken(_ token: String) async throws {
+        let _: EmptyResponse = try await TRPCClient.shared.call(
+            router: "notification",
+            procedure: "registerDeviceToken",
+            type: .mutation,
+            input: [
+                "fcmToken": token,
+                "deviceType": "ios"
+            ]
+        )
     }
 
     // MARK: - Notification Handling
@@ -167,8 +211,9 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        let userInfo = notification.request.content.userInfo
-        HXLogger.info("[PushNotificationManager] Foreground notification received: \(userInfo)", category: "Push")
+        Task { @MainActor in
+            HXLogger.info("[PushNotificationManager] Foreground notification received", category: "Push")
+        }
 
         // Show as banner, play sound, and update badge even in foreground
         completionHandler([.banner, .sound, .badge])
@@ -181,7 +226,6 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        HXLogger.info("[PushNotificationManager] Notification tapped: \(userInfo)", category: "Push")
 
         // Convert to sendable dictionary for async capture
         let sendableUserInfo = Dictionary(uniqueKeysWithValues: userInfo.compactMap { key, value -> (String, Any)? in
@@ -189,6 +233,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
             return (stringKey, value)
         })
         Task { @MainActor in
+            HXLogger.info("[PushNotificationManager] Notification tapped", category: "Push")
             self.handleNotificationFromSendable(sendableUserInfo)
         }
 
@@ -213,13 +258,14 @@ extension PushNotificationManager: MessagingDelegate {
         didReceiveRegistrationToken fcmToken: String?
     ) {
         guard let token = fcmToken else {
-            HXLogger.info("[PushNotificationManager] FCM token is nil", category: "Push")
+            Task { @MainActor in
+                HXLogger.info("[PushNotificationManager] FCM token is nil", category: "Push")
+            }
             return
         }
 
-        HXLogger.info("[PushNotificationManager] FCM token refreshed", category: "Push")
-
         Task { @MainActor in
+            HXLogger.info("[PushNotificationManager] FCM token refreshed", category: "Push")
             await handleFCMToken(token)
         }
     }
