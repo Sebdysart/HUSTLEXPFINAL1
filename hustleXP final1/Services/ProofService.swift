@@ -53,21 +53,23 @@ final class ProofService: ObservableObject {
     func getUploadURL(
         taskId: String,
         filename: String,
-        contentType: String = "image/jpeg"
+        contentType: String = "image/jpeg",
+        purpose: String = "proof"
     ) async throws -> PresignedUploadURL {
         struct GetURLInput: Codable {
             let taskId: String
             let filename: String
             let contentType: String
+            let purpose: String
         }
 
         let response: PresignedUploadURL = try await trpc.call(
             router: "upload",
             procedure: "getPresignedUrl",
-            input: GetURLInput(taskId: taskId, filename: filename, contentType: contentType)
+            input: GetURLInput(taskId: taskId, filename: filename, contentType: contentType, purpose: purpose)
         )
 
-        HXLogger.info("ProofService: Got pre-signed URL for \(filename)", category: "Task")
+        HXLogger.info("ProofService: Got pre-signed URL for \(filename) (purpose: \(purpose))", category: "Task")
         return response
     }
 
