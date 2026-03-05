@@ -59,7 +59,8 @@ enum TrustTier: Int, CaseIterable, Codable {
 
     var color: Color {
         switch self {
-        case .unranked, .rookie: return .textSecondary
+        case .unranked: return .textTertiary
+        case .rookie: return .textSecondary
         case .verified: return .infoBlue
         case .trusted: return .successGreen
         case .elite: return .brandPurple
