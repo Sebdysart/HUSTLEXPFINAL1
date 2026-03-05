@@ -32,7 +32,7 @@ final class SquadService: ObservableObject {
         }
 
         let squad: HXSquad = try await trpc.call(
-            router: "squads",
+            router: "squad",
             procedure: "create",
             input: CreateSquadInput(name: name, emoji: emoji, tagline: tagline)
         )
@@ -45,7 +45,7 @@ final class SquadService: ObservableObject {
         struct EmptyInput: Codable {}
 
         let squads: [HXSquad] = try await trpc.call(
-            router: "squads",
+            router: "squad",
             procedure: "listMine",
             type: .query,
             input: EmptyInput()
@@ -61,7 +61,7 @@ final class SquadService: ObservableObject {
         }
 
         let squad: HXSquad = try await trpc.call(
-            router: "squads",
+            router: "squad",
             procedure: "getById",
             type: .query,
             input: GetSquadInput(id: id)
@@ -81,7 +81,7 @@ final class SquadService: ObservableObject {
         struct EmptyResponse: Codable {}
 
         let _: EmptyResponse = try await trpc.call(
-            router: "squads",
+            router: "squad",
             procedure: "disband",
             input: DisbandInput(id: id)
         )
@@ -101,7 +101,7 @@ final class SquadService: ObservableObject {
         }
 
         let invite: SquadInvite = try await trpc.call(
-            router: "squads",
+            router: "squad",
             procedure: "invite",
             input: InviteInput(squadId: squadId, inviteeId: userId)
         )
@@ -122,8 +122,8 @@ final class SquadService: ObservableObject {
         struct EmptyResponse: Codable {}
 
         let _: EmptyResponse = try await trpc.call(
-            router: "squads",
-            procedure: "respondInvite",
+            router: "squad",
+            procedure: "respondToInvite",
             input: RespondInput(inviteId: inviteId, accept: accept)
         )
 
@@ -134,8 +134,8 @@ final class SquadService: ObservableObject {
         struct EmptyInput: Codable {}
 
         let invites: [SquadInvite] = try await trpc.call(
-            router: "squads",
-            procedure: "pendingInvites",
+            router: "squad",
+            procedure: "listInvites",
             type: .query,
             input: EmptyInput()
         )
@@ -146,51 +146,21 @@ final class SquadService: ObservableObject {
     // MARK: - Squad Tasks
 
     func getSquadTasks(squadId: String) async throws -> [SquadTask] {
-        struct GetTasksInput: Codable {
-            let squadId: String
-        }
-
-        let tasks: [SquadTask] = try await trpc.call(
-            router: "squads",
-            procedure: "listTasks",
-            type: .query,
-            input: GetTasksInput(squadId: squadId)
-        )
-
-        return tasks
+        // B3: squad.listTasks not yet implemented on backend
+        HXLogger.warning("SquadService: listTasks not yet available", category: "Squad")
+        return []
     }
 
     func acceptSquadTask(squadTaskId: String) async throws {
-        isLoading = true
-        defer { isLoading = false }
-
-        struct AcceptTaskInput: Codable {
-            let squadTaskId: String
-        }
-
-        struct EmptyResponse: Codable {}
-
-        let _: EmptyResponse = try await trpc.call(
-            router: "squads",
-            procedure: "acceptTask",
-            input: AcceptTaskInput(squadTaskId: squadTaskId)
-        )
-
-        HXLogger.info("SquadService: Accepted squad task", category: "General")
+        // B3: squad.acceptTask not yet implemented on backend
+        HXLogger.warning("SquadService: acceptTask not yet available", category: "Squad")
     }
 
     // MARK: - Leaderboard
 
     func getLeaderboard() async throws -> [HXSquad] {
-        struct EmptyInput: Codable {}
-
-        let squads: [HXSquad] = try await trpc.call(
-            router: "squads",
-            procedure: "leaderboard",
-            type: .query,
-            input: EmptyInput()
-        )
-
-        return squads
+        // B3: squad.leaderboard not yet implemented on backend
+        HXLogger.warning("SquadService: leaderboard not yet available", category: "Squad")
+        return []
     }
 }

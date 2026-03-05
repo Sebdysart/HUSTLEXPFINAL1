@@ -17,6 +17,20 @@ final class RecurringTaskService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
+    /// B3: recurringTask router not yet deployed to backend.
+    /// Set to `true` once backend/src/routers/recurringTask.ts is created and registered.
+    private let isFeatureAvailable = false
+
+    private func guardFeature() throws {
+        guard isFeatureAvailable else {
+            throw NSError(
+                domain: "HustleXP",
+                code: 503,
+                userInfo: [NSLocalizedDescriptionKey: "Recurring tasks coming soon"]
+            )
+        }
+    }
+
     private init() {}
 
     // MARK: - Series CRUD
@@ -36,6 +50,7 @@ final class RecurringTaskService: ObservableObject {
         startDate: Date,
         endDate: Date?
     ) async throws -> RecurringTaskSeries {
+        try guardFeature()
         isLoading = true
         defer { isLoading = false }
 
@@ -82,6 +97,7 @@ final class RecurringTaskService: ObservableObject {
     }
 
     func getMySeries() async throws -> [RecurringTaskSeries] {
+        try guardFeature()
         struct EmptyInput: Codable {}
 
         let series: [RecurringTaskSeries] = try await trpc.call(
@@ -96,6 +112,7 @@ final class RecurringTaskService: ObservableObject {
     }
 
     func getSeries(id: String) async throws -> RecurringTaskSeries {
+        try guardFeature()
         struct GetSeriesInput: Codable {
             let id: String
         }
@@ -111,6 +128,7 @@ final class RecurringTaskService: ObservableObject {
     }
 
     func pauseSeries(id: String) async throws {
+        try guardFeature()
         isLoading = true
         defer { isLoading = false }
 
@@ -132,6 +150,7 @@ final class RecurringTaskService: ObservableObject {
     }
 
     func resumeSeries(id: String) async throws {
+        try guardFeature()
         isLoading = true
         defer { isLoading = false }
 
@@ -153,6 +172,7 @@ final class RecurringTaskService: ObservableObject {
     }
 
     func cancelSeries(id: String) async throws {
+        try guardFeature()
         isLoading = true
         defer { isLoading = false }
 
@@ -176,6 +196,7 @@ final class RecurringTaskService: ObservableObject {
     // MARK: - Occurrences
 
     func getOccurrences(seriesId: String) async throws -> [RecurringOccurrence] {
+        try guardFeature()
         struct GetOccurrencesInput: Codable {
             let seriesId: String
         }
@@ -191,6 +212,7 @@ final class RecurringTaskService: ObservableObject {
     }
 
     func skipOccurrence(occurrenceId: String) async throws {
+        try guardFeature()
         isLoading = true
         defer { isLoading = false }
 
@@ -214,6 +236,7 @@ final class RecurringTaskService: ObservableObject {
     // MARK: - Preferred Worker
 
     func setPreferredWorker(seriesId: String, workerId: String) async throws {
+        try guardFeature()
         isLoading = true
         defer { isLoading = false }
 
