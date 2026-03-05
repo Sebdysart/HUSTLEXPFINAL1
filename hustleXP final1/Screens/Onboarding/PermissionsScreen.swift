@@ -63,7 +63,24 @@ struct PermissionsScreen: View {
                             )
                         }
                         .padding(.horizontal, 20)
-                        
+                        .onChange(of: notificationsEnabled) { _, isOn in
+                            if isOn {
+                                Task {
+                                    let granted = await PushNotificationManager.shared.requestAuthorization()
+                                    if granted {
+                                        PushNotificationManager.shared.registerForRemoteNotifications()
+                                    } else {
+                                        notificationsEnabled = false
+                                    }
+                                }
+                            }
+                        }
+                        .onChange(of: locationEnabled) { _, isOn in
+                            if isOn {
+                                locationDelegate.requestPermission()
+                            }
+                        }
+
                         // Privacy note
                         HStack(spacing: 10) {
                             Image(systemName: "shield.fill")
