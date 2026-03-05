@@ -115,6 +115,7 @@ enum SettingsRoute: Hashable {
     case help
     case referrals
     case subscription
+    case betaDashboard
 }
 
 enum EdgeRoute: Hashable {

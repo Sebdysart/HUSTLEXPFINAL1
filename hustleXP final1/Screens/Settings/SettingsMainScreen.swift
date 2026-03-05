@@ -85,6 +85,19 @@ struct SettingsMainScreen: View {
             }
             .listRowBackground(Color.surfaceElevated)
             
+            // Admin (DEBUG only)
+            #if DEBUG
+            Section {
+                SettingsListItem(icon: "chart.bar.fill", iconColor: .brandPurple, title: "Beta Dashboard") {
+                    router.navigateToSettings(.betaDashboard)
+                }
+            } header: {
+                Text("Admin")
+                    .foregroundStyle(Color.textSecondary)
+            }
+            .listRowBackground(Color.surfaceElevated)
+            #endif
+
             // App info
             Section {
                 HStack {

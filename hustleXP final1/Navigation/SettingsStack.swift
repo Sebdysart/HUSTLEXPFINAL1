@@ -36,6 +36,8 @@ struct SettingsStack: View {
                         ReferralScreen()
                     case .subscription:
                         SubscriptionScreen()
+                    case .betaDashboard:
+                        BetaDashboardScreen()
                     }
                 }
         }
