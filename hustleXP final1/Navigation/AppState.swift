@@ -12,6 +12,7 @@ import SwiftUI
 enum UserRole: String, CaseIterable, Codable {
     case hustler = "hustler"
     case poster = "poster"
+    case admin = "admin"
 
     /// Safely decode — treat "worker" as "hustler", unknown values default to "hustler"
     init(from decoder: Decoder) throws {
@@ -20,6 +21,7 @@ enum UserRole: String, CaseIterable, Codable {
         switch rawValue {
         case "hustler", "worker": self = .hustler
         case "poster": self = .poster
+        case "admin": self = .admin
         default: self = .hustler
         }
     }

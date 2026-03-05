@@ -85,17 +85,31 @@ struct SettingsMainScreen: View {
             }
             .listRowBackground(Color.surfaceElevated)
             
-            // Admin (DEBUG only)
-            #if DEBUG
-            Section {
-                SettingsListItem(icon: "chart.bar.fill", iconColor: .brandPurple, title: "Beta Dashboard") {
-                    router.navigateToSettings(.betaDashboard)
+            // Admin dashboard — visible to admin role users or in debug builds
+            if dataService.currentUser.role == .admin {
+                Section {
+                    SettingsListItem(icon: "chart.bar.fill", iconColor: .brandPurple, title: "Beta Dashboard") {
+                        router.navigateToSettings(.betaDashboard)
+                    }
+                } header: {
+                    Text("Admin")
+                        .foregroundStyle(Color.textSecondary)
                 }
-            } header: {
-                Text("Admin")
-                    .foregroundStyle(Color.textSecondary)
+                .listRowBackground(Color.surfaceElevated)
             }
-            .listRowBackground(Color.surfaceElevated)
+            #if DEBUG
+            // Always visible in debug for development
+            if dataService.currentUser.role != .admin {
+                Section {
+                    SettingsListItem(icon: "chart.bar.fill", iconColor: .brandPurple, title: "Beta Dashboard") {
+                        router.navigateToSettings(.betaDashboard)
+                    }
+                } header: {
+                    Text("Admin (Debug)")
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .listRowBackground(Color.surfaceElevated)
+            }
             #endif
 
             // App info

@@ -458,8 +458,9 @@ struct BetaDashboardScreen: View {
         return String(format: "$%.2f", dollars)
     }
 
+    /// Backend returns percentage values (e.g. 5.25 meaning 5.25%), NOT decimal fractions.
     private func formatPercent(_ value: Double) -> String {
-        return String(format: "%.1f%%", value * 100)
+        return String(format: "%.1f%%", value)
     }
 
     private func humanizeSignal(_ signal: String) -> String {
