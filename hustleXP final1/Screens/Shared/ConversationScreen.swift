@@ -189,7 +189,8 @@ struct ConversationScreen: View {
                         text: msg.content,
                         isFromCurrentUser: msg.senderId == currentUserId,
                         timestamp: msg.timestamp,
-                        senderName: msg.senderName
+                        senderName: msg.senderName,
+                        photoUrls: msg.photoUrls ?? []
                     )
                 }
 
@@ -285,41 +286,35 @@ struct ConversationScreen: View {
 
         photoUploadTask = Task {
             do {
-                let timestamp = Int(Date().timeIntervalSince1970)
-                let filename = "msg_\(conversationId)_\(timestamp).jpg"
-
-                // Step 1: Get presigned URL for message photo (uses messages/ key prefix)
-                let presignedURL = try await ProofService.shared.getUploadURL(
-                    taskId: conversationId,
-                    filename: filename,
-                    contentType: "image/jpeg",
-                    purpose: .message
+                // Step 1: Upload photo to R2 via the general-purpose upload service
+                let publicUrl = try await R2UploadService.shared.uploadPhoto(
+                    image,
+                    purpose: .message,
+                    taskId: conversationId
                 )
 
-                // Step 2: Upload image bytes to R2
-                let publicUrl = try await ProofService.shared.uploadImage(image, to: presignedURL)
-
-                // Step 3: Send photo message via tRPC (stores real R2 URL in DB)
+                // Step 2: Send photo message via tRPC (stores real R2 URL in DB)
                 let sentMessage = try await messagingService.sendPhotoMessage(
                     taskId: conversationId,
                     photoUrls: [publicUrl],
                     caption: nil
                 )
 
-                // Step 4: Append to local message list
+                // Step 3: Append to local message list with photo URL
                 let chatMessage = ChatMessage(
                     id: sentMessage.id,
-                    text: "📷 Photo",
+                    text: sentMessage.content,
                     isFromCurrentUser: true,
                     timestamp: sentMessage.timestamp,
-                    senderName: sentMessage.senderName
+                    senderName: sentMessage.senderName,
+                    photoUrls: [publicUrl]
                 )
 
                 withAnimation(.spring(response: 0.3)) {
                     messages.append(chatMessage)
                 }
 
-                HXLogger.info("Conversation: Photo message sent (R2 key: \(presignedURL.key))", category: "General")
+                HXLogger.info("Conversation: Photo message sent to R2 (\(publicUrl))", category: "General")
             } catch {
                 if !(error is CancellationError) {
                     errorMessage = "Failed to send photo: \(error.localizedDescription)"
@@ -339,6 +334,10 @@ struct ChatMessage: Identifiable {
     let timestamp: Date
     let senderName: String
     var isRead: Bool = false
+    var photoUrls: [String] = []
+
+    /// Whether this message contains photos
+    var isPhoto: Bool { !photoUrls.isEmpty }
 }
 
 // MARK: - Task Context Header
@@ -407,30 +406,72 @@ private struct EmptyMessagesView: View {
 private struct MessageBubble: View {
     let message: ChatMessage
     var maxWidth: CGFloat = 280 // Default max width, overridden by parent
-    
+
     var body: some View {
         HStack {
             if message.isFromCurrentUser {
                 Spacer(minLength: 40)
             }
-            
+
             VStack(alignment: message.isFromCurrentUser ? .trailing : .leading, spacing: 4) {
-                Text(message.text)
-                    .font(.body)
-                    .foregroundStyle(message.isFromCurrentUser ? .white : Color.textPrimary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        message.isFromCurrentUser
-                            ? Color.brandPurple
-                            : Color.surfaceElevated
-                    )
-                    .cornerRadius(20, corners: message.isFromCurrentUser
-                        ? [.topLeft, .topRight, .bottomLeft]
-                        : [.topLeft, .topRight, .bottomRight]
-                    )
+                if message.isPhoto {
+                    // Photo message: render each photo with AsyncImage
+                    VStack(spacing: 4) {
+                        ForEach(message.photoUrls, id: \.self) { urlString in
+                            if let url = URL(string: urlString) {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(maxWidth: maxWidth, maxHeight: 240)
+                                            .clipped()
+                                    case .failure:
+                                        photoPlaceholder(systemName: "photo.fill", label: "Failed to load")
+                                    case .empty:
+                                        photoPlaceholder(systemName: "arrow.down.circle", label: "Loading...")
+                                            .overlay(ProgressView().tint(.white))
+                                    @unknown default:
+                                        photoPlaceholder(systemName: "photo", label: "Photo")
+                                    }
+                                }
+                                .cornerRadius(16, corners: message.isFromCurrentUser
+                                    ? [.topLeft, .topRight, .bottomLeft]
+                                    : [.topLeft, .topRight, .bottomRight]
+                                )
+                            }
+                        }
+
+                        // Optional caption below photos
+                        if !message.text.isEmpty && message.text != "Photo" {
+                            Text(message.text)
+                                .font(.body)
+                                .foregroundStyle(message.isFromCurrentUser ? .white : Color.textPrimary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                        }
+                    }
                     .frame(maxWidth: maxWidth, alignment: message.isFromCurrentUser ? .trailing : .leading)
-                
+                } else {
+                    // Text message: existing rendering
+                    Text(message.text)
+                        .font(.body)
+                        .foregroundStyle(message.isFromCurrentUser ? .white : Color.textPrimary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            message.isFromCurrentUser
+                                ? Color.brandPurple
+                                : Color.surfaceElevated
+                        )
+                        .cornerRadius(20, corners: message.isFromCurrentUser
+                            ? [.topLeft, .topRight, .bottomLeft]
+                            : [.topLeft, .topRight, .bottomRight]
+                        )
+                        .frame(maxWidth: maxWidth, alignment: message.isFromCurrentUser ? .trailing : .leading)
+                }
+
                 HXText(
                     formatTime(message.timestamp),
                     style: .caption,
@@ -455,7 +496,21 @@ private struct MessageBubble: View {
             }
         }
     }
-    
+
+    /// Placeholder view shown while photo is loading or on error
+    private func photoPlaceholder(systemName: String, label: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: systemName)
+                .font(.system(size: 32))
+                .foregroundColor(.textTertiary)
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.textTertiary)
+        }
+        .frame(width: maxWidth * 0.8, height: 160)
+        .background(Color.surfaceElevated)
+    }
+
     private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short

@@ -15,7 +15,9 @@ struct HXMessage: Identifiable, Codable {
     let content: String
     let timestamp: Date
     var isRead: Bool
-    
+    let messageType: String?
+    let photoUrls: [String]?
+
     var formattedTime: String {
         let formatter = DateFormatter()
         if Calendar.current.isDateInToday(timestamp) {
@@ -24,6 +26,11 @@ struct HXMessage: Identifiable, Codable {
             formatter.dateFormat = "MMM d, h:mm a"
         }
         return formatter.string(from: timestamp)
+    }
+
+    /// Whether this message is a photo message
+    var isPhoto: Bool {
+        messageType == "PHOTO" || !(photoUrls ?? []).isEmpty
     }
 }
 
