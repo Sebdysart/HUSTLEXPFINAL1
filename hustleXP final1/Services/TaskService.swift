@@ -258,6 +258,66 @@ final class TaskService: ObservableObject {
         return task
     }
 
+    // MARK: - Applicant Management (Poster)
+
+    /// Lists applicants for a posted task
+    func listApplicants(taskId: String) async throws -> [TaskApplicant] {
+        struct ListInput: Codable {
+            let taskId: String
+        }
+
+        let applicants: [TaskApplicant] = try await trpc.call(
+            router: "task",
+            procedure: "listApplicants",
+            type: .query,
+            input: ListInput(taskId: taskId)
+        )
+
+        HXLogger.info("TaskService: Fetched \(applicants.count) applicants for task \(taskId)", category: "Task")
+        return applicants
+    }
+
+    /// Poster assigns a specific applicant as the worker for their task
+    func assignWorker(taskId: String, workerId: String) async throws -> HXTask {
+        isLoading = true
+        defer { isLoading = false }
+
+        struct AssignInput: Codable {
+            let taskId: String
+            let workerId: String
+        }
+
+        let task: HXTask = try await trpc.call(
+            router: "task",
+            procedure: "assignWorker",
+            input: AssignInput(taskId: taskId, workerId: workerId)
+        )
+
+        HXLogger.info("TaskService: Assigned worker \(workerId) to task \(task.title)", category: "Task")
+        AnalyticsService.shared.trackTaskEvent(.taskAccepted, taskId: task.id, taskTitle: task.title)
+        return task
+    }
+
+    /// Poster rejects an applicant for their task
+    func rejectApplicant(taskId: String, workerId: String) async throws {
+        struct RejectInput: Codable {
+            let taskId: String
+            let workerId: String
+        }
+
+        struct SuccessResponse: Codable {
+            let success: Bool
+        }
+
+        let _: SuccessResponse = try await trpc.call(
+            router: "task",
+            procedure: "rejectApplicant",
+            input: RejectInput(taskId: taskId, workerId: workerId)
+        )
+
+        HXLogger.info("TaskService: Rejected applicant \(workerId) for task \(taskId)", category: "Task")
+    }
+
     // MARK: - Task Listings
 
     /// Gets all open tasks (available for workers)

@@ -398,7 +398,7 @@ final class TRPCClient: ObservableObject {
                             HXLogger.error("tRPC: Offline request \(path) exceeded max server retries (\(QueuedRequest.maxServerRetries)) after 5xx — dropping to prevent double execution", category: "Network")
                             processedIDs.insert(queued.id)
                         } else {
-                            HXLogger.warning("tRPC: Offline request \(path) got 5xx (retry \(queued.retryCount + 1)/\(QueuedRequest.maxServerRetries)) — will retry", category: "Network")
+                            HXLogger.info("tRPC: Offline request \(path) got 5xx (retry \(queued.retryCount + 1)/\(QueuedRequest.maxServerRetries)) — will retry", category: "Network")
                         }
                     }
                 }

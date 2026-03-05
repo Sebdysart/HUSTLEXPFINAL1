@@ -6,17 +6,20 @@
 //
 
 import SwiftUI
+import Combine
 
 struct TaskManagementScreen: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
-    
+
     let taskId: String
-    
+
     @State private var task: HXTask?
     @State private var isLoading = true
     @State private var showReportSheet = false
-    
+    @State private var lastSSEUpdate: Date?
+    @State private var sseSubscription: AnyCancellable?
+
     var body: some View {
         ZStack {
             Color.brandBlack
@@ -31,8 +34,8 @@ struct TaskManagementScreen: View {
                         TaskSummaryCard(task: task)
                         
                         // Progress tracker
-                        if task.state == .inProgress {
-                            TaskProgressCard(task: task)
+                        if task.state == .inProgress || task.state == .claimed {
+                            TaskProgressCard(task: task, lastSSEUpdate: lastSSEUpdate)
                         }
                         
                         // Hustler info card
@@ -73,6 +76,11 @@ struct TaskManagementScreen: View {
         }
         .onAppear {
             loadTask()
+            subscribeToSSE()
+        }
+        .onDisappear {
+            sseSubscription?.cancel()
+            sseSubscription = nil
         }
     }
     
@@ -88,6 +96,36 @@ struct TaskManagementScreen: View {
             }
             isLoading = false
         }
+    }
+
+    /// Subscribe to SSE events and auto-refresh task on relevant updates
+    private func subscribeToSSE() {
+        sseSubscription = RealtimeSSEClient.shared.messageReceived
+            .receive(on: DispatchQueue.main)
+            .sink { message in
+                // Refresh on task-related events (state changes, check-in, proof submitted)
+                let relevantEvents = [
+                    "task_updated", "task_state_changed", "worker_checkin",
+                    "worker_checkout", "proof_submitted", "task_completed",
+                    "worker_location_update"
+                ]
+                if relevantEvents.contains(message.event) {
+                    // Check if this event is for our task
+                    if let json = try? JSONSerialization.jsonObject(with: message.data) as? [String: Any],
+                       let eventTaskId = json["taskId"] as? String,
+                       eventTaskId == taskId {
+                        lastSSEUpdate = Date()
+                        Task {
+                            do {
+                                task = try await TaskService.shared.getTask(id: taskId)
+                                HXLogger.info("TaskManagement: Refreshed via SSE event '\(message.event)'", category: "Task")
+                            } catch {
+                                HXLogger.error("TaskManagement: SSE refresh failed - \(error.localizedDescription)", category: "Task")
+                            }
+                        }
+                    }
+                }
+            }
     }
 }
 
@@ -166,39 +204,92 @@ private struct TaskStateBadge: View {
 // MARK: - Task Progress Card
 private struct TaskProgressCard: View {
     let task: HXTask
-    
+    var lastSSEUpdate: Date?
+
+    private var isClaimed: Bool {
+        [.claimed, .inProgress, .proofSubmitted, .completed].contains(task.state)
+    }
+    private var isWorking: Bool {
+        [.inProgress, .proofSubmitted, .completed].contains(task.state)
+    }
+    private var isProofSubmitted: Bool {
+        [.proofSubmitted, .completed].contains(task.state)
+    }
+    private var isDone: Bool {
+        task.state == .completed
+    }
+
+    private var statusLabel: String {
+        switch task.state {
+        case .claimed: return "Claimed"
+        case .inProgress: return "In Progress"
+        case .proofSubmitted: return "Proof Submitted"
+        case .completed: return "Completed"
+        default: return task.state.rawValue
+        }
+    }
+
+    private var statusColor: Color {
+        switch task.state {
+        case .claimed: return .warningOrange
+        case .inProgress: return .brandPurple
+        case .proofSubmitted: return .warningOrange
+        case .completed: return .successGreen
+        default: return .textSecondary
+        }
+    }
+
+    private var liveMessage: String {
+        switch task.state {
+        case .claimed: return "Hustler has claimed your task"
+        case .inProgress: return "Hustler is working on your task"
+        case .proofSubmitted: return "Proof submitted \u{2013} awaiting your review"
+        case .completed: return "Task completed!"
+        default: return "Monitoring task..."
+        }
+    }
+
+    private var updatedAgoText: String {
+        guard let date = lastSSEUpdate else { return "Live" }
+        let seconds = Int(-date.timeIntervalSinceNow)
+        if seconds < 10 { return "Just now" }
+        if seconds < 60 { return "\(seconds)s ago" }
+        let minutes = seconds / 60
+        return "\(minutes)m ago"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 HXText("Progress", style: .headline)
                 Spacer()
-                HXText("In Progress", style: .caption, color: .brandPurple)
+                HXText(statusLabel, style: .caption, color: statusColor)
             }
-            
+
             // Progress steps
             HStack(spacing: 0) {
-                ProgressStep(title: "Claimed", isComplete: true, isCurrent: false)
-                ProgressConnector(isComplete: true)
-                ProgressStep(title: "En Route", isComplete: true, isCurrent: false)
-                ProgressConnector(isComplete: false)
-                ProgressStep(title: "Working", isComplete: false, isCurrent: true)
-                ProgressConnector(isComplete: false)
-                ProgressStep(title: "Done", isComplete: false, isCurrent: false)
+                ProgressStep(title: "Claimed", isComplete: isClaimed, isCurrent: task.state == .claimed)
+                ProgressConnector(isComplete: isClaimed)
+                ProgressStep(title: "En Route", isComplete: isWorking, isCurrent: false)
+                ProgressConnector(isComplete: isWorking)
+                ProgressStep(title: "Working", isComplete: isProofSubmitted, isCurrent: task.state == .inProgress)
+                ProgressConnector(isComplete: isProofSubmitted)
+                ProgressStep(title: "Done", isComplete: isDone, isCurrent: task.state == .proofSubmitted)
             }
-            
+
             HXDivider()
-            
+
             // Live update
             HStack(spacing: 12) {
                 Circle()
-                    .fill(Color.successGreen)
+                    .fill(RealtimeSSEClient.shared.isConnected ? Color.successGreen : Color.warningOrange)
                     .frame(width: 8, height: 8)
-                
-                HXText("Hustler is working on your task", style: .subheadline, color: .textSecondary)
-                
+
+                HXText(liveMessage, style: .subheadline, color: .textSecondary)
+
                 Spacer()
-                
-                HXText("Updated 2m ago", style: .caption, color: .textTertiary)
+
+                HXText(updatedAgoText, style: .caption, color: .textTertiary)
             }
         }
         .padding(20)

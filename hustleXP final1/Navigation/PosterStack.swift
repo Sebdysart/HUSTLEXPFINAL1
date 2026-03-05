@@ -30,6 +30,8 @@ struct PosterStack: View {
                         PosterActiveTasksScreen()
                     case .taskManagement(let taskId):
                         TaskManagementScreen(taskId: taskId)
+                    case .applicantList(let taskId):
+                        ApplicantListScreen(taskId: taskId)
                     case .proofReview(let taskId):
                         ProofReviewScreen(taskId: taskId)
                     case .conversation(let taskId):

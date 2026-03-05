@@ -233,6 +233,68 @@ struct HXTask: Identifiable, Codable {
     }
 }
 
+// MARK: - Task Applicant
+
+/// An applicant who has applied for a posted task
+struct TaskApplicant: Identifiable, Codable {
+    let id: String
+    let userId: String
+    let name: String
+    let rating: Double
+    let completedTasks: Int
+    let tier: TrustTier
+    let appliedAt: Date
+    let message: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, userId, name, rating, completedTasks, tier, appliedAt, message
+        case user_id, completed_tasks, applied_at
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        userId = try c.decodeIfPresent(String.self, forKey: .userId)
+            ?? c.decodeIfPresent(String.self, forKey: .user_id)
+            ?? ""
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? "Unknown"
+        rating = try c.decodeIfPresent(Double.self, forKey: .rating) ?? 5.0
+        completedTasks = try c.decodeIfPresent(Int.self, forKey: .completedTasks)
+            ?? c.decodeIfPresent(Int.self, forKey: .completed_tasks)
+            ?? 0
+        tier = try c.decodeIfPresent(TrustTier.self, forKey: .tier) ?? .rookie
+        if let date = try? c.decode(Date.self, forKey: .appliedAt) {
+            appliedAt = date
+        } else if let date = try? c.decode(Date.self, forKey: .applied_at) {
+            appliedAt = date
+        } else {
+            appliedAt = Date()
+        }
+        message = try c.decodeIfPresent(String.self, forKey: .message)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(userId, forKey: .userId)
+        try c.encode(name, forKey: .name)
+        try c.encode(rating, forKey: .rating)
+        try c.encode(completedTasks, forKey: .completedTasks)
+        try c.encode(tier, forKey: .tier)
+        try c.encode(appliedAt, forKey: .appliedAt)
+        try c.encodeIfPresent(message, forKey: .message)
+    }
+
+    // Memberwise for previews
+    init(id: String, userId: String, name: String, rating: Double = 5.0,
+         completedTasks: Int = 0, tier: TrustTier = .rookie,
+         appliedAt: Date = Date(), message: String? = nil) {
+        self.id = id; self.userId = userId; self.name = name
+        self.rating = rating; self.completedTasks = completedTasks
+        self.tier = tier; self.appliedAt = appliedAt; self.message = message
+    }
+}
+
 // MARK: - Task extensions for convenience
 extension HXTask {
     var isAvailable: Bool {

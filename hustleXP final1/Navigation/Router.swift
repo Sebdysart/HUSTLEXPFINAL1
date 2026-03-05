@@ -82,6 +82,7 @@ enum PosterRoute: Hashable {
     case taskDetail(taskId: String)
     case activeTasks
     case taskManagement(taskId: String)
+    case applicantList(taskId: String)
     case proofReview(taskId: String)
     case conversation(taskId: String)
     case history

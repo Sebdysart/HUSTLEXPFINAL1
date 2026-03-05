@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct PosterTaskDetailScreen: View {
     @Environment(Router.self) private var router
@@ -19,6 +20,7 @@ struct PosterTaskDetailScreen: View {
     @State private var showTipSheet = false
     @State private var tipSent = false
     @State private var loadError: Error?
+    @State private var sseSubscription: AnyCancellable?
     
     var body: some View {
         ZStack {
@@ -111,7 +113,7 @@ struct PosterTaskDetailScreen: View {
                         
                         // Applicants section (if posted)
                         if task.state == .posted {
-                            ApplicantsSection()
+                            ApplicantsSection(taskId: task.id, router: router)
                         }
                         
                         // Timeline section
@@ -232,6 +234,11 @@ struct PosterTaskDetailScreen: View {
         }
         .onAppear {
             loadTask()
+            subscribeToSSE()
+        }
+        .onDisappear {
+            sseSubscription?.cancel()
+            sseSubscription = nil
         }
     }
     
@@ -277,6 +284,32 @@ struct PosterTaskDetailScreen: View {
                 showTipSheet = false
             }
         }
+    }
+
+    /// Subscribe to SSE for real-time task state updates
+    private func subscribeToSSE() {
+        sseSubscription = RealtimeSSEClient.shared.messageReceived
+            .receive(on: DispatchQueue.main)
+            .sink { message in
+                let relevantEvents = [
+                    "task_updated", "task_state_changed", "proof_submitted",
+                    "task_completed", "worker_checkin", "worker_checkout"
+                ]
+                if relevantEvents.contains(message.event) {
+                    if let json = try? JSONSerialization.jsonObject(with: message.data) as? [String: Any],
+                       let eventTaskId = json["taskId"] as? String,
+                       eventTaskId == taskId {
+                        Task {
+                            do {
+                                task = try await TaskService.shared.getTask(id: taskId)
+                                HXLogger.info("PosterTaskDetail: Refreshed via SSE '\(message.event)'", category: "Task")
+                            } catch {
+                                HXLogger.error("PosterTaskDetail: SSE refresh failed", category: "Task")
+                            }
+                        }
+                    }
+                }
+            }
     }
 
     private func cancelTask() {
@@ -371,28 +404,62 @@ private struct AssignedHustlerSection: View {
 
 // MARK: - Applicants Section
 private struct ApplicantsSection: View {
+    let taskId: String
+    let router: Router
+
+    @State private var applicantCount: Int = 0
+    @State private var isLoaded = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 HXText("Applicants", style: .headline)
                 Spacer()
-                HXBadge(variant: .count(3))
+                if isLoaded {
+                    HXBadge(variant: .count(applicantCount))
+                }
             }
-            
-            HXText(
-                "3 hustlers have applied for this task",
-                style: .subheadline,
-                color: .textSecondary
-            )
-            
-            HXButton("View Applicants", variant: .secondary) {
-                // Navigate to applicants
+
+            if isLoaded {
+                if applicantCount > 0 {
+                    HXText(
+                        "\(applicantCount) hustler\(applicantCount == 1 ? " has" : "s have") applied for this task",
+                        style: .subheadline,
+                        color: .textSecondary
+                    )
+
+                    HXButton("View Applicants", variant: .secondary) {
+                        router.navigateToPoster(.applicantList(taskId: taskId))
+                    }
+                    .accessibilityLabel("View applicants")
+                } else {
+                    HXText(
+                        "No applicants yet. Hustlers in the area will be notified.",
+                        style: .subheadline,
+                        color: .textSecondary
+                    )
+                }
+            } else {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .tint(.textSecondary)
+                    HXText("Loading applicants...", style: .subheadline, color: .textSecondary)
+                }
             }
-            .accessibilityLabel("View applicants")
         }
         .padding(20)
         .background(Color.surfaceElevated)
         .cornerRadius(16)
+        .task {
+            do {
+                let applicants = try await TaskService.shared.listApplicants(taskId: taskId)
+                applicantCount = applicants.count
+            } catch {
+                HXLogger.error("ApplicantsSection: Failed to load count - \(error.localizedDescription)", category: "Task")
+                applicantCount = 0
+            }
+            isLoaded = true
+        }
     }
 }
 
