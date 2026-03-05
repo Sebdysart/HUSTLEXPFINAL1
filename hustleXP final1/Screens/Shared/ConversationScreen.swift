@@ -190,6 +190,7 @@ struct ConversationScreen: View {
                         isFromCurrentUser: msg.senderId == currentUserId,
                         timestamp: msg.timestamp,
                         senderName: msg.senderName,
+                        isRead: msg.isRead,
                         photoUrls: msg.photoUrls ?? []
                     )
                 }
