@@ -46,6 +46,27 @@ enum TrustTier: Int, CaseIterable, Codable {
         }
     }
 
+    var nextTierName: String {
+        switch self {
+        case .unranked: return "Rookie"
+        case .rookie: return "Verified"
+        case .verified: return "Trusted"
+        case .trusted: return "Elite"
+        case .elite: return "Master"
+        case .master: return "Master"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .unranked, .rookie: return .textSecondary
+        case .verified: return .infoBlue
+        case .trusted: return .successGreen
+        case .elite: return .brandPurple
+        case .master: return .warningOrange
+        }
+    }
+
     /// Safely decode from backend — unknown values default to .unranked
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()

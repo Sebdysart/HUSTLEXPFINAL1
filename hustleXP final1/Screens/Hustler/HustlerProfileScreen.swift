@@ -26,7 +26,15 @@ struct HustlerProfileScreen: View {
                         rating: dataService.currentUser.rating,
                         totalRatings: dataService.currentUser.totalRatings
                     )
-                    
+
+                    // XP tier progression
+                    TierProgressCard(
+                        tier: dataService.currentUser.trustTier,
+                        xp: dataService.currentUser.xp,
+                        xpProgress: dataService.currentUser.xpProgress,
+                        xpToNextTier: dataService.currentUser.xpToNextTier
+                    )
+
                     // v1.8.0: Tax Balance Card (if blocked)
                     if dataService.taxStatus.blocked {
                         TaxBalanceCard(
