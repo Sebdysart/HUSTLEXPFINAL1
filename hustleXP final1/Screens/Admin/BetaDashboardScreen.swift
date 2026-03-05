@@ -39,7 +39,11 @@ struct BetaStatusResponse: Decodable {
     let users: BetaCap
     let tasks: BetaCap
     let gmvCents: BetaCap
-    let guardrails: BetaGuardrails
+    // Guardrail booleans are flat at top level (not nested)
+    let canCreateUser: Bool
+    let canCreateTask: Bool
+    let withinGmvCap: Bool
+    let withinDateWindow: Bool
 
     struct BetaBounds: Decodable {
         let north: Double?
@@ -52,22 +56,21 @@ struct BetaStatusResponse: Decodable {
 struct BetaCap: Decodable {
     let current: Int
     let max: Int
-    let percentage: Double
+    let pct: Double
 }
 
-struct BetaGuardrails: Decodable {
-    let canCreateUser: Bool
-    let canCreateTask: Bool
-    let withinGmvCap: Bool
-    let withinDateWindow: Bool
+/// Wrapper for getKillSignals response: { signals: [...], shouldKill: bool }
+struct BetaKillSignalsResponse: Decodable {
+    let signals: [BetaKillSignal]
+    let shouldKill: Bool
 }
 
 struct BetaKillSignal: Decodable, Identifiable {
-    let signal: String
+    let name: String
     let triggered: Bool
     let detail: String
 
-    var id: String { signal }
+    var id: String { name }
 }
 
 // MARK: - Input Models
@@ -157,7 +160,7 @@ struct BetaDashboardScreen: View {
                 type: .query,
                 input: EmptyInput()
             )
-            async let killCall: [BetaKillSignal] = TRPCClient.shared.call(
+            async let killCall: BetaKillSignalsResponse = TRPCClient.shared.call(
                 router: "betaDashboard",
                 procedure: "getKillSignals",
                 type: .query,
@@ -167,7 +170,7 @@ struct BetaDashboardScreen: View {
             let (m, s, k) = try await (metricsCall, statusCall, killCall)
             metrics = m
             status = s
-            killSignals = k
+            killSignals = k.signals
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -223,10 +226,10 @@ struct BetaDashboardScreen: View {
                 HXText("Guardrails", style: .caption, color: .textSecondary)
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    guardrailIndicator(label: "Create User", ok: status.guardrails.canCreateUser)
-                    guardrailIndicator(label: "Create Task", ok: status.guardrails.canCreateTask)
-                    guardrailIndicator(label: "GMV Cap", ok: status.guardrails.withinGmvCap)
-                    guardrailIndicator(label: "Date Window", ok: status.guardrails.withinDateWindow)
+                    guardrailIndicator(label: "Create User", ok: status.canCreateUser)
+                    guardrailIndicator(label: "Create Task", ok: status.canCreateTask)
+                    guardrailIndicator(label: "GMV Cap", ok: status.withinGmvCap)
+                    guardrailIndicator(label: "Date Window", ok: status.withinDateWindow)
                 }
             }
         }
@@ -259,8 +262,8 @@ struct BetaDashboardScreen: View {
                         .frame(height: 8)
 
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(progressColor(for: cap.percentage))
-                        .frame(width: max(0, geo.size.width * min(CGFloat(cap.percentage) / 100.0, 1.0)), height: 8)
+                        .fill(progressColor(for: cap.pct))
+                        .frame(width: max(0, geo.size.width * min(CGFloat(cap.pct) / 100.0, 1.0)), height: 8)
                 }
             }
             .frame(height: 8)
@@ -388,7 +391,7 @@ struct BetaDashboardScreen: View {
                 .foregroundStyle(signal.triggered ? Color.errorRed : Color.successGreen)
 
             VStack(alignment: .leading, spacing: 4) {
-                HXText(humanizeSignal(signal.signal), style: .subheadline)
+                HXText(humanizeSignal(signal.name), style: .subheadline)
                 HXText(signal.detail, style: .caption, color: .textSecondary)
             }
 
