@@ -60,7 +60,7 @@ struct OnboardingStatus: Codable {
 final class UserProfileService: ObservableObject {
     static let shared = UserProfileService()
 
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
 
     @Published var xpHistory: [XPHistoryEntry] = []
     @Published var badges: [UserBadge] = []
@@ -68,7 +68,9 @@ final class UserProfileService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
-    private init() {}
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
+    }
 
     // MARK: - Profile Updates
 

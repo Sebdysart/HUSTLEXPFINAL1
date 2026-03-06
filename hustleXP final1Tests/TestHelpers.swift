@@ -187,6 +187,90 @@ enum TestFixtures {
     }
     """
 
+    // MARK: - User Profile Service Fixtures
+
+    static let hxUserJSON = """
+    {
+        "id": "user-1",
+        "name": "Test User",
+        "email": "test@hustlexp.com",
+        "phone": null,
+        "bio": "A test bio",
+        "avatarURL": null,
+        "role": "hustler",
+        "trustTier": 2,
+        "rating": 4.5,
+        "totalRatings": 10,
+        "xp": 150,
+        "tasksCompleted": 5,
+        "tasksPosted": 3,
+        "totalEarnings": 250.0,
+        "totalSpent": 100.0,
+        "isVerified": false,
+        "createdAt": "2026-01-15T10:00:00Z"
+    }
+    """
+
+    static let xpHistoryEntryJSON = """
+    {
+        "id": "xp-1",
+        "userId": "user-1",
+        "amount": 50,
+        "reason": "Task completed",
+        "taskId": "task-1",
+        "taskTitle": "Fix Sink",
+        "createdAt": "2026-01-15T10:00:00Z"
+    }
+    """
+
+    static let userBadgeJSON = """
+    {
+        "id": "badge-1",
+        "name": "First Task",
+        "description": "Complete your first task",
+        "iconName": "star.fill",
+        "tier": "bronze",
+        "earnedAt": "2026-01-15T10:00:00Z",
+        "criteria": "Complete 1 task"
+    }
+    """
+
+    static let onboardingStatusJSON = """
+    {
+        "hasCompletedOnboarding": true,
+        "completedSteps": ["role_selection", "profile_setup"],
+        "currentStep": null
+    }
+    """
+
+    static let verificationUnlockStatusJSON = """
+    {
+        "earnedCents": 2000,
+        "thresholdCents": 4000,
+        "percentage": 50.0,
+        "unlocked": false,
+        "tasksCompleted": 3,
+        "remainingCents": 2000
+    }
+    """
+
+    static let verificationEligibilityJSON = """
+    {
+        "isEligible": true
+    }
+    """
+
+    static let verificationEarningsEntryJSON = """
+    {
+        "id": "entry-1",
+        "taskId": "task-1",
+        "taskTitle": "Fix Sink",
+        "escrowId": "esc-1",
+        "netPayoutCents": 2000,
+        "earnedAt": "2026-01-15T10:00:00Z"
+    }
+    """
+
     /// Creates a modified version of a JSON fixture by replacing a key's value.
     static func modify(_ json: String, key: String, value: String) -> String {
         // Simple key-value replacement for test fixtures
