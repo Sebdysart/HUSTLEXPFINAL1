@@ -146,21 +146,57 @@ final class SquadService: ObservableObject {
     // MARK: - Squad Tasks
 
     func getSquadTasks(squadId: String) async throws -> [SquadTask] {
-        // B3: squad.listTasks not yet implemented on backend
-        HXLogger.warning("SquadService: listTasks not yet available", category: "Squad")
-        return []
+        struct GetTasksInput: Codable {
+            let squadId: String
+        }
+
+        let tasks: [SquadTask] = try await trpc.call(
+            router: "squad",
+            procedure: "listTasks",
+            type: .query,
+            input: GetTasksInput(squadId: squadId)
+        )
+
+        return tasks
     }
 
     func acceptSquadTask(squadTaskId: String) async throws {
-        // B3: squad.acceptTask not yet implemented on backend
-        HXLogger.warning("SquadService: acceptTask not yet available", category: "Squad")
+        isLoading = true
+        defer { isLoading = false }
+
+        struct AcceptTaskInput: Codable {
+            let squadTaskId: String
+        }
+
+        struct AcceptResponse: Codable {
+            let id: String
+            let squadTaskId: String
+            let workerId: String
+            let acceptedAt: Date
+            let taskStatus: String
+        }
+
+        let _: AcceptResponse = try await trpc.call(
+            router: "squad",
+            procedure: "acceptTask",
+            input: AcceptTaskInput(squadTaskId: squadTaskId)
+        )
+
+        HXLogger.info("SquadService: Accepted squad task", category: "Squad")
     }
 
     // MARK: - Leaderboard
 
     func getLeaderboard() async throws -> [HXSquad] {
-        // B3: squad.leaderboard not yet implemented on backend
-        HXLogger.warning("SquadService: leaderboard not yet available", category: "Squad")
-        return []
+        struct EmptyInput: Codable {}
+
+        let squads: [HXSquad] = try await trpc.call(
+            router: "squad",
+            procedure: "leaderboard",
+            type: .query,
+            input: EmptyInput()
+        )
+
+        return squads
     }
 }

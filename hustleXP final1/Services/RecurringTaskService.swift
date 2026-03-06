@@ -17,9 +17,9 @@ final class RecurringTaskService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
-    /// B3: recurringTask router not yet deployed to backend.
-    /// Set to `true` once backend/src/routers/recurringTask.ts is created and registered.
-    private let isFeatureAvailable = false
+    /// B3: recurringTask router now deployed to backend.
+    /// @see backend/src/routers/recurringTask.ts (9 procedures)
+    private let isFeatureAvailable = true
 
     private func guardFeature() throws {
         guard isFeatureAvailable else {
