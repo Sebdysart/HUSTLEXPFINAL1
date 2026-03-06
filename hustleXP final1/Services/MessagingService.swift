@@ -27,7 +27,7 @@ struct APIConversationSummary: Codable, Identifiable {
 final class MessagingService: ObservableObject {
     static let shared = MessagingService()
 
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
 
     @Published var unreadCount: Int = 0
     @Published var isLoading = false
@@ -35,7 +35,9 @@ final class MessagingService: ObservableObject {
 
     private var sseCancellable: AnyCancellable?
 
-    private init() {}
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
+    }
 
     // MARK: - SSE Realtime Subscription
 

@@ -187,6 +187,36 @@ enum TestFixtures {
     }
     """
 
+    // MARK: - Messaging Service Fixtures
+
+    static let messageJSON = """
+    {
+        "id": "msg-1",
+        "conversationId": "task-1",
+        "senderId": "user-2",
+        "senderName": "Jane",
+        "content": "Hello!",
+        "timestamp": "2026-03-01T10:00:00Z",
+        "isRead": false,
+        "messageType": "TEXT",
+        "photoUrls": []
+    }
+    """
+
+    static let conversationSummaryJSON = """
+    {
+        "id": "task-1",
+        "taskId": "task-1",
+        "taskTitle": "Fix Sink",
+        "otherUserId": "user-2",
+        "otherUserName": "Jane",
+        "otherUserRole": "hustler",
+        "lastMessage": "Hello!",
+        "lastMessageAt": "2026-03-01T10:00:00Z",
+        "unreadCount": 2
+    }
+    """
+
     // MARK: - User Profile Service Fixtures
 
     static let hxUserJSON = """
