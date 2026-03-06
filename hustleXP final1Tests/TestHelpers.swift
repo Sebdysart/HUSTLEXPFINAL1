@@ -105,6 +105,88 @@ enum TestFixtures {
     }
     """
 
+    static let squadMemberJSON = """
+    {
+        "id": "member-1",
+        "userId": "user-1",
+        "userName": "TestUser",
+        "userInitials": "TU",
+        "role": "organizer",
+        "trustTier": 4,
+        "rating": 4.8,
+        "completedTasks": 120,
+        "joinedAt": "2026-01-01T00:00:00Z",
+        "lastActiveAt": "2026-03-01T00:00:00Z",
+        "isOnline": true
+    }
+    """
+
+    static let squadJSON = """
+    {
+        "id": "squad-1",
+        "name": "Fix-It Crew",
+        "organizerId": "user-1",
+        "organizerName": "TestUser",
+        "members": [\(squadMemberJSON)],
+        "status": "active",
+        "maxMembers": 5,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "lastActiveAt": "2026-03-01T00:00:00Z",
+        "totalTasksCompleted": 25,
+        "totalEarnings": 5000.0,
+        "averageRating": 4.8,
+        "squadXP": 1500,
+        "squadLevel": 3,
+        "emoji": "wrench",
+        "tagline": "We fix things"
+    }
+    """
+
+    static let squadInviteJSON = """
+    {
+        "id": "invite-1",
+        "squadId": "squad-1",
+        "squadName": "Fix-It Crew",
+        "squadEmoji": "wrench",
+        "inviterId": "user-1",
+        "inviterName": "John",
+        "inviteeId": "user-2",
+        "status": "pending",
+        "sentAt": "2026-03-01T00:00:00Z",
+        "expiresAt": "2026-03-08T00:00:00Z"
+    }
+    """
+
+    static let squadTaskJSON = """
+    {
+        "id": "squad-task-1",
+        "taskId": "task-1",
+        "squadId": "squad-1",
+        "task": {
+            "id": "task-1",
+            "title": "Move Furniture",
+            "description": "Help move furniture across town",
+            "payment": 75.0,
+            "location": "San Francisco, CA",
+            "latitude": 37.7749,
+            "longitude": -122.4194,
+            "estimatedDuration": "2 hours",
+            "posterId": "poster-1",
+            "posterName": "Alice",
+            "posterRating": 4.9,
+            "state": "posted",
+            "requiredTier": 1,
+            "createdAt": "2026-03-01T10:00:00Z"
+        },
+        "requiredWorkers": 3,
+        "acceptedWorkers": ["worker-1"],
+        "paymentSplit": "equal",
+        "perWorkerPayment": 25.0,
+        "status": "recruiting",
+        "createdAt": "2026-03-01T10:00:00Z"
+    }
+    """
+
     /// Creates a modified version of a JSON fixture by replacing a key's value.
     static func modify(_ json: String, key: String, value: String) -> String {
         // Simple key-value replacement for test fixtures
