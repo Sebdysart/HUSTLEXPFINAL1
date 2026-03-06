@@ -18,7 +18,7 @@ struct SquadDetailScreen: View {
     @Environment(AppState.self) private var appState
 
     @State private var squad: HXSquad?
-    @State private var activeTasks: [MockSquadTask] = []
+    @State private var activeTasks: [SquadTask] = []
     @State private var isLoading = true
     @State private var showContent = false
     @State private var showLeaveConfirmation = false
@@ -77,7 +77,7 @@ struct SquadDetailScreen: View {
         .alert("Leave Squad", isPresented: $showLeaveConfirmation) {
             Button("Stay", role: .cancel) {}
             Button("Leave", role: .destructive) {
-                // Mock: would call SquadService.shared.leaveSquad
+                HXLogger.info("SquadDetail: Leave squad awaits backend endpoint", category: "Squad")
             }
         } message: {
             Text("Are you sure you want to leave this squad? You can rejoin later if invited.")
@@ -86,7 +86,7 @@ struct SquadDetailScreen: View {
             inviteSheet
         }
         .task {
-            loadMockData()
+            await loadFromAPI()
             withAnimation(.easeOut(duration: 0.4)) {
                 showContent = true
             }
@@ -367,8 +367,28 @@ struct SquadDetailScreen: View {
         }
     }
 
-    private func activeTaskCard(_ task: MockSquadTask) -> some View {
-        VStack(spacing: 12) {
+    private func activeTaskCard(_ task: SquadTask) -> some View {
+        let statusLabel: String = {
+            switch task.status {
+            case .recruiting: return "Recruiting"
+            case .ready: return "Ready"
+            case .inProgress: return "In Progress"
+            case .completed: return "Completed"
+            case .cancelled: return "Cancelled"
+            }
+        }()
+
+        let statusColor: Color = {
+            switch task.status {
+            case .recruiting: return .squadGold
+            case .ready: return .successGreen
+            case .inProgress: return .infoBlue
+            case .completed: return .successGreen
+            case .cancelled: return .errorRed
+            }
+        }()
+
+        return VStack(spacing: 12) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
@@ -381,15 +401,15 @@ struct SquadDetailScreen: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(task.title)
+                    Text(task.task.title)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
 
-                    Text(task.statusLabel)
+                    Text(statusLabel)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(task.statusColor)
+                        .foregroundStyle(statusColor)
                 }
 
                 Spacer()
@@ -410,7 +430,7 @@ struct SquadDetailScreen: View {
                 HStack(spacing: 4) {
                     Image(systemName: "person.fill.checkmark")
                         .font(.system(size: 11))
-                    Text("\(task.acceptedCount)/\(task.requiredWorkers) spots filled")
+                    Text("\(task.acceptedWorkers.count)/\(task.requiredWorkers) spots filled")
                         .font(.system(size: 12, weight: .medium))
                 }
                 .foregroundStyle(Color.textSecondary)
@@ -438,7 +458,7 @@ struct SquadDetailScreen: View {
                     RoundedRectangle(cornerRadius: 3)
                         .fill(task.spotsRemaining > 0 ? Color.squadGold : Color.successGreen)
                         .frame(
-                            width: geo.size.width * (Double(task.acceptedCount) / Double(task.requiredWorkers)),
+                            width: geo.size.width * (Double(task.acceptedWorkers.count) / Double(max(task.requiredWorkers, 1))),
                             height: 6
                         )
                 }
@@ -480,7 +500,7 @@ struct SquadDetailScreen: View {
                     color: .textSecondary,
                     isDanger: false
                 ) {
-                    // Mock: would navigate to squad management
+                    HXLogger.info("SquadDetail: Manage squad navigation pending", category: "Squad")
                 }
             }
 
@@ -595,113 +615,25 @@ struct SquadDetailScreen: View {
         }
     }
 
-    // MARK: - Mock Data
+    // MARK: - API Data Loading
 
-    private func loadMockData() {
+    private func loadFromAPI() async {
         isLoading = true
+        defer { isLoading = false }
 
-        let now = Date()
-        let calendar = Calendar.current
+        do {
+            async let squadResult = SquadService.shared.getSquad(id: squadId)
+            async let tasksResult = SquadService.shared.getSquadTasks(squadId: squadId)
 
-        squad = HXSquad(
-            id: squadId,
-            name: "Thunder Squad",
-            organizerId: "hustler-001",
-            organizerName: "Alex R.",
-            members: [
-                SquadMember(
-                    id: "member-1",
-                    userId: "hustler-001",
-                    userName: "Alex R.",
-                    userInitials: "AR",
-                    role: .organizer,
-                    trustTier: .elite,
-                    rating: 4.9,
-                    completedTasks: 142,
-                    joinedAt: calendar.date(byAdding: .day, value: -60, to: now) ?? now,
-                    lastActiveAt: now,
-                    isOnline: true
-                ),
-                SquadMember(
-                    id: "member-2",
-                    userId: "hustler-002",
-                    userName: "Jordan K.",
-                    userInitials: "JK",
-                    role: .member,
-                    trustTier: .elite,
-                    rating: 4.8,
-                    completedTasks: 118,
-                    joinedAt: calendar.date(byAdding: .day, value: -45, to: now) ?? now,
-                    lastActiveAt: calendar.date(byAdding: .hour, value: -2, to: now) ?? now,
-                    isOnline: true
-                ),
-                SquadMember(
-                    id: "member-3",
-                    userId: "hustler-003",
-                    userName: "Sam W.",
-                    userInitials: "SW",
-                    role: .member,
-                    trustTier: .master,
-                    rating: 4.95,
-                    completedTasks: 203,
-                    joinedAt: calendar.date(byAdding: .day, value: -30, to: now) ?? now,
-                    lastActiveAt: calendar.date(byAdding: .hour, value: -8, to: now) ?? now,
-                    isOnline: false
-                ),
-            ],
-            status: .active,
-            maxMembers: 5,
-            createdAt: calendar.date(byAdding: .day, value: -60, to: now) ?? now,
-            lastActiveAt: now,
-            totalTasksCompleted: 37,
-            totalEarnings: 2850,
-            averageRating: 4.88,
-            squadXP: 4200,
-            squadLevel: 3,
-            emoji: "\u{26A1}\u{FE0F}",
-            tagline: "Speed. Precision. Results."
-        )
-
-        activeTasks = [
-            MockSquadTask(
-                id: "st-1",
-                title: "Move 3-Bedroom House",
-                requiredWorkers: 4,
-                acceptedCount: 2,
-                perWorkerPayment: 120,
-                statusLabel: "Recruiting",
-                statusColor: .squadGold
-            ),
-            MockSquadTask(
-                id: "st-2",
-                title: "Deep Clean Office Suite",
-                requiredWorkers: 3,
-                acceptedCount: 3,
-                perWorkerPayment: 85,
-                statusLabel: "Ready",
-                statusColor: .successGreen
-            ),
-        ]
-
-        isLoading = false
-    }
-}
-
-// MARK: - Mock Squad Task (simplified for detail screen)
-
-private struct MockSquadTask: Identifiable {
-    let id: String
-    let title: String
-    let requiredWorkers: Int
-    let acceptedCount: Int
-    let perWorkerPayment: Double
-    let statusLabel: String
-    let statusColor: Color
-
-    var spotsRemaining: Int { requiredWorkers - acceptedCount }
-
-    var formattedPerWorkerPay: String {
-        "$\(String(format: "%.0f", perWorkerPayment))"
+            let (fetchedSquad, fetchedTasks) = try await (squadResult, tasksResult)
+            self.squad = fetchedSquad
+            self.activeTasks = fetchedTasks.filter { $0.status != .completed && $0.status != .cancelled }
+            HXLogger.info("SquadDetail: Loaded squad '\(fetchedSquad.name)' with \(fetchedTasks.count) tasks", category: "Squad")
+        } catch {
+            HXLogger.error("SquadDetail: API load failed - \(error.localizedDescription)", category: "Squad")
+            self.squad = nil
+            self.activeTasks = []
+        }
     }
 }
 

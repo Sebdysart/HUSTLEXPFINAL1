@@ -80,13 +80,21 @@ struct RecurringTaskDetailScreen: View {
         .alert("Cancel Series", isPresented: $showCancelConfirmation) {
             Button("Keep Active", role: .cancel) {}
             Button("Cancel Series", role: .destructive) {
-                // Mock: would call RecurringTaskService.shared.cancelSeries
+                Task {
+                    do {
+                        try await RecurringTaskService.shared.cancelSeries(id: seriesId)
+                        await loadFromAPI()
+                        HXLogger.info("RecurringTaskDetail: Series cancelled", category: "Task")
+                    } catch {
+                        HXLogger.error("RecurringTaskDetail: Cancel failed - \(error.localizedDescription)", category: "Task")
+                    }
+                }
             }
         } message: {
             Text("This will stop all future occurrences. Any active occurrence will still complete. This cannot be undone.")
         }
         .task {
-            loadMockData()
+            await loadFromAPI()
             withAnimation(.easeOut(duration: 0.4)) {
                 showContent = true
             }
@@ -472,7 +480,14 @@ struct RecurringTaskDetailScreen: View {
                     color: .warningOrange,
                     variant: .secondary
                 ) {
-                    // Mock: would call RecurringTaskService.shared.pauseSeries
+                    Task {
+                        do {
+                            try await RecurringTaskService.shared.pauseSeries(id: seriesId)
+                            await loadFromAPI()
+                        } catch {
+                            HXLogger.error("RecurringTaskDetail: Pause failed - \(error.localizedDescription)", category: "Task")
+                        }
+                    }
                 }
             } else if series.isPaused {
                 actionButton(
@@ -481,7 +496,14 @@ struct RecurringTaskDetailScreen: View {
                     color: .successGreen,
                     variant: .secondary
                 ) {
-                    // Mock: would call RecurringTaskService.shared.resumeSeries
+                    Task {
+                        do {
+                            try await RecurringTaskService.shared.resumeSeries(id: seriesId)
+                            await loadFromAPI()
+                        } catch {
+                            HXLogger.error("RecurringTaskDetail: Resume failed - \(error.localizedDescription)", category: "Task")
+                        }
+                    }
                 }
             }
 
@@ -492,7 +514,7 @@ struct RecurringTaskDetailScreen: View {
                 color: .recurringBlue,
                 variant: .secondary
             ) {
-                // Mock: would present edit sheet
+                HXLogger.info("RecurringTaskDetail: Edit schedule UI pending", category: "Task")
             }
 
             // Cancel series
@@ -543,105 +565,25 @@ struct RecurringTaskDetailScreen: View {
         .accessibilityLabel(title)
     }
 
-    // MARK: - Mock Data
+    // MARK: - API Data Loading
 
-    private func loadMockData() {
+    private func loadFromAPI() async {
         isLoading = true
+        defer { isLoading = false }
 
-        let now = Date()
-        let calendar = Calendar.current
+        do {
+            async let seriesResult = RecurringTaskService.shared.getSeries(id: seriesId)
+            async let occurrencesResult = RecurringTaskService.shared.getOccurrences(seriesId: seriesId)
 
-        series = RecurringTaskSeries(
-            id: seriesId,
-            posterId: "poster-001",
-            templateTaskId: "task-template-001",
-            pattern: .weekly,
-            dayOfWeek: 2,
-            dayOfMonth: nil,
-            timeOfDay: "09:00",
-            startDate: calendar.date(byAdding: .day, value: -42, to: now) ?? now,
-            endDate: nil,
-            title: "Mow the Front & Back Lawn",
-            description: "Full mow of front and back yard, edge along walkways, bag clippings.",
-            payment: 45,
-            location: "742 Evergreen Terrace",
-            category: .yardWork,
-            estimatedDuration: "1.5 hours",
-            requiredTier: .rookie,
-            status: .active,
-            occurrenceCount: 6,
-            completedCount: 5,
-            preferredWorkerId: "hustler-007",
-            preferredWorkerName: "Marcus T.",
-            createdAt: calendar.date(byAdding: .day, value: -42, to: now) ?? now,
-            updatedAt: now,
-            nextOccurrence: calendar.date(byAdding: .day, value: 3, to: now)
-        )
-
-        occurrences = [
-            RecurringOccurrence(
-                id: "occ-6",
-                seriesId: seriesId,
-                taskId: "task-gen-6",
-                occurrenceNumber: 6,
-                scheduledDate: calendar.date(byAdding: .day, value: -1, to: now) ?? now,
-                status: .completed,
-                workerId: "hustler-007",
-                workerName: "Marcus T.",
-                completedAt: calendar.date(byAdding: .day, value: -1, to: now),
-                rating: 5
-            ),
-            RecurringOccurrence(
-                id: "occ-5",
-                seriesId: seriesId,
-                taskId: "task-gen-5",
-                occurrenceNumber: 5,
-                scheduledDate: calendar.date(byAdding: .day, value: -8, to: now) ?? now,
-                status: .completed,
-                workerId: "hustler-007",
-                workerName: "Marcus T.",
-                completedAt: calendar.date(byAdding: .day, value: -8, to: now),
-                rating: 5
-            ),
-            RecurringOccurrence(
-                id: "occ-4",
-                seriesId: seriesId,
-                taskId: "task-gen-4",
-                occurrenceNumber: 4,
-                scheduledDate: calendar.date(byAdding: .day, value: -15, to: now) ?? now,
-                status: .skipped,
-                workerId: nil,
-                workerName: nil,
-                completedAt: nil,
-                rating: nil
-            ),
-            RecurringOccurrence(
-                id: "occ-3",
-                seriesId: seriesId,
-                taskId: "task-gen-3",
-                occurrenceNumber: 3,
-                scheduledDate: calendar.date(byAdding: .day, value: -22, to: now) ?? now,
-                status: .completed,
-                workerId: "hustler-007",
-                workerName: "Marcus T.",
-                completedAt: calendar.date(byAdding: .day, value: -22, to: now),
-                rating: 4
-            ),
-            RecurringOccurrence(
-                id: "occ-2",
-                seriesId: seriesId,
-                taskId: "task-gen-2",
-                occurrenceNumber: 2,
-                scheduledDate: calendar.date(byAdding: .day, value: -29, to: now) ?? now,
-                status: .completed,
-                workerId: "hustler-007",
-                workerName: "Marcus T.",
-                completedAt: calendar.date(byAdding: .day, value: -29, to: now),
-                rating: 5
-            ),
-        ]
-
-        isLoading = false
+            let (fetchedSeries, fetchedOccurrences) = try await (seriesResult, occurrencesResult)
+            self.series = fetchedSeries
+            self.occurrences = fetchedOccurrences.sorted { $0.occurrenceNumber > $1.occurrenceNumber }
+            HXLogger.info("RecurringTaskDetail: Loaded series '\(fetchedSeries.title)' with \(fetchedOccurrences.count) occurrences", category: "Task")
+        } catch {
+            HXLogger.error("RecurringTaskDetail: API load failed - \(error.localizedDescription)", category: "Task")
+            self.series = nil
+            self.occurrences = []
+        }
     }
 }
 
