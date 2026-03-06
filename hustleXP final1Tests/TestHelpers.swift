@@ -271,6 +271,33 @@ enum TestFixtures {
     }
     """
 
+    // MARK: - Notification Service Fixtures
+
+    static let notificationJSON = """
+    {
+        "id": "notif-1",
+        "userId": "user-1",
+        "type": "taskAccepted",
+        "title": "Task Accepted",
+        "body": "Your task was accepted by Jane",
+        "data": {"taskId": "task-1"},
+        "isRead": false,
+        "isClicked": false,
+        "createdAt": "2026-03-01T10:00:00Z"
+    }
+    """
+
+    static let notificationPreferencesJSON = """
+    {
+        "pushEnabled": true,
+        "emailEnabled": false,
+        "taskUpdates": true,
+        "paymentUpdates": true,
+        "messageNotifications": true,
+        "marketingEmails": false
+    }
+    """
+
     /// Creates a modified version of a JSON fixture by replacing a key's value.
     static func modify(_ json: String, key: String, value: String) -> String {
         // Simple key-value replacement for test fixtures

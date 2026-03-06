@@ -105,7 +105,7 @@ struct BackendNotificationPrefsInput: Codable {
 final class NotificationService: ObservableObject {
     static let shared = NotificationService()
 
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
 
     @Published var notifications: [HXNotification] = []
     @Published var unreadCount: Int = 0
@@ -113,7 +113,9 @@ final class NotificationService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
-    private init() {}
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
+    }
 
     // MARK: - Get Notifications
 
