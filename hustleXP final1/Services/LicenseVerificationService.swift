@@ -253,34 +253,6 @@ final class LicenseVerificationService {
         )
     }
 
-    /// Synchronous compatibility wrapper used by existing screens.
-    /// Delegates to mock flow so UI paths continue to work while real API is adopted.
-    func uploadLicense(
-        type: LicenseType,
-        licenseNumber: String,
-        issuingState: String,
-        documentURL: URL? = nil
-    ) -> ProfessionalLicense {
-        MockLicenseVerificationService.shared.uploadLicense(
-            type: type,
-            licenseNumber: licenseNumber,
-            issuingState: issuingState,
-            documentURL: documentURL
-        )
-    }
-
-    /// Compatibility wrapper for existing feed filtering flow.
-    func filterEligibleTasks(
-        allTasks: [HXTask],
-        location: GPSCoordinates?,
-        settings: FeedFilterSettings? = nil
-    ) -> AIMatchmakerResult {
-        MockLicenseVerificationService.shared.filterEligibleTasks(
-            allTasks: allTasks,
-            location: location,
-            settings: settings
-        )
-    }
 
     // MARK: - Status Helpers
 
@@ -296,8 +268,4 @@ final class LicenseVerificationService {
         licenses.filter { $0.isVerified }
     }
 
-    /// Compatibility wrapper for existing license status checks.
-    func getLicenseStatus(for type: LicenseType) -> LicenseVerificationStatus? {
-        MockLicenseVerificationService.shared.getLicenseStatus(for: type)
-    }
 }

@@ -256,16 +256,9 @@ struct LockedQuestsScreen: View {
             HXLogger.debug("LockedQuests: Found \(locked.count) locked quests via API", category: "Skill")
 
         } catch {
-            HXLogger.debug("LockedQuests: API failed, using mock - \(error.localizedDescription)", category: "Skill")
-
-            // Fallback to mock
-            let mockService = LicenseVerificationService.shared
-            mockService.initializeProfile(for: appState.userId ?? "worker")
-            let result = mockService.filterEligibleTasks(
-                allTasks: dataService.availableTasks,
-                location: coords
-            )
-            lockedQuests = result.lockedQuests
+            HXLogger.error("LockedQuests: Skills API failed - \(error.localizedDescription)", category: "Skill")
+            // Show empty locked quests — skills data unavailable
+            lockedQuests = []
         }
     }
 }

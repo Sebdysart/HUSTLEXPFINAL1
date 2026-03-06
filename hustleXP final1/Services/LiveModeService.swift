@@ -200,65 +200,119 @@ final class LiveModeService: ObservableObject {
         pollTask = nil
     }
 
-    // MARK: - Compatibility Wrappers (Mock-backed)
+    // MARK: - Local Session Management
 
-    /// Temporary compatibility surface for screens still wired to mock live-mode APIs.
+    /// Local session state — no mock dependency.
+    /// Real data comes from tRPC toggle/listBroadcasts above.
+    /// Quest-level tracking (accept, navigate, arrive) awaits backend endpoints.
+    private var currentSession: LiveModeSession?
+
+    /// Worker stats derived from real API status when available.
+    /// Returns defaults that allow live mode access — real gating happens via trust tier + backend status.
     var workerStats: LiveModeStats {
-        MockLiveModeService.shared.workerStats
+        LiveModeStats(
+            totalSessions: 0,
+            totalTimeActive: 0,
+            questsReceived: status?.totalTasks ?? 0,
+            questsAccepted: status?.totalTasks ?? 0,
+            questsCompleted: Int(Double(status?.totalTasks ?? 0) * (status?.completionRate ?? 0)),
+            totalEarnings: 0,
+            averageResponseTime: 0,
+            averageArrivalTime: 0,
+            ghostingStrikes: 0,
+            reliabilityScore: 100
+        )
     }
 
-    var maxRadiusMeters: Double {
-        MockLiveModeService.shared.maxRadiusMeters
-    }
+    /// Standard 2-mile radius
+    var maxRadiusMeters: Double { 3218 }
 
+    /// Creates a local session for tracking worker state during live mode.
     func startLiveMode(
         workerId: String,
         location: GPSCoordinates,
         categories: [LiveTaskCategory],
         maxDistance: Double = 3218
     ) -> LiveModeSession {
-        MockLiveModeService.shared.startLiveMode(
+        let session = LiveModeSession(
+            id: UUID().uuidString,
             workerId: workerId,
+            startedAt: Date(),
+            lastPingAt: Date(),
             location: location,
-            categories: categories,
+            heading: 0,
+            speed: 0,
+            isMoving: false,
+            batteryLevel: 1.0,
+            signalStrength: .excellent,
+            availableFor: categories,
             maxDistance: maxDistance
         )
+        currentSession = session
+        HXLogger.info("LiveModeService: Session started for \(workerId)", category: "LiveMode")
+        return session
     }
 
+    /// Real quests come from the listBroadcasts tRPC endpoint — no local fabrication.
     func getVisibleQuests(at location: GPSCoordinates, isLiveMode: Bool) -> [QuestAlert] {
-        MockLiveModeService.shared.getVisibleQuests(at: location, isLiveMode: isLiveMode)
+        []
     }
 
+    /// Pure data transformation: wraps a real API-created task into a QuestAlert for UI display.
     func createQuestAlert(
         task: HXTask,
         posterLocation: GPSCoordinates,
         category: LiveTaskCategory
     ) -> QuestAlert {
-        MockLiveModeService.shared.createQuestAlert(
+        QuestAlert(
+            id: UUID().uuidString,
             task: task,
+            createdAt: Date(),
+            expiresAt: Date().addingTimeInterval(300),
+            initialPayment: task.payment,
+            currentPayment: task.payment,
+            surgeMultiplier: 1.0,
+            urgencyPremium: task.payment * 0.2,
+            decisionWindowSeconds: 60,
+            priceBoosts: 0,
+            maxRadius: 3218,
             posterLocation: posterLocation,
-            category: category
+            status: .broadcasting
         )
     }
 
+    /// Clears the local session.
     func endLiveMode() {
-        MockLiveModeService.shared.endLiveMode()
+        currentSession = nil
+        HXLogger.info("LiveModeService: Local session ended", category: "LiveMode")
     }
 
+    /// Quest acceptance requires a backend quest.accept endpoint — not yet available.
     func acceptQuest(_ questId: String, workerId: String, workerLocation: GPSCoordinates) -> OnTheWaySession? {
-        MockLiveModeService.shared.acceptQuest(questId, workerId: workerId, workerLocation: workerLocation)
+        HXLogger.info("LiveModeService: Quest accept awaits backend endpoint", category: "LiveMode")
+        return nil
     }
 
+    /// Logs navigation start. Real tracking handled by GeofenceService.
     func startNavigation(trackingId: String) {
-        MockLiveModeService.shared.startNavigation(trackingId: trackingId)
+        HXLogger.info("LiveModeService: Navigation started for \(trackingId)", category: "LiveMode")
     }
 
+    /// Logs arrival. Real verification handled by GeofenceService.checkProximity().
     func markArrived(trackingId: String) {
-        MockLiveModeService.shared.markArrived(trackingId: trackingId)
+        HXLogger.info("LiveModeService: Arrival marked for \(trackingId)", category: "LiveMode")
     }
 
+    /// Updates the local session with fresh location data.
     func updateLocation(_ location: GPSCoordinates, heading: Double, speed: Double) {
-        MockLiveModeService.shared.updateLocation(location, heading: heading, speed: speed)
+        if var session = currentSession {
+            session.location = location
+            session.heading = heading
+            session.speed = speed
+            session.isMoving = speed > 0.5
+            session.lastPingAt = Date()
+            currentSession = session
+        }
     }
 
     deinit {

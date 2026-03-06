@@ -562,20 +562,10 @@ struct LicenseUploadScreen: View {
                     }
                 }
             } catch {
-                HXLogger.debug("LicenseUpload: API failed, using mock - \(error.localizedDescription)", category: "Skill")
-
-                // Fallback to mock service
+                HXLogger.error("LicenseUpload: Submission failed - \(error.localizedDescription)", category: "Skill")
                 await MainActor.run {
-                    _ = licenseService.uploadLicense(
-                        type: licenseType,
-                        licenseNumber: licenseNumber,
-                        issuingState: issuingState,
-                        documentURL: nil
-                    )
+                    isSubmitting = false
                 }
-
-                // Poll mock for status
-                pollMockStatus()
             }
         }
     }
@@ -621,26 +611,6 @@ struct LicenseUploadScreen: View {
         }
     }
 
-    private func pollMockStatus() {
-        Task {
-            while verificationStatus != .verified && verificationStatus != .rejected {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-
-                if let status = licenseService.getLicenseStatus(for: licenseType) {
-                    await MainActor.run {
-                        verificationStatus = status
-
-                        if status == .verified {
-                            isSubmitting = false
-                            showSuccess = true
-                        } else if status == .rejected {
-                            isSubmitting = false
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 // MARK: - Preview

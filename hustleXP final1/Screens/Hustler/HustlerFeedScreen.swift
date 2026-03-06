@@ -297,14 +297,9 @@ struct HustlerFeedScreen: View {
             // Fetch tasks with skill-based filtering via the discovery feed
             await loadTasksFromAPI(location: coords, skills: skillIds.isEmpty ? nil : skillIds)
         } catch {
-            HXLogger.error("HustlerFeed: Skills API failed, falling back to mock - \(error.localizedDescription)", category: "Task")
-            // Fall back to mock license filtering and standard task load
+            HXLogger.error("HustlerFeed: Skills API failed - \(error.localizedDescription)", category: "Task")
+            // Load tasks without skill filtering — skills unavailable this session
             await loadTasksFromAPI(location: coords)
-            licenseService.initializeProfile(for: appState.userId ?? "worker")
-            matchmakerResult = licenseService.filterEligibleTasks(
-                allTasks: apiTasks.isEmpty ? dataService.availableTasks : apiTasks,
-                location: coords
-            )
         }
         
         // v2.2.0: Generate batch recommendation - try real API first
