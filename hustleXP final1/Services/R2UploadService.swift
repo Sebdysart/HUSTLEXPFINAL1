@@ -72,7 +72,7 @@ private struct PresignedURLResponse: Decodable {
 final class R2UploadService: ObservableObject {
     static let shared = R2UploadService()
 
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
 
     /// Current upload progress (0.0 to 1.0). Resets at the start of each upload call.
     @Published var uploadProgress: Double = 0.0
@@ -80,7 +80,9 @@ final class R2UploadService: ObservableObject {
     /// Whether an upload is currently in progress.
     @Published var isUploading = false
 
-    private init() {}
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
+    }
 
     // MARK: - Constants
 

@@ -7,10 +7,11 @@ final class FeatureFlagService: ObservableObject {
     static let shared = FeatureFlagService()
 
     @Published private(set) var flags: [String: Bool] = [:]
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
     private let cacheKey = "feature_flags_cache"
 
-    private init() {
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
         loadCachedFlags()
     }
 
