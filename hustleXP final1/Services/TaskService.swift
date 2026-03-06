@@ -14,12 +14,14 @@ import Combine
 final class TaskService: ObservableObject {
     static let shared = TaskService()
 
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
 
     @Published var isLoading = false
     @Published var error: Error?
 
-    private init() {}
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
+    }
 
     // MARK: - Task CRUD Operations
 

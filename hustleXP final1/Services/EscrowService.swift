@@ -68,12 +68,14 @@ struct PaymentIntentResponse: Codable {
 final class EscrowService: ObservableObject {
     static let shared = EscrowService()
 
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
 
     @Published var isLoading = false
     @Published var error: Error?
 
-    private init() {}
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
+    }
 
     // MARK: - Payment Intent (Poster pays)
 

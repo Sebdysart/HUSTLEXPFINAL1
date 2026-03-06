@@ -30,14 +30,18 @@ final class AuthService: ObservableObject {
     /// Set this from the app entry point after initialization
     var appState: AppState?
 
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
 
-    private init() {
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
+
         // In demo mode, skip Firebase token restoration
         guard !Self.isDemoMode else { return }
 
         // Load saved token and attempt to restore session
-        trpc.loadAuthToken()
+        if let trpcClient = client as? TRPCClient {
+            trpcClient.loadAuthToken()
+        }
 
         if KeychainManager.shared.get(forKey: KeychainManager.Key.authToken) != nil {
             Task {
@@ -128,7 +132,7 @@ final class AuthService: ObservableObject {
             )
 
             // Step 4: Store credentials and update state
-            trpc.setAuthToken(idToken)
+            TRPCClient.shared.setAuthToken(idToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
 
@@ -203,7 +207,7 @@ final class AuthService: ObservableObject {
             let idToken = try await authResult.user.getIDToken()
 
             // Step 3: Store token
-            trpc.setAuthToken(idToken)
+            TRPCClient.shared.setAuthToken(idToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
 
             // Step 4: Load user from backend
@@ -250,7 +254,7 @@ final class AuthService: ObservableObject {
             let idToken = try await authResult.user.getIDToken()
 
             // Store token
-            trpc.setAuthToken(idToken)
+            TRPCClient.shared.setAuthToken(idToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
 
             // Try to load existing user from backend (silentFail: user may not exist yet)
@@ -331,7 +335,7 @@ final class AuthService: ObservableObject {
             let firebaseToken = try await authResult.user.getIDToken()
 
             // Store token
-            trpc.setAuthToken(firebaseToken)
+            TRPCClient.shared.setAuthToken(firebaseToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
 
             // Try to load existing user from backend (silentFail: user may not exist yet)
@@ -398,7 +402,7 @@ final class AuthService: ObservableObject {
 
         do {
             try Auth.auth().signOut()
-            trpc.clearAuthToken()
+            TRPCClient.shared.clearAuthToken()
             KeychainManager.shared.delete(forKey: KeychainManager.Key.authToken)
             KeychainManager.shared.delete(forKey: KeychainManager.Key.firebaseUid)
             KeychainManager.shared.delete(forKey: KeychainManager.Key.userId)
@@ -462,7 +466,7 @@ final class AuthService: ObservableObject {
         }
 
         let idToken = try await firebaseUser.getIDToken(forcingRefresh: true)
-        trpc.setAuthToken(idToken)
+        TRPCClient.shared.setAuthToken(idToken)
 
         HXLogger.info("Auth: Token refreshed successfully", category: "Auth")
     }
