@@ -374,6 +374,48 @@ enum TestFixtures {
     }
     """
 
+    // MARK: - Live Mode Service Fixtures
+
+    static let liveModeStatusJSON = """
+    {
+        "state": "ACTIVE",
+        "session_started_at": "2026-03-01T10:00:00Z",
+        "banned_until": null,
+        "total_tasks": 25,
+        "completion_rate": 0.92
+    }
+    """
+
+    static let liveBroadcastJSON = """
+    {
+        "id": "broadcast-1",
+        "task_id": "task-1",
+        "title": "Fix Sink Urgently",
+        "price": 50.0,
+        "location": "San Francisco, CA",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "category": "plumbing",
+        "deadline": null,
+        "created_at": "2026-03-01T10:00:00Z"
+    }
+    """
+
+    static let instantTaskJSON = """
+    {
+        "id": "instant-1",
+        "title": "Quick Delivery",
+        "description": "Pick up package from post office",
+        "price": 15.0,
+        "location": "San Francisco, CA",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "created_at": "2026-03-01T10:00:00Z",
+        "matched_at": null,
+        "waiting_seconds": 120
+    }
+    """
+
     /// Creates a modified version of a JSON fixture by replacing a key's value.
     static func modify(_ json: String, key: String, value: String) -> String {
         // Simple key-value replacement for test fixtures
