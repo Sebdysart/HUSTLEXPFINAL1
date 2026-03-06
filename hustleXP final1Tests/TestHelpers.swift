@@ -84,6 +84,27 @@ enum TestFixtures {
     }
     """
 
+    static let ratingSummaryJSON = """
+    {
+        "averageRating": 4.5,
+        "totalRatings": 12,
+        "ratingDistribution": {"1": 0, "2": 1, "3": 2, "4": 3, "5": 6}
+    }
+    """
+
+    static let userRatingJSON = """
+    {
+        "id": "rating-1",
+        "taskId": "task-1",
+        "taskTitle": "Fix Sink",
+        "fromUserId": "user-2",
+        "fromUserName": "Jane",
+        "rating": 5,
+        "review": "Great work!",
+        "createdAt": "2026-01-15T10:00:00Z"
+    }
+    """
+
     /// Creates a modified version of a JSON fixture by replacing a key's value.
     static func modify(_ json: String, key: String, value: String) -> String {
         // Simple key-value replacement for test fixtures

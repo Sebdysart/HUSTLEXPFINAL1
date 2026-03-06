@@ -35,11 +35,13 @@ struct UserRating: Codable, Identifiable {
 final class RatingService: ObservableObject {
     static let shared = RatingService()
 
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
 
     @Published var isLoading = false
 
-    private init() {}
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
+    }
 
     /// Submits a rating for a completed task
     func submitRating(
