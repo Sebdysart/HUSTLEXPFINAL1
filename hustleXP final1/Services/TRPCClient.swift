@@ -17,13 +17,30 @@ private let iso8601NoFraction: ISO8601DateFormatter = {
     return f
 }()
 
+/// tRPC procedure type – determines HTTP method
+enum ProcedureType {
+    case query    // GET  – read operations
+    case mutation // POST – write operations
+}
+
+/// Protocol enabling test injection for services that call the backend.
+/// Production code uses `TRPCClient.shared`; tests inject `MockTRPCClient`.
+protocol TRPCClientProtocol {
+    func call<Input: Encodable, Output: Decodable>(
+        router: String,
+        procedure: String,
+        type: ProcedureType,
+        input: Input
+    ) async throws -> Output
+}
+
 /// tRPC API client for communicating with the Node.js backend
 ///
 /// Handles all network communication with the Railway-deployed backend,
 /// including authentication token management, request/response serialization,
 /// and offline request queuing for resilience during network interruptions.
 @MainActor
-final class TRPCClient: ObservableObject {
+final class TRPCClient: ObservableObject, TRPCClientProtocol {
     static let shared = TRPCClient()
 
     private let baseURL: URL
@@ -80,12 +97,6 @@ final class TRPCClient: ObservableObject {
             }
         }
         networkMonitor.start(queue: monitorQueue)
-    }
-
-    /// tRPC procedure type – determines HTTP method
-    enum ProcedureType {
-        case query    // GET  – read operations
-        case mutation // POST – write operations
     }
 
     // MARK: - Generic tRPC Call
