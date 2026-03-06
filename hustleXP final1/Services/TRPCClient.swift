@@ -34,6 +34,17 @@ protocol TRPCClientProtocol {
     ) async throws -> Output
 }
 
+/// Default `type` parameter so callers can omit it (defaults to `.mutation`).
+extension TRPCClientProtocol {
+    func call<Input: Encodable, Output: Decodable>(
+        router: String,
+        procedure: String,
+        input: Input
+    ) async throws -> Output {
+        try await call(router: router, procedure: procedure, type: .mutation, input: input)
+    }
+}
+
 /// tRPC API client for communicating with the Node.js backend
 ///
 /// Handles all network communication with the Railway-deployed backend,

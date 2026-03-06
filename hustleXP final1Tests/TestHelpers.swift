@@ -77,10 +77,10 @@ enum TestFixtures {
 
     static let xpAwardJSON = """
     {
-        "xp_awarded": 50,
-        "new_total_xp": 200,
-        "bonus_xp": 10,
-        "tier_up": false
+        "xpAwarded": 50,
+        "newTotalXP": 200,
+        "bonusXP": 10,
+        "tierUp": false
     }
     """
 
