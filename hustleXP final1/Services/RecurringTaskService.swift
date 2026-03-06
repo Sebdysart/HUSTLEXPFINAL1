@@ -12,7 +12,7 @@ import Combine
 @MainActor
 final class RecurringTaskService: ObservableObject {
     static let shared = RecurringTaskService()
-    private let trpc = TRPCClient.shared
+    private let trpc: TRPCClientProtocol
 
     @Published var isLoading = false
     @Published var error: Error?
@@ -31,7 +31,9 @@ final class RecurringTaskService: ObservableObject {
         }
     }
 
-    private init() {}
+    init(client: TRPCClientProtocol = TRPCClient.shared) {
+        self.trpc = client
+    }
 
     // MARK: - Series CRUD
 

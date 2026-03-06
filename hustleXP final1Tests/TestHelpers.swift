@@ -328,6 +328,52 @@ enum TestFixtures {
     }
     """
 
+    // MARK: - Recurring Task Service Fixtures
+
+    static let recurringSeriesJSON = """
+    {
+        "id": "series-1",
+        "poster_id": "user-1",
+        "template_task_id": "task-tpl-1",
+        "pattern": "weekly",
+        "day_of_week": 1,
+        "day_of_month": null,
+        "time_of_day": "09:00",
+        "status": "active",
+        "title": "Weekly Lawn Mow",
+        "description": "Mow the front lawn",
+        "payment": 5000,
+        "location": "123 Main St",
+        "category": "yard_work",
+        "estimated_duration": "1 hour",
+        "required_tier": 1,
+        "occurrence_count": 10,
+        "completed_count": 5,
+        "preferred_worker_id": null,
+        "preferred_worker_name": null,
+        "next_occurrence": "2026-03-10T09:00:00Z",
+        "start_date": "2026-01-01T00:00:00Z",
+        "end_date": null,
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-03-01T00:00:00Z"
+    }
+    """
+
+    static let recurringOccurrenceJSON = """
+    {
+        "id": "occ-1",
+        "series_id": "series-1",
+        "task_id": "task-1",
+        "occurrence_number": 1,
+        "scheduled_date": "2026-03-10T00:00:00Z",
+        "status": "completed",
+        "worker_id": "user-2",
+        "worker_name": "Jane",
+        "completed_at": "2026-03-10T11:00:00Z",
+        "rating": 5
+    }
+    """
+
     /// Creates a modified version of a JSON fixture by replacing a key's value.
     static func modify(_ json: String, key: String, value: String) -> String {
         // Simple key-value replacement for test fixtures
