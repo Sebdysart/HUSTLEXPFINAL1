@@ -23,7 +23,7 @@ struct NotificationCenterScreen: View {
                 .ignoresSafeArea()
 
             if isLoading {
-                LoadingState(message: "Loading notifications...")
+                LoadingState(variant: .skeleton)
             } else if notifications.isEmpty {
                 emptyState
             } else {

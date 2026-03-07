@@ -67,11 +67,47 @@ struct SkeletonList: View {
     }
 }
 
+/// Skeleton row for conversation/message list loading state
+struct SkeletonConversationRow: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            SkeletonView(width: 48, height: 48, cornerRadius: 24) // avatar
+            VStack(alignment: .leading, spacing: 8) {
+                SkeletonView(width: 140, height: 16) // name
+                SkeletonView(height: 14) // preview text
+            }
+            Spacer()
+            SkeletonView(width: 40, height: 12, cornerRadius: 6) // timestamp
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal)
+    }
+}
+
+/// Skeleton row for notification list loading state
+struct SkeletonNotificationRow: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            SkeletonView(width: 36, height: 36, cornerRadius: 18) // icon circle
+            VStack(alignment: .leading, spacing: 8) {
+                SkeletonView(width: 200, height: 15) // title
+                SkeletonView(height: 13) // body
+                SkeletonView(width: 80, height: 11, cornerRadius: 5) // timestamp
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal)
+    }
+}
+
 #Preview {
     VStack(spacing: 20) {
         SkeletonView(width: 200, height: 20)
         SkeletonTaskCard()
         SkeletonList(count: 2)
+        Divider()
+        SkeletonConversationRow()
+        SkeletonNotificationRow()
     }
     .padding()
 }

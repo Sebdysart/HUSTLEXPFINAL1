@@ -22,7 +22,7 @@ struct MessagesInboxScreen: View {
                 .ignoresSafeArea()
 
             if isLoading {
-                LoadingState(message: "Loading conversations...")
+                LoadingState(variant: .skeleton)
             } else if conversations.isEmpty {
                 emptyState
             } else {
