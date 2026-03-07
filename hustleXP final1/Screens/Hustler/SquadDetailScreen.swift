@@ -22,6 +22,7 @@ struct SquadDetailScreen: View {
     @State private var isLoading = true
     @State private var showContent = false
     @State private var showLeaveConfirmation = false
+    @State private var showDisbandConfirmation = false
     @State private var showInviteSheet = false
 
     var body: some View {
@@ -77,10 +78,28 @@ struct SquadDetailScreen: View {
         .alert("Leave Squad", isPresented: $showLeaveConfirmation) {
             Button("Stay", role: .cancel) {}
             Button("Leave", role: .destructive) {
-                HXLogger.info("SquadDetail: Leave squad awaits backend endpoint", category: "Squad")
+                Task {
+                    if let squad {
+                        try? await SquadService.shared.leaveSquad(squadId: squad.id)
+                        router.navigateToHustler()
+                    }
+                }
             }
         } message: {
             Text("Are you sure you want to leave this squad? You can rejoin later if invited.")
+        }
+        .alert("Disband Squad", isPresented: $showDisbandConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Disband", role: .destructive) {
+                Task {
+                    if let squad {
+                        try? await SquadService.shared.disbandSquad(id: squad.id)
+                        router.navigateToHustler()
+                    }
+                }
+            }
+        } message: {
+            Text("Are you sure you want to disband this squad? This action cannot be undone and all members will be removed.")
         }
         .sheet(isPresented: $showInviteSheet) {
             inviteSheet
@@ -492,26 +511,30 @@ struct SquadDetailScreen: View {
                 }
             }
 
-            // Manage squad (visible to organizer)
-            if isOrganizer || true /* demo mode */ {
+            // Disband squad (organizer only)
+            if isOrganizer {
                 actionButton(
-                    title: "Manage Squad",
-                    icon: "gearshape.fill",
-                    color: .textSecondary,
-                    isDanger: false
+                    title: "Disband Squad",
+                    icon: "trash.fill",
+                    color: .errorRed,
+                    isDanger: true
                 ) {
-                    HXLogger.info("SquadDetail: Manage squad navigation pending", category: "Squad")
+                    HapticFeedback.warning()
+                    showDisbandConfirmation = true
                 }
             }
 
-            // Leave squad
-            actionButton(
-                title: "Leave Squad",
-                icon: "rectangle.portrait.and.arrow.right",
-                color: .errorRed,
-                isDanger: true
-            ) {
-                showLeaveConfirmation = true
+            // Leave squad (non-organizer members)
+            if !isOrganizer {
+                actionButton(
+                    title: "Leave Squad",
+                    icon: "rectangle.portrait.and.arrow.right",
+                    color: .errorRed,
+                    isDanger: true
+                ) {
+                    HapticFeedback.warning()
+                    showLeaveConfirmation = true
+                }
             }
         }
     }

@@ -92,6 +92,25 @@ final class SquadService: ObservableObject {
         HXLogger.info("SquadService: Disbanded squad \(id)", category: "General")
     }
 
+    func leaveSquad(squadId: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        struct LeaveInput: Codable {
+            let squadId: String
+        }
+
+        struct EmptyResponse: Codable {}
+
+        let _: EmptyResponse = try await trpc.call(
+            router: "squad",
+            procedure: "leave",
+            input: LeaveInput(squadId: squadId)
+        )
+
+        HXLogger.info("SquadService: Left squad \(squadId)", category: "Squad")
+    }
+
     // MARK: - Squad Invites
 
     func inviteMember(squadId: String, userId: String) async throws -> SquadInvite {
