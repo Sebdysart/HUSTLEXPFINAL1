@@ -16,12 +16,15 @@ struct HustlerHistoryScreen: View {
             Color.brandBlack
                 .ignoresSafeArea()
             
-            Group {
+            ScrollView {
                 if dataService.completedTasks.isEmpty {
                     emptyState
                 } else {
                     taskList
                 }
+            }
+            .refreshable {
+                await dataService.refreshAll()
             }
         }
         .navigationTitle("History")
@@ -34,21 +37,16 @@ struct HustlerHistoryScreen: View {
     // MARK: - Task List
     
     private var taskList: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                // Stats summary
-                statsSummary
+        LazyVStack(spacing: 12) {
+            // Stats summary
+            statsSummary
 
-                // Completed tasks
-                ForEach(dataService.completedTasks) { task in
-                    CompletedTaskCard(task: task)
-                }
+            // Completed tasks
+            ForEach(dataService.completedTasks) { task in
+                CompletedTaskCard(task: task)
             }
-            .padding()
         }
-        .refreshable {
-            await dataService.refreshAll()
-        }
+        .padding()
     }
     
     // MARK: - Stats Summary

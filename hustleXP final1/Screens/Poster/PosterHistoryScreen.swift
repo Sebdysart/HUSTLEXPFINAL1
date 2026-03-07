@@ -22,12 +22,12 @@ struct PosterHistoryScreen: View {
                 // Filter tabs
                 FilterTabsView(selectedFilter: $selectedFilter)
                 
-                if completedTasks.isEmpty {
-                    // Empty state
-                    EmptyHistoryView()
-                } else {
-                    // Task list
-                    ScrollView {
+                ScrollView {
+                    if completedTasks.isEmpty {
+                        // Empty state
+                        EmptyHistoryView()
+                    } else {
+                        // Task list
                         LazyVStack(spacing: 16) {
                             ForEach(filteredTasks) { task in
                                 PosterCompletedTaskCard(task: task)
@@ -35,9 +35,9 @@ struct PosterHistoryScreen: View {
                         }
                         .padding(24)
                     }
-                    .refreshable {
-                        await refreshHistory()
-                    }
+                }
+                .refreshable {
+                    await refreshHistory()
                 }
             }
         }
@@ -204,23 +204,6 @@ private struct PosterCompletedTaskCard: View {
                 Spacer()
             }
             
-            // Rating given (if completed)
-            if task.state == .completed {
-                HStack(spacing: 8) {
-                    HXText("Rating given:", style: .caption, color: .textSecondary)
-                    
-                    HStack(spacing: 2) {
-                        ForEach(0..<5, id: \.self) { index in
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 12))
-                                .foregroundStyle(index < 5 ? Color.warningOrange : Color.textTertiary)
-                        }
-                    }
-                }
-                .padding(12)
-                .background(Color.surfaceSecondary)
-                .cornerRadius(8)
-            }
         }
         .padding(20)
         .background(Color.surfaceElevated)
