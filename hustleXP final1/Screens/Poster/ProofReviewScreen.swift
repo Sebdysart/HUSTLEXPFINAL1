@@ -66,7 +66,10 @@ struct ProofReviewScreen: View {
                         rating: rating,
                         isProcessing: isProcessing,
                         onApprove: { showApproveConfirmation = true },
-                        onReject: { showRejectSheet = true }
+                        onReject: {
+                            HapticFeedback.warning()
+                            showRejectSheet = true
+                        }
                     )
                 }
             }
