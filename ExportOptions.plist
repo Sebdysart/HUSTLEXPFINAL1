@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TestFlight / App Store export options for HustleXP.
+
+  REQUIRED MANUAL STEP:
+    Replace TEAM_ID_PLACEHOLDER with the actual Apple Developer Team ID.
+    Current team ID detected from project.pbxproj: V85B8S6KA2
+    Confirm at: https://developer.apple.com/account → Membership → Team ID
+
+  See TESTFLIGHT_SETUP.md for the full setup checklist.
+-->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>TEAM_ID_PLACEHOLDER</string>
+    <key>uploadBitcode</key>
+    <false/>
+    <key>compileBitcode</key>
+    <false/>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>signingStyle</key>
+    <string>automatic</string>
+    <key>destination</key>
+    <string>upload</string>
+    <key>thinning</key>
+    <string>&lt;none&gt;</string>
+    <key>stripSwiftSymbols</key>
+    <true/>
+    <key>manageAppVersionAndBuildNumber</key>
+    <true/>
+</dict>
+</plist>

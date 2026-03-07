@@ -1,0 +1,70 @@
+name: TestFlight Upload
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+-beta*'
+  workflow_dispatch:
+    inputs:
+      build_note:
+        description: 'What to test in this build'
+        required: false
+        default: 'Internal beta build'
+
+jobs:
+  build-and-upload:
+    name: Build & Upload to TestFlight
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+
+      - name: Install xcpretty
+        run: gem install xcpretty --no-document
+
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-deriveddata-${{ hashFiles('**/*.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-deriveddata-
+
+      - name: Inject Team ID into ExportOptions.plist
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          sed -i '' "s/TEAM_ID_PLACEHOLDER/${APPLE_TEAM_ID}/" ExportOptions.plist
+
+      - name: Build & Archive
+        run: |
+          chmod +x scripts/build-testflight.sh
+          ./scripts/build-testflight.sh
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+        run: |
+          echo "$APP_STORE_CONNECT_API_KEY_CONTENT" | base64 --decode > AuthKey.p8
+          xcrun altool --upload-app \
+            --type ios \
+            --file "build/ipa/*.ipa" \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
+            --private-key-path AuthKey.p8
+          rm -f AuthKey.p8
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: HustleXP-archive
+          path: build/HustleXP.xcarchive
+          retention-days: 14
