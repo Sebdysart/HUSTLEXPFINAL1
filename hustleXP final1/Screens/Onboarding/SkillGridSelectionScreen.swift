@@ -16,9 +16,9 @@ struct SkillGridSelectionScreen: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var selectedSkills: Set<String> = []
-    @State private var expandedCategory: SkillCategory? = nil
+    @State private var expandedCategory: SkillCategory?
     @State private var showLicensePrompt: Bool = false
-    @State private var selectedLicenseType: LicenseType? = nil
+    @State private var selectedLicenseType: LicenseType?
     @State private var searchText: String = ""
     @State private var verifiedSkills: [WorkerSkillRecord] = []
     @State private var isLoadingSkills: Bool = false
@@ -415,7 +415,7 @@ struct SkillGridSelectionScreen: View {
                         .font(.system(size: 17, weight: .semibold))
                         .minimumScaleFactor(0.7)
                     
-                    if selectedSkills.count > 0 {
+                    if !selectedSkills.isEmpty {
                         Text("(\(selectedSkills.count))")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(.white.opacity(0.7))

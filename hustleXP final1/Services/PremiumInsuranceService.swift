@@ -46,7 +46,7 @@ class PremiumInsuranceService: ObservableObject {
         "100% coverage (vs 80% basic)",
         "$10,000 max claim (vs $5,000)",
         "Priority claim processing",
-        "Dedicated support line",
+        "Dedicated support line"
     ]
 
     static let premiumPriceCents = 999 // $9.99/month

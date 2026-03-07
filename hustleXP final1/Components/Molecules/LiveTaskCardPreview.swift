@@ -23,7 +23,7 @@ struct LiveTaskCardPreview: View {
     
     // Track previous values for update animation
     @State private var previousTitle: String = ""
-    @State private var previousPayment: Double? = nil
+    @State private var previousPayment: Double?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MaintenanceScreen: View {
-    var estimatedTime: String? = nil
+    var estimatedTime: String?
     
     @State private var rotationAngle: Double = 0
     

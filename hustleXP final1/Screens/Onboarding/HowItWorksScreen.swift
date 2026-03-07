@@ -30,7 +30,7 @@ struct HowItWorksScreen: View {
             title: "Get Paid",
             subtitle: "Receive instant payout when your work is approved",
             color: .moneyGreen
-        ),
+        )
     ]
 
     var body: some View {

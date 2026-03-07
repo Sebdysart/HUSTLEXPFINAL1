@@ -49,7 +49,7 @@ final class MessagingService: ObservableObject {
                 try? JSONDecoder().decode(SSENewMessagePayload.self, from: sseMessage.data)
             }
             .filter { $0.taskId == taskId }
-            .sink { [weak self] payload in
+            .sink { [weak self] _ in
                 // Fetch the full message from the API to get complete data
                 Task {
                     do {

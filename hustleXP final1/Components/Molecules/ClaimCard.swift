@@ -330,6 +330,7 @@ private struct TimelineItem: View {
                         id: "claim-001",
                         taskId: "task-001",
                         taskTitle: "Furniture delivery gone wrong",
+                        // swiftlint:disable:next line_length
                         incidentDescription: "The poster never responded after I completed the work. I delivered the furniture as requested but they ghosted me after multiple attempts to contact them.",
                         requestedAmountCents: 7500,
                         approvedAmountCents: 6000,

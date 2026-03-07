@@ -37,6 +37,7 @@ final class RecurringTaskService: ObservableObject {
 
     // MARK: - Series CRUD
 
+    // swiftlint:disable:next function_parameter_count
     func createSeries(
         title: String,
         description: String,

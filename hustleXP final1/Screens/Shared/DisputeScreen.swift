@@ -307,7 +307,7 @@ private struct PhotoAttachmentSection: View {
                 .accessibilityLabel("Add evidence photo")
                 
                 // Attached photos would appear here
-                ForEach(attachedPhotos, id: \.self) { photo in
+                ForEach(attachedPhotos, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color.surfaceSecondary)
                         .frame(width: 80, height: 80)

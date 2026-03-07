@@ -36,7 +36,7 @@ final class LiveDataService {
 
     // MARK: - Tasks (backed by real API)
     var availableTasks: [HXTask] = []
-    var activeTask: HXTask? = nil
+    var activeTask: HXTask?
     var completedTasks: [HXTask] = []
     var postedTasks: [HXTask] = []
 
@@ -216,7 +216,7 @@ final class LiveDataService {
                         activeTask = nil
                     }
                 case .cancelled:
-                    let _ = try await taskService.cancelTask(taskId: taskId, reason: nil)
+                    _ = try await taskService.cancelTask(taskId: taskId, reason: nil)
                     if activeTask?.id == taskId {
                         activeTask = nil
                     }

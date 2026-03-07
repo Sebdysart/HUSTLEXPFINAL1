@@ -258,7 +258,7 @@ struct SquadTierGate {
                 title: "30+ Days Active",
                 description: "Be active for at least 30 days",
                 color: .infoBlue
-            ),
+            )
         ]
     }
 }

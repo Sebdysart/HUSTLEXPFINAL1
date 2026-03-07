@@ -260,7 +260,7 @@ private struct ClaimsFilterChip: View {
                 Text(title)
                     .font(.subheadline.weight(.medium))
                 
-                if count > 0 {
+                if !isEmpty {
                     Text("\(count)")
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 6)

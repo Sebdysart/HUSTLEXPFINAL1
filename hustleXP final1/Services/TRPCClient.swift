@@ -303,7 +303,7 @@ final class TRPCClient: ObservableObject, TRPCClientProtocol {
             .cannotConnectToHost,      // TCP handshake failed — request never sent
             .dnsLookupFailed,          // DNS failed — request never sent
             .dataNotAllowed,           // Cellular data disabled — request never sent
-            .internationalRoamingOff,  // Roaming disabled — request never sent
+            .internationalRoamingOff  // Roaming disabled — request never sent
         ]
         return offlineCodes.contains(error.code)
     }
@@ -417,6 +417,7 @@ final class TRPCClient: ObservableObject, TRPCClientProtocol {
                             offlineQueue[idx].retryCount += 1
                         }
                         if queued.retryCount + 1 >= QueuedRequest.maxServerRetries {
+                            // swiftlint:disable:next line_length
                             HXLogger.error("tRPC: Offline request \(path) exceeded max server retries (\(QueuedRequest.maxServerRetries)) after 5xx — dropping to prevent double execution", category: "Network")
                             processedIDs.insert(queued.id)
                         } else {

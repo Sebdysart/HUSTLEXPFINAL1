@@ -239,7 +239,7 @@ struct HustlerFeedScreen: View {
                 heatZones: apiHeatZones ?? [],
                 tasks: filteredTasks,
                 userLocation: currentLocation,
-                onZoneTapped: { zone in
+                onZoneTapped: { _ in
                     // Could show zone details
                 },
                 onTaskTapped: { task in

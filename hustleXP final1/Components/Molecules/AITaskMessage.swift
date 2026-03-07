@@ -92,7 +92,7 @@ struct TypingIndicator: View {
     }
     
     private func startAnimation() {
-        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { timer in
+        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { _ in
             withAnimation(.easeInOut(duration: 0.2)) {
                 animatingDot = (animatingDot + 1) % 3
             }
@@ -265,6 +265,7 @@ struct UserBubbleShape: Shape {
             )
             
             AITaskMessage(
+                // swiftlint:disable:next line_length
                 message: "Got it! Grocery pickup and delivery.\n\nA few quick questions to finalize:\n• How much are you looking to pay for this?\n• When do you need this done?\n• Approximately how many items/bags?",
                 isBold: false
             )

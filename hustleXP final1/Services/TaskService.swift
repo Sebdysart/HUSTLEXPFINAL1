@@ -467,6 +467,7 @@ final class TaskDiscoveryService: ObservableObject {
         limit: Int = 50,
         filters: FeedFilterParams? = nil
     ) async throws -> TaskFeedResponse {
+        // swiftlint:disable identifier_name
         struct FeedFiltersInput: Codable {
             let category: String?
             let min_price: Int?
@@ -474,6 +475,7 @@ final class TaskDiscoveryService: ObservableObject {
             let max_distance_miles: Double?
             let sort_by: String?
         }
+        // swiftlint:enable identifier_name
 
         struct FeedInput: Codable {
             let latitude: Double
@@ -484,13 +486,13 @@ final class TaskDiscoveryService: ObservableObject {
             let filters: FeedFiltersInput?
         }
 
-        let filtersInput: FeedFiltersInput? = filters.map { f in
+        let filtersInput: FeedFiltersInput? = filters.map { filterParams in
             FeedFiltersInput(
-                category: f.category?.rawValue,
-                min_price: f.minPriceCents,
-                max_price: f.maxPriceCents,
-                max_distance_miles: f.maxDistanceMiles,
-                sort_by: f.sortBy?.rawValue
+                category: filterParams.category?.rawValue,
+                min_price: filterParams.minPriceCents,
+                max_price: filterParams.maxPriceCents,
+                max_distance_miles: filterParams.maxDistanceMiles,
+                sort_by: filterParams.sortBy?.rawValue
             )
         }
 
@@ -729,11 +731,11 @@ enum FeedSortOption: String, CaseIterable, Identifiable {
 }
 
 struct FeedFilterParams {
-    var category: TaskCategory? = nil
-    var minPriceCents: Int? = nil   // USD cents
-    var maxPriceCents: Int? = nil   // USD cents
-    var maxDistanceMiles: Double? = nil
-    var sortBy: FeedSortOption? = nil
+    var category: TaskCategory?
+    var minPriceCents: Int?   // USD cents
+    var maxPriceCents: Int?   // USD cents
+    var maxDistanceMiles: Double?
+    var sortBy: FeedSortOption?
 
     var isActive: Bool {
         category != nil || minPriceCents != nil || maxPriceCents != nil

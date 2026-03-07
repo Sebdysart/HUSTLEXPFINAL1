@@ -168,13 +168,13 @@ struct TaskInProgressScreen: View {
         geofence = GeofenceService.shared.registerGeofence(for: task)
 
         // Set up geofence callbacks
-        GeofenceService.shared.onGeofenceEntered = { region in
+        GeofenceService.shared.onGeofenceEntered = { _ in
             withAnimation(.spring(response: 0.3)) {
                 isInsideGeofence = true
             }
         }
 
-        GeofenceService.shared.onDwellingDetected = { region in
+        GeofenceService.shared.onDwellingDetected = { _ in
             // Auto-trigger Smart Start
             if GeofenceService.shared.smartStartEnabled && currentStatus == .enRoute {
                 handleSmartStart(task)

@@ -12,7 +12,7 @@ struct TaskMapView: View {
     let userLocation: GPSCoordinates?
     let walkingETA: WalkingETA?
     var showRoute: Bool = true
-    var onOpenMaps: (() -> Void)? = nil
+    var onOpenMaps: (() -> Void)?
     var isCompact: Bool = false
     
     var body: some View {

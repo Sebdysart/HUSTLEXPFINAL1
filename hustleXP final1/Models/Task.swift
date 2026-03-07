@@ -70,8 +70,8 @@ struct HXTask: Identifiable, Codable {
 
     // v1.8.0 additions
     var aiSuggestedPrice: Bool = false
-    var paymentMethod: PaymentMethod? = nil
-    var category: TaskCategory? = nil
+    var paymentMethod: PaymentMethod?
+    var category: TaskCategory?
     var hasActiveClaim: Bool = false
 
     var badgeStatus: HXBadgeVariant.StatusType {
@@ -93,9 +93,11 @@ struct HXTask: Identifiable, Codable {
         case claimedAt, completedAt, aiSuggestedPrice, paymentMethod
         case category, hasActiveClaim
         // Backend snake_case aliases (decode-only)
+        // swiftlint:disable identifier_name
         case poster_id, worker_id, worker_name, poster_name, poster_rating
         case created_at, accepted_at, completed_at, estimated_duration
         case required_tier, price, has_active_claim
+        // swiftlint:enable identifier_name
     }
 
     func encode(to encoder: Encoder) throws {
@@ -248,6 +250,7 @@ struct TaskApplicant: Identifiable, Codable {
 
     private enum CodingKeys: String, CodingKey {
         case id, userId, name, rating, completedTasks, tier, appliedAt, message
+        // swiftlint:disable:next identifier_name
         case user_id, completed_tasks, applied_at
     }
 

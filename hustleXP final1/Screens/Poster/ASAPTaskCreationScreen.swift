@@ -69,7 +69,7 @@ struct ASAPTaskCreationScreen: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             ZStack {
                 // Background
                 backgroundLayer

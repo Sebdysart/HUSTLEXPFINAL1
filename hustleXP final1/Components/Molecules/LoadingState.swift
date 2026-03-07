@@ -199,7 +199,7 @@ struct SkeletonRow: View {
     }
     
     private var shimmerOverlay: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             Rectangle()
                 .fill(
                     LinearGradient(

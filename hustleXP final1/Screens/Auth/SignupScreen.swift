@@ -638,7 +638,7 @@ struct AuthTextField: View {
     let label: String
     @Binding var text: String
     let error: String?
-    var contentType: UITextContentType? = nil
+    var contentType: UITextContentType?
     var keyboardType: UIKeyboardType = .default
     
     var body: some View {
@@ -691,6 +691,7 @@ struct AuthSecureField: View {
 // MARK: - Brand Text Field Style
 
 private struct BrandTextFieldStyle: TextFieldStyle {
+    // swiftlint:disable:next identifier_name
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
             .padding(14)

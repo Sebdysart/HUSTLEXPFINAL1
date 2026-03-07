@@ -55,7 +55,7 @@ final class RealtimeSSEClient: ObservableObject {
             sseSession = URLSession(configuration: config)
         }
 
-        task = sseSession?.dataTask(with: request) { [weak self] data, response, error in
+        task = sseSession?.dataTask(with: request) { [weak self] data, _, error in
             guard let self = self else { return }
 
             Task { @MainActor in

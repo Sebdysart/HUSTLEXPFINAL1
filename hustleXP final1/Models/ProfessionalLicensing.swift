@@ -414,7 +414,7 @@ struct SkillCatalog {
             ("Standing/Watching", "eye"),
             ("Basic Errands", "figure.walk"),
             ("Ticket Pickup", "ticket"),
-            ("Package Receiving", "shippingbox"),
+            ("Package Receiving", "shippingbox")
         ]
         skills += generalLabor.enumerated().map { idx, skill in
             WorkerSkill(
@@ -432,6 +432,7 @@ struct SkillCatalog {
         }
         
         // MARK: Moving & Lifting (Experience-Based)
+        // swiftlint:disable:next large_tuple
         let moving: [(String, String, Int, Int)] = [
             ("Light Lifting (<25 lbs)", "cube", 1, 0),
             ("Medium Lifting (25-50 lbs)", "cube.fill", 2, 5),
@@ -440,7 +441,7 @@ struct SkillCatalog {
             ("Appliance Moving", "refrigerator.fill", 4, 20),
             ("Piano Moving", "pianokeys", 5, 30),
             ("Loading/Unloading", "truck.box", 2, 5),
-            ("Packing", "archivebox.fill", 1, 3),
+            ("Packing", "archivebox.fill", 1, 3)
         ]
         skills += moving.enumerated().map { idx, skill in
             WorkerSkill(
@@ -465,7 +466,7 @@ struct SkillCatalog {
             ("Grocery Shopping", "cart.fill", 1),
             ("Pharmacy Pickup", "cross.case.fill", 1),
             ("Restaurant Pickup", "takeoutbag.and.cup.and.straw.fill", 1),
-            ("Large Item Delivery", "truck.box.fill", 3),
+            ("Large Item Delivery", "truck.box.fill", 3)
         ]
         skills += delivery.enumerated().map { idx, skill in
             WorkerSkill(
@@ -490,7 +491,7 @@ struct SkillCatalog {
             ("Window Cleaning", "window.vertical.closed", 2),
             ("Carpet Cleaning", "rectangle.split.1x2.fill", 3),
             ("Pressure Washing", "drop.triangle.fill", 3),
-            ("Junk Removal", "trash.fill", 2),
+            ("Junk Removal", "trash.fill", 2)
         ]
         skills += cleaning.enumerated().map { idx, skill in
             WorkerSkill(
@@ -517,7 +518,7 @@ struct SkillCatalog {
             ("Landscaping", "mountain.2.fill", 4),
             ("Snow Shoveling", "snowflake", 1),
             ("Gutter Cleaning", "drop.fill", 2),
-            ("Pool Maintenance", "figure.pool.swim", 3),
+            ("Pool Maintenance", "figure.pool.swim", 3)
         ]
         skills += yard.enumerated().map { idx, skill in
             WorkerSkill(
@@ -540,7 +541,7 @@ struct SkillCatalog {
             ("Pet Sitting", "house.fill", 2),
             ("Pet Feeding", "fork.knife", 1),
             ("Pet Grooming", "scissors", 3),
-            ("Pet Transport", "car.fill", 2),
+            ("Pet Transport", "car.fill", 2)
         ]
         skills += petCare.enumerated().map { idx, skill in
             WorkerSkill(
@@ -565,7 +566,7 @@ struct SkillCatalog {
             ("TV Mounting", "tv.fill", 2),
             ("Smart Home Setup", "homekit", 3),
             ("Data Backup", "externaldrive.fill", 2),
-            ("Virus Removal", "ladybug.fill", 3),
+            ("Virus Removal", "ladybug.fill", 3)
         ]
         skills += tech.enumerated().map { idx, skill in
             WorkerSkill(
@@ -589,7 +590,7 @@ struct SkillCatalog {
             ("Furniture Assembly", "screwdriver.fill", 2),
             ("Tent Setup", "tent.fill", 2),
             ("AV Equipment Setup", "speaker.wave.3.fill", 3),
-            ("Stage Setup", "rectangle.3.group.fill", 4),
+            ("Stage Setup", "rectangle.3.group.fill", 4)
         ]
         skills += events.enumerated().map { idx, skill in
             WorkerSkill(
@@ -615,7 +616,7 @@ struct SkillCatalog {
             ("Pest Control", "ant.fill", .pestControl),
             ("Locksmith", "key.fill", .locksmith),
             ("Notary Services", "signature", .notary),
-            ("Security Services", "shield.fill", .securityGuard),
+            ("Security Services", "shield.fill", .securityGuard)
         ]
         skills += trades.enumerated().map { idx, skill in
             WorkerSkill(
@@ -633,12 +634,13 @@ struct SkillCatalog {
         }
         
         // MARK: Automotive (Mixed)
+        // swiftlint:disable:next large_tuple
         let automotive: [(String, String, Int, LicenseType?)] = [
             ("Jump Start", "bolt.car.fill", 1, nil),
             ("Tire Change", "circle.fill", 2, nil),
             ("Car Wash", "drop.fill", 1, nil),
             ("Interior Detailing", "car.fill", 2, nil),
-            ("Commercial Driving", "truck.box.fill", 1, .cdl),
+            ("Commercial Driving", "truck.box.fill", 1, .cdl)
         ]
         skills += automotive.enumerated().map { idx, skill in
             WorkerSkill(
@@ -656,13 +658,14 @@ struct SkillCatalog {
         }
         
         // MARK: Personal Services (Mixed)
+        // swiftlint:disable:next large_tuple
         let personal: [(String, String, Int, LicenseType?)] = [
             ("Companionship", "person.2.fill", 1, nil),
             ("Senior Assistance", "figure.stand.line.dotted.figure.stand", 2, nil),
             ("Personal Training", "figure.strengthtraining.traditional", 1, .personalTrainer),
             ("Massage", "hand.raised.fill", 1, .massage),
             ("Hair Styling", "scissors", 1, .cosmetology),
-            ("CPR/First Aid", "cross.fill", 1, .cpr),
+            ("CPR/First Aid", "cross.fill", 1, .cpr)
         ]
         skills += personal.enumerated().map { idx, skill in
             WorkerSkill(

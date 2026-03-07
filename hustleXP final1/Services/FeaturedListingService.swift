@@ -47,7 +47,7 @@ class FeaturedListingService: ObservableObject {
     static let options: [FeatureOption] = [
         FeatureOption(type: "promoted", label: "Promote", description: "Appear at top of feed for 24 hours", priceCents: 299, durationHours: 24, icon: "arrow.up.circle.fill"),
         FeatureOption(type: "highlighted", label: "Highlight", description: "Gold border + badge for 48 hours", priceCents: 499, durationHours: 48, icon: "star.circle.fill"),
-        FeatureOption(type: "urgent_boost", label: "Urgent Boost", description: "Push notification to nearby hustlers", priceCents: 799, durationHours: 12, icon: "bolt.circle.fill"),
+        FeatureOption(type: "urgent_boost", label: "Urgent Boost", description: "Push notification to nearby hustlers", priceCents: 799, durationHours: 12, icon: "bolt.circle.fill")
     ]
 
     /// Creates a featured listing and returns a Stripe clientSecret for payment.

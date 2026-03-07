@@ -18,7 +18,7 @@ import StripePaymentSheet
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         // Initialize Firebase
         FirebaseApp.configure()
@@ -60,6 +60,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 // MARK: - Main App
 
 @main
+// swiftlint:disable:next type_name
 struct hustleXP_final1App: App {
     // Register app delegate for Firebase setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate

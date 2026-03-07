@@ -5,8 +5,8 @@ struct EmptyStateView: View {
     let icon: String
     let title: String
     let message: String
-    var ctaLabel: String? = nil
-    var ctaAction: (() -> Void)? = nil
+    var ctaLabel: String?
+    var ctaAction: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 16) {

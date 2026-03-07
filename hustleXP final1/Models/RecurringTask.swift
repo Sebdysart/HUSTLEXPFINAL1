@@ -237,7 +237,7 @@ struct RecurringTaskTierGate {
                 title: "7+ Days Active",
                 description: "Be active for at least 7 days",
                 color: .warningOrange
-            ),
+            )
         ]
     }
 }
@@ -295,6 +295,6 @@ struct RecurringCategory: Identifiable {
             color: .textMuted,
             suggestedPattern: .weekly,
             examples: ["Bins to curb", "Sort recycling"]
-        ),
+        )
     ]
 }

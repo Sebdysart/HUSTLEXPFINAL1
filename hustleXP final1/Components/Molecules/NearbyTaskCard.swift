@@ -9,8 +9,8 @@ import SwiftUI
 
 struct NearbyTaskCard: View {
     let recommendation: BatchRecommendation
-    var onAccept: (() -> Void)? = nil
-    var onDismiss: (() -> Void)? = nil
+    var onAccept: (() -> Void)?
+    var onDismiss: (() -> Void)?
     var isCompact: Bool = false
     
     @State private var isExpanded: Bool = false

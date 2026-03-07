@@ -98,10 +98,12 @@ class DailyChallengeService: ObservableObject {
     }
 
     static func defaultChallenges() -> [DailyChallenge] {
+        // swiftlint:disable line_length
         [
             DailyChallenge(id: "dc1", title: "Complete a Task", description: "Finish any task today", challengeType: "complete_task", targetValue: 1, currentProgress: 0, xpReward: 10, completed: false, icon: "checkmark.circle.fill"),
             DailyChallenge(id: "dc2", title: "Speed Run", description: "Complete a task in under 30 minutes", challengeType: "fast_completion", targetValue: 1, currentProgress: 0, xpReward: 15, completed: false, icon: "bolt.fill"),
-            DailyChallenge(id: "dc3", title: "Keep the Streak", description: "Maintain your daily streak", challengeType: "streak_maintain", targetValue: 1, currentProgress: 0, xpReward: 5, completed: false, icon: "flame.fill"),
+            DailyChallenge(id: "dc3", title: "Keep the Streak", description: "Maintain your daily streak", challengeType: "streak_maintain", targetValue: 1, currentProgress: 0, xpReward: 5, completed: false, icon: "flame.fill")
         ]
+        // swiftlint:enable line_length
     }
 }

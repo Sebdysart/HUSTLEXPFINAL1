@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Animated skeleton loading placeholder
 struct SkeletonView: View {
-    var width: CGFloat? = nil
+    var width: CGFloat?
     var height: CGFloat = 16
     var cornerRadius: CGFloat = 8
 
@@ -15,7 +15,7 @@ struct SkeletonView: View {
                     gradient: Gradient(colors: [
                         Color.surfaceSecondary,
                         Color.surfaceElevated,
-                        Color.surfaceSecondary,
+                        Color.surfaceSecondary
                     ]),
                     startPoint: isAnimating ? .trailing : .leading,
                     endPoint: isAnimating ? .leading : .trailing

@@ -13,7 +13,7 @@ struct PaymentConfirmationSheet: View {
     let description: String
     let priceCents: Int
     let icon: String
-    var interval: String? = nil // e.g. "month", "year" — nil for one-time
+    var interval: String? // e.g. "month", "year" — nil for one-time
     let onConfirm: () async -> Void
     let onDismiss: () -> Void
 

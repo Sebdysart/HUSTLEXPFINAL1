@@ -206,7 +206,7 @@ struct ShareTaskButton: View {
 /// Wraps UIActivityViewController for SwiftUI presentation.
 private struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
-    var excludedActivityTypes: [UIActivity.ActivityType]? = nil
+    var excludedActivityTypes: [UIActivity.ActivityType]?
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let controller = UIActivityViewController(

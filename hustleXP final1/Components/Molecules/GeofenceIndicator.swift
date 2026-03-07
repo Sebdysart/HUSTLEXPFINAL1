@@ -11,7 +11,7 @@ struct GeofenceIndicator: View {
     let geofence: GeofenceRegion
     let currentDistance: Double?  // meters from center
     let isInside: Bool
-    var onSmartStartTriggered: (() -> Void)? = nil
+    var onSmartStartTriggered: (() -> Void)?
     var isCompact: Bool = false
     
     @State private var pulseAnimation: Bool = false

@@ -11,8 +11,8 @@ struct HeatMapView: View {
     let heatZones: [HeatZone]
     let tasks: [HXTask]
     let userLocation: GPSCoordinates?
-    var onZoneTapped: ((HeatZone) -> Void)? = nil
-    var onTaskTapped: ((HXTask) -> Void)? = nil
+    var onZoneTapped: ((HeatZone) -> Void)?
+    var onTaskTapped: ((HXTask) -> Void)?
     var isCompact: Bool = false
     
     @State private var selectedZone: HeatZone?

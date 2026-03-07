@@ -253,7 +253,6 @@ final class LicenseVerificationService {
         )
     }
 
-
     // MARK: - Status Helpers
 
     func hasVerifiedLicense(for tradeType: String) -> Bool {

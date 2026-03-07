@@ -75,7 +75,10 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
         isCapturing = false
         locationManager.stopUpdatingLocation()
 
-        HXLogger.debug("[RealLocation] Captured: (\(String(format: "%.4f", result.coordinates.latitude)), \(String(format: "%.4f", result.coordinates.longitude))) (+-\(String(format: "%.1f", result.accuracy))m)", category: "General")
+        let lat = String(format: "%.4f", result.coordinates.latitude)
+        let lon = String(format: "%.4f", result.coordinates.longitude)
+        let acc = String(format: "%.1f", result.accuracy)
+        HXLogger.debug("[RealLocation] Captured: (\(lat), \(lon)) (+-\(acc)m)", category: "General")
 
         return result
     }

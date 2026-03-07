@@ -14,7 +14,7 @@ struct TipSheet: View {
     let onTip: (Int) -> Void
     let onDismiss: () -> Void
 
-    @State private var selectedAmount: Int? = nil
+    @State private var selectedAmount: Int?
     @State private var customAmount: String = ""
     @State private var isProcessing = false
 

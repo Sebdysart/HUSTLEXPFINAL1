@@ -21,10 +21,10 @@ struct LicenseUploadScreen: View {
     @State private var licenseNumber: String = ""
     @State private var issuingState: String = ""
     @State private var hasUploadedDocument: Bool = false
-    @State private var selectedPhotoItem: PhotosPickerItem? = nil
-    @State private var capturedImage: UIImage? = nil
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var capturedImage: UIImage?
     @State private var isSubmitting: Bool = false
-    @State private var verificationStatus: LicenseVerificationStatus? = nil
+    @State private var verificationStatus: LicenseVerificationStatus?
     @State private var showStateSelector: Bool = false
     @State private var showSuccess: Bool = false
     
