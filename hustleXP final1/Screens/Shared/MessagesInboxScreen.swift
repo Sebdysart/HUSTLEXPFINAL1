@@ -54,32 +54,11 @@ struct MessagesInboxScreen: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            ZStack {
-                Circle()
-                    .fill(Color.brandPurple.opacity(0.1))
-                    .frame(width: 100, height: 100)
-
-                Image(systemName: "bubble.left.and.bubble.right")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color.textSecondary)
-            }
-
-            VStack(spacing: 8) {
-                HXText("No conversations yet", style: .title3)
-                HXText(
-                    "When you accept or post a task, you'll be able to message the other party here.",
-                    style: .subheadline,
-                    color: .textSecondary,
-                    alignment: .center
-                )
-            }
-            .padding(.horizontal, 32)
-
-            Spacer()
-        }
+        EmptyStateView(
+            icon: "bubble.left.and.bubble.right",
+            title: "No Conversations Yet",
+            message: "When you accept or post a task, you'll be able to message the other party here."
+        )
     }
 
     private var conversationList: some View {

@@ -134,56 +134,13 @@ struct RecurringTasksScreen: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 24) {
-            Spacer().frame(height: 40)
-
-            ZStack {
-                Circle()
-                    .fill(Color.recurringBlue.opacity(0.15))
-                    .frame(width: 100, height: 100)
-
-                Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                    .font(.system(size: 44))
-                    .foregroundStyle(Color.recurringBlue)
-            }
-
-            VStack(spacing: 8) {
-                Text(viewModel.selectedFilter == .active ? "No Active Recurring Tasks" : "No Recurring Tasks")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .minimumScaleFactor(0.7)
-                    .foregroundStyle(Color.textPrimary)
-
-                Text("Schedule tasks that repeat automatically.\nPerfect for lawn care, cleaning, dog walking, and more.")
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-            .padding(.horizontal, 24)
-
-            // Suggested categories
-            VStack(alignment: .leading, spacing: 12) {
-                Text("POPULAR FOR RECURRING")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.textMuted)
-                    .tracking(1)
-                    .padding(.horizontal, 4)
-
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(RecurringCategory.suggested.prefix(4)) { cat in
-                        suggestedCategoryCard(cat)
-                    }
-                }
-            }
-            .padding(.horizontal, 24)
-
-            HXButton("Create Recurring Task", icon: "plus.circle.fill", variant: .primary) {
-                viewModel.showCreateSheet = true
-            }
-            .padding(.horizontal, 24)
-
-            Spacer()
-        }
+        EmptyStateView(
+            icon: "arrow.trianglehead.2.clockwise.rotate.90",
+            title: viewModel.selectedFilter == .active ? "No Active Recurring Tasks" : "No Recurring Tasks",
+            message: "Schedule tasks that repeat automatically. Perfect for lawn care, cleaning, and more.",
+            ctaLabel: "Create Recurring Task",
+            ctaAction: { viewModel.showCreateSheet = true }
+        )
     }
 
     private func suggestedCategoryCard(_ cat: RecurringCategory) -> some View {

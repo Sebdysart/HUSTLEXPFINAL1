@@ -69,19 +69,13 @@ struct HustlerHistoryScreen: View {
     // MARK: - Empty State
     
     private var emptyState: some View {
-        VStack {
-            Spacer()
-            EmptyState(
-                icon: "clock.arrow.circlepath",
-                title: "No Completed Tasks Yet",
-                message: "Your completed tasks will appear here",
-                actionTitle: "Browse Tasks"
-            ) {
-                // Navigate to feed - would need tab switching
-            }
-            .accessibilityLabel("No completed tasks yet, browse tasks to get started")
-            Spacer()
-        }
+        EmptyStateView(
+            icon: "clock.arrow.circlepath",
+            title: "No Completed Tasks Yet",
+            message: "Your completed tasks will appear here.",
+            ctaLabel: "Browse Tasks",
+            ctaAction: { router.navigateToHustler() }
+        )
     }
 }
 

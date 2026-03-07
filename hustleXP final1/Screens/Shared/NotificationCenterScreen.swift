@@ -55,32 +55,11 @@ struct NotificationCenterScreen: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            ZStack {
-                Circle()
-                    .fill(Color.brandPurple.opacity(0.1))
-                    .frame(width: 100, height: 100)
-
-                Image(systemName: "bell.slash")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color.textSecondary)
-            }
-
-            VStack(spacing: 8) {
-                HXText("No notifications", style: .title3)
-                HXText(
-                    "You're all caught up. Notifications about tasks, payments, and messages will appear here.",
-                    style: .subheadline,
-                    color: .textSecondary,
-                    alignment: .center
-                )
-            }
-            .padding(.horizontal, 32)
-
-            Spacer()
-        }
+        EmptyStateView(
+            icon: "bell.slash",
+            title: "No Notifications",
+            message: "You're all caught up. Notifications about tasks, payments, and messages will appear here."
+        )
     }
 
     private var notificationList: some View {

@@ -523,38 +523,16 @@ struct HustlerFeedScreen: View {
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            ZStack {
-                Circle()
-                    .fill(Color.brandPurple.opacity(0.1))
-                    .frame(width: 100, height: 100)
-                
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 40, weight: .medium))
-                    .foregroundStyle(Color.textMuted)
-            }
-            
-            VStack(spacing: 8) {
-                Text("No tasks found")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                
-                Text("Try adjusting your filters or check back later")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            
-            HXButton("Clear Filters", variant: .secondary, size: .medium, isFullWidth: false) {
+        EmptyStateView(
+            icon: "magnifyingglass",
+            title: "No Tasks Found",
+            message: "Try adjusting your filters or check back later.",
+            ctaLabel: "Clear Filters",
+            ctaAction: {
                 selectedFilter = .all
                 searchText = ""
             }
-            
-            Spacer()
-        }
-        .padding(24)
+        )
     }
     
     private var taskList: some View {
