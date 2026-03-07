@@ -61,6 +61,7 @@ enum HustlerRoute: Hashable {
     case batchDetails(batchId: String)
     // v2.0.0 LIVE Mode routes
     case liveRadar
+    case liveBroadcasts
     case onTheWayTracking(trackingId: String)
     // v2.1.0 Professional Licensing routes
     case skillSelection

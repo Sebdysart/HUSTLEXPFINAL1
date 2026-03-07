@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseCore
+import FirebaseAuth
 import FirebaseCrashlytics
 import FirebaseMessaging
 import GoogleSignIn
@@ -76,6 +77,25 @@ struct hustleXP_final1App: App {
     @State private var isInitialized = false
     @State private var showSplash = true
 
+    // MARK: - SSE Lifecycle
+
+    /// Obtains a fresh Firebase ID token and connects the SSE stream.
+    /// Silently no-ops if Firebase has no current user (demo mode / token not yet ready).
+    @MainActor
+    private func connectSSEIfAuthenticated(authService: AuthService) async {
+        guard let firebaseUser = FirebaseAuth.Auth.auth().currentUser else {
+            HXLogger.info("SSE: No Firebase user — skipping SSE connect", category: "Network")
+            return
+        }
+        do {
+            let token = try await firebaseUser.getIDToken()
+            RealtimeSSEClient.shared.connect(authToken: token)
+            HXLogger.info("SSE: Connected after authentication", category: "Network")
+        } catch {
+            HXLogger.error("SSE: Failed to get ID token for SSE connect — \(error.localizedDescription)", category: "Network")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -142,6 +162,16 @@ struct hustleXP_final1App: App {
                 GIDSignIn.sharedInstance.handle(url)
             }
             .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
+                // Wire SSE lifecycle to authentication state
+                if isAuthenticated {
+                    Task {
+                        await connectSSEIfAuthenticated(authService: authService)
+                    }
+                } else {
+                    RealtimeSSEClient.shared.disconnect()
+                    HXLogger.info("SSE: Disconnected on logout", category: "Network")
+                }
+
                 // Consume any pending deep link that arrived before authentication
                 if isAuthenticated,
                    let destination = deepLinkManager.consumePendingDeepLink() {
@@ -149,6 +179,12 @@ struct hustleXP_final1App: App {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         router.navigate(to: destination, appState: appState)
                     }
+                }
+            }
+            .task {
+                // Connect SSE on launch if a session was already restored
+                if authService.isAuthenticated {
+                    await connectSSEIfAuthenticated(authService: authService)
                 }
             }
         }

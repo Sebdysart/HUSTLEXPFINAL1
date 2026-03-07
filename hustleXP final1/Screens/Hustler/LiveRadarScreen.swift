@@ -90,7 +90,14 @@ struct LiveRadarScreen: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button(action: { router.navigateToHustler(.liveBroadcasts) }) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.brandPurple)
+                }
+                .accessibilityLabel("View live broadcasts list")
+
                 Button(action: { showCategoryPicker = true }) {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                         .font(.system(size: 20))

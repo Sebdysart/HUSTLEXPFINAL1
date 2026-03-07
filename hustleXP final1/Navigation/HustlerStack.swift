@@ -51,6 +51,8 @@ struct HustlerStack: View {
                     // v2.0.0 LIVE Mode routes
                     case .liveRadar:
                         LiveRadarScreen()
+                    case .liveBroadcasts:
+                        LiveBroadcastsScreen()
                     case .onTheWayTracking(let trackingId):
                         OnTheWayTrackingScreen(trackingId: trackingId)
                     // v2.1.0 Professional Licensing routes
