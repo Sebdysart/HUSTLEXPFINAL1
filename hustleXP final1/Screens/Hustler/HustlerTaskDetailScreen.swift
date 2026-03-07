@@ -22,7 +22,7 @@ struct HustlerTaskDetailScreen: View {
     @State private var showContent = false
     @State private var isAccepting = false
     @State private var apiTask: HXTask?
-    @State private var loadError: Error?
+    @State private var loadError: AppError?
     @State private var acceptError: String?
     @State private var showAcceptError: Bool = false
     @State private var showRatingSheet = false
@@ -802,57 +802,17 @@ struct HustlerTaskDetailScreen: View {
         ZStack {
             Color.brandBlack.ignoresSafeArea()
             
-            if loadError != nil {
-                // v2.5.0: Show error state with retry option
-                VStack(spacing: 24) {
-                    ErrorState(
-                        icon: "exclamationmark.triangle.fill",
-                        title: "Couldn't Load Task",
-                        message: "There was a problem loading this task. Please check your connection and try again.",
-                        retryAction: {
-                            Task {
-                                loadError = nil
-                                await loadTaskFromAPI()
-                            }
-                        }
-                    )
-                    
-                    // Show fallback option if mock data available
-                    if dataService.availableTasks.first(where: { $0.id == taskId }) != nil {
-                        VStack(spacing: 12) {
-                            HXDivider()
-                                .padding(.horizontal, 40)
-                            
-                            Button(action: {
-                                withAnimation {
-                                    loadError = nil
-                                    // Use mock data fallback
-                                }
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "arrow.clockwise")
-                                        .font(.system(size: 14))
-                                    Text("Show Cached Version")
-                                        .font(.subheadline.weight(.medium))
-                                }
-                                .foregroundStyle(Color.brandPurple)
-                            }
-                            
-                            HXText(
-                                "Data may be outdated",
-                                style: .caption,
-                                color: .textMuted
-                            )
-                        }
-                    }
-                }
-                .padding(24)
+            if let error = loadError {
+                ErrorStateView(error: error, onRetry: {
+                    loadError = nil
+                    Task { await loadTaskFromAPI() }
+                })
             } else {
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.2)
                         .tint(Color.brandPurple)
-                    
+
                     Text("Loading task...")
                         .font(.subheadline)
                         .foregroundStyle(Color.textSecondary)
@@ -956,8 +916,21 @@ struct HustlerTaskDetailScreen: View {
             apiTask = try await taskService.getTask(id: taskId)
             HXLogger.info("TaskDetail: Loaded task from API", category: "Task")
         } catch {
-            loadError = error
-            HXLogger.error("TaskDetail: API load failed, using mock - \(error.localizedDescription)", category: "Task")
+            if let apiError = error as? APIError {
+                switch apiError {
+                case .notFound:
+                    loadError = .notFound("Task")
+                case .networkError:
+                    loadError = .network
+                case .unauthorized:
+                    loadError = .authExpired
+                default:
+                    loadError = .server
+                }
+            } else {
+                loadError = .server
+            }
+            HXLogger.error("TaskDetail: API load failed - \(error.localizedDescription)", category: "Task")
         }
     }
 

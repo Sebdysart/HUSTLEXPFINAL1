@@ -19,7 +19,7 @@ struct PosterTaskDetailScreen: View {
     @State private var showCancelConfirmation = false
     @State private var showTipSheet = false
     @State private var tipSent = false
-    @State private var loadError: Error?
+    @State private var loadError: AppError?
     @State private var sseSubscription: AnyCancellable?
     
     var body: some View {
@@ -174,12 +174,15 @@ struct PosterTaskDetailScreen: View {
                         showCancelConfirmation = true
                     })
                 }
+            } else if let error = loadError {
+                ErrorStateView(error: error, onRetry: {
+                    loadError = nil
+                    loadTask()
+                })
             } else {
-                ErrorState(
-                    title: "Task Not Found",
-                    message: "This task may have been removed or is no longer available.",
-                    retryAction: { loadTask() }
-                )
+                ErrorStateView(error: .notFound("Task"), onRetry: {
+                    loadTask()
+                })
             }
         }
         .navigationTitle("Task Details")
@@ -249,7 +252,20 @@ struct PosterTaskDetailScreen: View {
                 task = try await TaskService.shared.getTask(id: taskId)
                 HXLogger.info("PosterTaskDetail: Loaded task from API", category: "Task")
             } catch {
-                loadError = error
+                if let apiError = error as? APIError {
+                    switch apiError {
+                    case .notFound:
+                        loadError = .notFound("Task")
+                    case .networkError:
+                        loadError = .network
+                    case .unauthorized:
+                        loadError = .authExpired
+                    default:
+                        loadError = .server
+                    }
+                } else {
+                    loadError = .server
+                }
                 HXLogger.error("PosterTaskDetail: API failed - \(error.localizedDescription)", category: "Task")
                 // Fall back to mock data
                 task = LiveDataService.shared.getTask(by: taskId)

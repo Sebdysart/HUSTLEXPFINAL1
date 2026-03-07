@@ -22,7 +22,7 @@ struct HustlerFeedScreen: View {
     @State private var showFilters: Bool = false
     @State private var feedFilters = FeedFilterParams()
     @State private var apiTasks: [HXTask] = []
-    @State private var apiError: Error?
+    @State private var apiError: AppError?
     @State private var showApiError: Bool = false
     
     // v1.9.0 Spatial Intelligence
@@ -361,8 +361,18 @@ struct HustlerFeedScreen: View {
             apiError = nil
             HXLogger.info("HustlerFeed: Loaded \(apiTasks.count) tasks from API", category: "Task")
         } catch {
-            // v2.5.0: Show error to user instead of silent fallback
-            apiError = error
+            if let apiErr = error as? APIError {
+                switch apiErr {
+                case .networkError:
+                    apiError = .network
+                case .unauthorized:
+                    apiError = .authExpired
+                default:
+                    apiError = .server
+                }
+            } else {
+                apiError = .server
+            }
             showApiError = true
             HXLogger.error("HustlerFeed: API failed - \(error.localizedDescription)", category: "Task")
         }
@@ -501,54 +511,15 @@ struct HustlerFeedScreen: View {
     
     // MARK: - API Error View (v2.5.0)
     
-    private func apiErrorView(error: Error) -> some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            ErrorState(
-                icon: "wifi.exclamationmark",
-                title: "Connection Issue",
-                message: "We couldn't load tasks from the server. Showing cached data instead.",
-                retryAction: {
-                    Task {
-                        showApiError = false
-                        isLoading = true
-                        await loadTasksFromAPI(location: currentLocation)
-                        isLoading = false
-                    }
-                }
-            )
-            
-            // Show mock data option
-            if !dataService.availableTasks.isEmpty {
-                VStack(spacing: 12) {
-                    HXDivider()
-                    
-                    Button(action: {
-                        withAnimation {
-                            showApiError = false
-                        }
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 14))
-                            Text("Show Offline Data")
-                                .font(.subheadline.weight(.medium))
-                        }
-                        .foregroundStyle(Color.brandPurple)
-                    }
-                    
-                    HXText(
-                        "(\(dataService.availableTasks.count) tasks from cache)",
-                        style: .caption,
-                        color: .textMuted
-                    )
-                }
+    private func apiErrorView(error: AppError) -> some View {
+        ErrorStateView(error: error, onRetry: {
+            Task {
+                showApiError = false
+                isLoading = true
+                await loadTasksFromAPI(location: currentLocation)
+                isLoading = false
             }
-            
-            Spacer()
-        }
-        .padding(24)
+        })
     }
     
     private var emptyStateView: some View {
