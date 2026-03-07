@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct HustlerTaskDetailScreen: View {
     @Environment(Router.self) private var router
@@ -25,7 +26,8 @@ struct HustlerTaskDetailScreen: View {
     @State private var acceptError: String?
     @State private var showAcceptError: Bool = false
     @State private var showRatingSheet = false
-    
+    @State private var sseSubscription: AnyCancellable?
+
     // v1.9.0 Spatial Intelligence
     @State private var userLocation: GPSCoordinates?
     @State private var walkingETA: WalkingETA?
@@ -95,6 +97,11 @@ struct HustlerTaskDetailScreen: View {
                 withAnimation(.easeOut(duration: 0.5)) {
                     showContent = true
                 }
+                subscribeToSSE()
+            }
+            .onDisappear {
+                sseSubscription?.cancel()
+                sseSubscription = nil
             }
             .task {
                 // v2.2.0: Load task from real API
@@ -863,6 +870,29 @@ struct HustlerTaskDetailScreen: View {
             loadError = error
             HXLogger.error("TaskDetail: API load failed, using mock - \(error.localizedDescription)", category: "Task")
         }
+    }
+
+    // MARK: - SSE Subscription
+
+    private func subscribeToSSE() {
+        sseSubscription = RealtimeSSEClient.shared.messageReceived
+            .receive(on: DispatchQueue.main)
+            .sink { message in
+                let relevantEvents = [
+                    "task_updated", "task_state_changed", "proof_submitted",
+                    "task_completed", "application_accepted", "application_rejected"
+                ]
+                guard relevantEvents.contains(message.event) else { return }
+
+                if let json = try? JSONSerialization.jsonObject(with: message.data) as? [String: Any],
+                   let eventTaskId = json["taskId"] as? String ?? json["task_id"] as? String,
+                   eventTaskId == taskId {
+                    HXLogger.info("HustlerTaskDetail: SSE event \(message.event) for task \(taskId)", category: "Network")
+                    Task {
+                        await loadTaskFromAPI()
+                    }
+                }
+            }
     }
 }
 
