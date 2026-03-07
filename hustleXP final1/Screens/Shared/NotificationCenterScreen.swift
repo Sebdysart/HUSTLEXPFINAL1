@@ -23,7 +23,13 @@ struct NotificationCenterScreen: View {
                 .ignoresSafeArea()
 
             if isLoading {
-                LoadingState(variant: .skeleton)
+                VStack(spacing: 0) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        SkeletonNotificationRow()
+                        Divider()
+                            .padding(.leading, 60)
+                    }
+                }
             } else if notifications.isEmpty {
                 emptyState
             } else {

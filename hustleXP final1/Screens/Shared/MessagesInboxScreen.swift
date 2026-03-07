@@ -22,7 +22,13 @@ struct MessagesInboxScreen: View {
                 .ignoresSafeArea()
 
             if isLoading {
-                LoadingState(variant: .skeleton)
+                VStack(spacing: 0) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        SkeletonConversationRow()
+                        Divider()
+                            .padding(.leading, 72)
+                    }
+                }
             } else if conversations.isEmpty {
                 emptyState
             } else {

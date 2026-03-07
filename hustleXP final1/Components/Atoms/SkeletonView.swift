@@ -13,9 +13,9 @@ struct SkeletonView: View {
             .fill(
                 LinearGradient(
                     gradient: Gradient(colors: [
-                        Color(.systemGray5),
-                        Color(.systemGray4),
-                        Color(.systemGray5),
+                        Color.surfaceSecondary,
+                        Color.surfaceElevated,
+                        Color.surfaceSecondary,
                     ]),
                     startPoint: isAnimating ? .trailing : .leading,
                     endPoint: isAnimating ? .leading : .trailing
@@ -88,7 +88,7 @@ struct SkeletonConversationRow: View {
 struct SkeletonNotificationRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            SkeletonView(width: 36, height: 36, cornerRadius: 18) // icon circle
+            SkeletonView(width: 40, height: 40, cornerRadius: 20) // icon circle
             VStack(alignment: .leading, spacing: 8) {
                 SkeletonView(width: 200, height: 15) // title
                 SkeletonView(height: 13) // body
@@ -101,13 +101,17 @@ struct SkeletonNotificationRow: View {
 }
 
 #Preview {
-    VStack(spacing: 20) {
-        SkeletonView(width: 200, height: 20)
-        SkeletonTaskCard()
-        SkeletonList(count: 2)
-        Divider()
-        SkeletonConversationRow()
-        SkeletonNotificationRow()
+    ZStack {
+        Color.brandBlack
+            .ignoresSafeArea()
+        VStack(spacing: 20) {
+            SkeletonView(width: 200, height: 20)
+            SkeletonTaskCard()
+            SkeletonList(count: 2)
+            Divider()
+            SkeletonConversationRow()
+            SkeletonNotificationRow()
+        }
+        .padding()
     }
-    .padding()
 }
