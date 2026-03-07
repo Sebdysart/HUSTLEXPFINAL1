@@ -25,9 +25,11 @@ final class SquadsHubViewModel {
 
     var mySquads: [HXSquad] = []
     var pendingInvites: [SquadInvite] = []
+    var leaderboard: [HXSquad] = []
     var selectedTab: SquadsTab = .mySquads
     var showCreateSheet = false
     var isLoading = true
+    var isLoadingLeaderboard = false
     var showContent = false
 
     // MARK: - Computed Properties
@@ -54,6 +56,26 @@ final class SquadsHubViewModel {
             pendingInvites = []
         }
         isLoading = false
+    }
+
+    // MARK: - Leaderboard
+
+    func loadLeaderboard() async {
+        guard !isLoadingLeaderboard else { return }
+        isLoadingLeaderboard = true
+        do {
+            leaderboard = try await SquadService.shared.getLeaderboard()
+            HXLogger.info("SquadsHub: Loaded \(leaderboard.count) leaderboard entries", category: "Squad")
+        } catch {
+            HXLogger.error("SquadsHub: Leaderboard load failed - \(error.localizedDescription)", category: "Squad")
+            leaderboard = []
+        }
+        isLoadingLeaderboard = false
+    }
+
+    func refreshLeaderboard() async {
+        isLoadingLeaderboard = false
+        await loadLeaderboard()
     }
 
     // MARK: - Actions

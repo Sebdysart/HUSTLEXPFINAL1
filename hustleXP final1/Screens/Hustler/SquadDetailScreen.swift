@@ -25,6 +25,7 @@ struct SquadDetailScreen: View {
     @State private var showDisbandConfirmation = false
     @State private var showInviteSheet = false
     @State private var actionError: String? = nil
+    @State private var acceptingTaskId: String? = nil
 
     var body: some View {
         ZStack {
@@ -500,6 +501,35 @@ struct SquadDetailScreen: View {
                 }
             }
             .frame(height: 6)
+
+            // Accept button — only shown when task is recruiting and has open spots
+            if task.status == .recruiting && task.spotsRemaining > 0 {
+                let isAccepting = acceptingTaskId == task.id
+
+                Button {
+                    acceptSquadTask(task)
+                } label: {
+                    HStack(spacing: 6) {
+                        if isAccepting {
+                            ProgressView()
+                                .tint(Color.brandBlack)
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "checkmark.circle.fill")
+                        }
+                        Text(isAccepting ? "Joining..." : "Accept Task")
+                            .font(.system(size: 14, weight: .semibold))
+                            .minimumScaleFactor(0.7)
+                    }
+                    .foregroundStyle(Color.brandBlack)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.squadGold)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .disabled(isAccepting)
+                .accessibilityLabel("Accept squad task")
+            }
         }
         .padding(16)
         .background(Color.surfaceElevated)
@@ -508,6 +538,25 @@ struct SquadDetailScreen: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.squadGold.opacity(0.15), lineWidth: 1)
         )
+    }
+
+    private func acceptSquadTask(_ task: SquadTask) {
+        guard acceptingTaskId == nil else { return }
+        HapticFeedback.confirmation()
+        acceptingTaskId = task.id
+        Task {
+            do {
+                try await SquadService.shared.acceptSquadTask(squadTaskId: task.id)
+                // Reload tasks to reflect accepted state
+                let refreshed = try await SquadService.shared.getSquadTasks(squadId: squadId)
+                activeTasks = refreshed.filter { $0.status != .completed && $0.status != .cancelled }
+                HXLogger.info("SquadDetail: Accepted squad task \(task.id)", category: "Squad")
+            } catch {
+                actionError = error.localizedDescription
+                HXLogger.error("SquadDetail: Accept task failed - \(error.localizedDescription)", category: "Squad")
+            }
+            acceptingTaskId = nil
+        }
     }
 
     // MARK: - Actions Section
@@ -591,6 +640,45 @@ struct SquadDetailScreen: View {
     // MARK: - Invite Sheet
 
     private var inviteSheet: some View {
+        InviteMemberSheet(squadId: squadId) {
+            showInviteSheet = false
+        }
+    }
+
+    // MARK: - API Data Loading
+
+    private func loadFromAPI() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            async let squadResult = SquadService.shared.getSquad(id: squadId)
+            async let tasksResult = SquadService.shared.getSquadTasks(squadId: squadId)
+
+            let (fetchedSquad, fetchedTasks) = try await (squadResult, tasksResult)
+            self.squad = fetchedSquad
+            self.activeTasks = fetchedTasks.filter { $0.status != .completed && $0.status != .cancelled }
+            HXLogger.info("SquadDetail: Loaded squad '\(fetchedSquad.name)' with \(fetchedTasks.count) tasks", category: "Squad")
+        } catch {
+            HXLogger.error("SquadDetail: API load failed - \(error.localizedDescription)", category: "Squad")
+            self.squad = nil
+            self.activeTasks = []
+        }
+    }
+}
+
+// MARK: - Invite Member Sheet
+
+private struct InviteMemberSheet: View {
+    let squadId: String
+    let onDismiss: () -> Void
+
+    @State private var userId = ""
+    @State private var isSending = false
+    @State private var successMessage: String? = nil
+    @State private var errorMessage: String? = nil
+
+    var body: some View {
         NavigationStack {
             ZStack {
                 Color.brandBlack.ignoresSafeArea()
@@ -614,7 +702,7 @@ struct SquadDetailScreen: View {
                             .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.textPrimary)
 
-                        Text("Only Elite+ hustlers can join squads.\nShare your invite link or search by username.")
+                        Text("Only Elite+ hustlers can join squads.\nEnter the hustler's user ID or username.")
                             .font(.system(size: 15))
                             .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.textSecondary)
@@ -622,20 +710,60 @@ struct SquadDetailScreen: View {
                             .lineSpacing(4)
                     }
 
-                    // Placeholder search field
-                    HStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(Color.textMuted)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HXText("User ID or Username", style: .subheadline, color: .textSecondary)
 
-                        Text("Search hustlers...")
-                            .font(.system(size: 15))
-                            .foregroundStyle(Color.textMuted)
-
-                        Spacer()
+                        TextField("", text: $userId, prompt: Text("e.g., user_abc123").foregroundColor(.textTertiary))
+                            .font(.system(size: 17))
+                            .foregroundStyle(Color.textPrimary)
+                            .autocapitalization(.none)
+                            .autocorrectionDisabled()
+                            .padding(16)
+                            .background(Color.surfaceElevated)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .padding(14)
-                    .background(Color.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 24)
+
+                    if let successMessage {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.successGreen)
+                            Text(successMessage)
+                                .font(.system(size: 14, weight: .medium))
+                                .minimumScaleFactor(0.7)
+                                .foregroundStyle(Color.successGreen)
+                        }
+                        .padding(12)
+                        .background(Color.successGreen.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .padding(.horizontal, 24)
+                    }
+
+                    if let errorMessage {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(Color.errorRed)
+                            Text(errorMessage)
+                                .font(.system(size: 14, weight: .medium))
+                                .minimumScaleFactor(0.7)
+                                .foregroundStyle(Color.errorRed)
+                        }
+                        .padding(12)
+                        .background(Color.errorRed.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .padding(.horizontal, 24)
+                    }
+
+                    HXButton(
+                        isSending ? "Sending..." : "Send Invite",
+                        icon: "paperplane.fill",
+                        variant: .primary,
+                        isLoading: isSending
+                    ) {
+                        sendInvite()
+                    }
+                    .disabled(userId.trimmingCharacters(in: .whitespaces).isEmpty || isSending)
+                    .opacity(userId.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
                     .padding(.horizontal, 24)
 
                     Spacer()
@@ -648,31 +776,30 @@ struct SquadDetailScreen: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { showInviteSheet = false }
+                    Button("Cancel") { onDismiss() }
                         .foregroundStyle(Color.textSecondary)
                 }
             }
         }
     }
 
-    // MARK: - API Data Loading
-
-    private func loadFromAPI() async {
-        isLoading = true
-        defer { isLoading = false }
-
-        do {
-            async let squadResult = SquadService.shared.getSquad(id: squadId)
-            async let tasksResult = SquadService.shared.getSquadTasks(squadId: squadId)
-
-            let (fetchedSquad, fetchedTasks) = try await (squadResult, tasksResult)
-            self.squad = fetchedSquad
-            self.activeTasks = fetchedTasks.filter { $0.status != .completed && $0.status != .cancelled }
-            HXLogger.info("SquadDetail: Loaded squad '\(fetchedSquad.name)' with \(fetchedTasks.count) tasks", category: "Squad")
-        } catch {
-            HXLogger.error("SquadDetail: API load failed - \(error.localizedDescription)", category: "Squad")
-            self.squad = nil
-            self.activeTasks = []
+    private func sendInvite() {
+        let trimmed = userId.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        isSending = true
+        errorMessage = nil
+        successMessage = nil
+        Task {
+            do {
+                _ = try await SquadService.shared.inviteMember(squadId: squadId, userId: trimmed)
+                successMessage = "Invite sent to \(trimmed)"
+                userId = ""
+                HXLogger.info("InviteMemberSheet: Sent invite to \(trimmed)", category: "Squad")
+            } catch {
+                errorMessage = error.localizedDescription
+                HXLogger.error("InviteMemberSheet: Invite failed - \(error.localizedDescription)", category: "Squad")
+            }
+            isSending = false
         }
     }
 }

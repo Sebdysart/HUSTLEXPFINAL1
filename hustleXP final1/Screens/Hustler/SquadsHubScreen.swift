@@ -81,6 +81,9 @@ struct SquadsHubScreen: View {
                     withAnimation(.spring(response: 0.3)) {
                         viewModel.selectedTab = tab
                     }
+                    if tab == .leaderboard && viewModel.leaderboard.isEmpty {
+                        Task { await viewModel.loadLeaderboard() }
+                    }
                 } label: {
                     VStack(spacing: 8) {
                         HStack(spacing: 6) {
@@ -233,44 +236,65 @@ struct SquadsHubScreen: View {
                         .foregroundStyle(Color.textSecondary)
                         .multilineTextAlignment(.center)
 
-                    VStack(spacing: 0) {
-                        ForEach(0..<5, id: \.self) { rank in
-                            leaderboardRow(rank: rank + 1)
-                            if rank < 4 {
-                                Divider().background(Color.borderSubtle)
+                    if viewModel.isLoadingLeaderboard && viewModel.leaderboard.isEmpty {
+                        LoadingState(variant: .skeleton)
+                            .padding(.top, 8)
+                    } else if viewModel.leaderboard.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "trophy")
+                                .font(.system(size: 36))
+                                .foregroundStyle(Color.textMuted)
+                            Text("No rankings yet")
+                                .font(.system(size: 15, weight: .medium))
+                                .minimumScaleFactor(0.7)
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 32)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(Array(viewModel.leaderboard.enumerated()), id: \.element.id) { index, squad in
+                                leaderboardRow(squad: squad, rank: index + 1)
+                                if index < viewModel.leaderboard.count - 1 {
+                                    Divider().background(Color.borderSubtle)
+                                }
                             }
                         }
+                        .background(Color.surfaceElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .padding(.top, 8)
                     }
-                    .background(Color.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .padding(.top, 8)
                 }
             }
             .padding(16)
         }
+        .refreshable {
+            await viewModel.refreshLeaderboard()
+        }
+        .task {
+            if viewModel.leaderboard.isEmpty {
+                await viewModel.loadLeaderboard()
+            }
+        }
     }
 
-    private func leaderboardRow(rank: Int) -> some View {
-        let names = ["Thunder Squad", "Night Owls", "Quick Crew", "Elite Force", "Task Masters"]
-        let emojis = ["⚡️", "🦉", "🚀", "💪", "🎯"]
-        let xps = [12500, 9800, 7200, 5100, 3400]
-
-        return HStack(spacing: 14) {
+    private func leaderboardRow(squad: HXSquad, rank: Int) -> some View {
+        HStack(spacing: 14) {
             Text("#\(rank)")
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(rank <= 3 ? Color.squadGold : Color.textMuted)
                 .frame(width: 36)
 
-            Text(emojis[rank - 1])
+            Text(squad.emoji)
                 .font(.system(size: 24))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(names[rank - 1])
+                Text(squad.name)
                     .font(.system(size: 15, weight: .semibold))
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
 
-                Text("\(xps[rank - 1]) Squad XP")
+                Text("\(squad.squadXP) Squad XP")
                     .font(.system(size: 12))
                     .foregroundStyle(Color.textMuted)
             }
