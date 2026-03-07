@@ -267,8 +267,6 @@ struct PosterTaskDetailScreen: View {
                     loadError = .server
                 }
                 HXLogger.error("PosterTaskDetail: API failed - \(error.localizedDescription)", category: "Task")
-                // Fall back to mock data
-                task = LiveDataService.shared.getTask(by: taskId)
             }
             isLoading = false
         }
