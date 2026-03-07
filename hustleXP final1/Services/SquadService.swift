@@ -89,7 +89,7 @@ final class SquadService: ObservableObject {
             input: DisbandInput(id: id)
         )
 
-        HXLogger.info("SquadService: Disbanded squad \(id)", category: "General")
+        HXLogger.info("SquadService: Disbanded squad \(id)", category: "Squad")
     }
 
     func leaveSquad(squadId: String) async throws {

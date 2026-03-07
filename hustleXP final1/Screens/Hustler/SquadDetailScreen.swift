@@ -24,6 +24,7 @@ struct SquadDetailScreen: View {
     @State private var showLeaveConfirmation = false
     @State private var showDisbandConfirmation = false
     @State private var showInviteSheet = false
+    @State private var actionError: String? = nil
 
     var body: some View {
         ZStack {
@@ -80,8 +81,12 @@ struct SquadDetailScreen: View {
             Button("Leave", role: .destructive) {
                 Task {
                     if let squad {
-                        try? await SquadService.shared.leaveSquad(squadId: squad.id)
-                        router.navigateToHustler()
+                        do {
+                            try await SquadService.shared.leaveSquad(squadId: squad.id)
+                            router.navigateToHustler()
+                        } catch {
+                            actionError = error.localizedDescription
+                        }
                     }
                 }
             }
@@ -93,13 +98,25 @@ struct SquadDetailScreen: View {
             Button("Disband", role: .destructive) {
                 Task {
                     if let squad {
-                        try? await SquadService.shared.disbandSquad(id: squad.id)
-                        router.navigateToHustler()
+                        do {
+                            try await SquadService.shared.disbandSquad(id: squad.id)
+                            router.navigateToHustler()
+                        } catch {
+                            actionError = error.localizedDescription
+                        }
                     }
                 }
             }
         } message: {
             Text("Are you sure you want to disband this squad? This action cannot be undone and all members will be removed.")
+        }
+        .alert("Action Failed", isPresented: Binding(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )) {
+            Button("OK", role: .cancel) { actionError = nil }
+        } message: {
+            Text(actionError ?? "Something went wrong. Please try again.")
         }
         .sheet(isPresented: $showInviteSheet) {
             inviteSheet
@@ -500,7 +517,7 @@ struct SquadDetailScreen: View {
             // Invite member (visible to organizer)
             let isOrganizer = squad.members.first(where: { $0.role == .organizer })?.userId == appState.userId
 
-            if isOrganizer || true /* demo mode */ {
+            if isOrganizer {
                 actionButton(
                     title: "Invite Member",
                     icon: "person.badge.plus",
