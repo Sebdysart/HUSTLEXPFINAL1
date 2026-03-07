@@ -12,7 +12,7 @@ struct EmptyStateView: View {
         VStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 52))
-                .foregroundColor(.secondary.opacity(0.6))
+                .foregroundStyle(.secondary.opacity(0.6))
 
             VStack(spacing: 8) {
                 Text(title)
@@ -21,7 +21,7 @@ struct EmptyStateView: View {
 
                 Text(message)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -33,6 +33,8 @@ struct EmptyStateView: View {
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(message)")
     }
 }
 
