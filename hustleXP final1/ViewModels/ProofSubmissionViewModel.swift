@@ -161,6 +161,7 @@ final class ProofSubmissionViewModel {
                     accuracyMeters: location.horizontalAccuracy,
                     timestamp: location.timestamp
                 )
+                HapticFeedback.pulse()
                 withAnimation {
                     self.gpsCoordinates = coords
                     self.isCapturingGPS = false
@@ -197,6 +198,7 @@ final class ProofSubmissionViewModel {
            let image = UIImage(data: data) {
             capturedImage = image
             hasPhoto = true
+            HapticFeedback.pulse()
             currentStep = .review
         }
     }
@@ -204,6 +206,7 @@ final class ProofSubmissionViewModel {
     func handleCameraDisappeared() {
         if capturedImage != nil {
             hasPhoto = true
+            HapticFeedback.pulse()
             currentStep = .review
         }
     }
@@ -286,6 +289,7 @@ final class ProofSubmissionViewModel {
                 isSubmitting = false
                 validationResult = result
 
+                HapticFeedback.success()
                 withAnimation(.spring(response: 0.4)) {
                     showValidationFeedback = true
                 }
@@ -293,6 +297,7 @@ final class ProofSubmissionViewModel {
                 HXLogger.debug("[ProofSubmission] Validation result: \(result.recommendation.rawValue)", category: "Task")
 
             } catch {
+                HapticFeedback.error()
                 HXLogger.error("ProofSubmission: API failed - \(error.localizedDescription)", category: "Task")
 
                 // Fall back to mock validation

@@ -72,12 +72,14 @@ struct DisputeScreen: View {
     
     private func submitDispute() {
         guard selectedReason != nil else { return }
-        
+
+        HapticFeedback.warning()
         isSubmitting = true
-        
+
         // Simulate submission
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             isSubmitting = false
+            HapticFeedback.success()
             withAnimation(.spring(response: 0.5)) {
                 showConfirmation = true
             }

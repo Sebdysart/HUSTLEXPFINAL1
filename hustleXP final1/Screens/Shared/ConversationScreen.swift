@@ -68,6 +68,9 @@ struct ConversationScreen: View {
                         }
                         .onChange(of: messages.count) { _, _ in
                             if let lastMessage = messages.last {
+                                if !lastMessage.isFromCurrentUser {
+                                    HapticFeedback.pulse()
+                                }
                                 withAnimation {
                                     proxy.scrollTo(lastMessage.id, anchor: .bottom)
                                 }
@@ -225,7 +228,8 @@ struct ConversationScreen: View {
     
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
+
+        HapticFeedback.impact(.light)
         let content = messageText
         messageText = ""
         isSending = true
@@ -283,6 +287,7 @@ struct ConversationScreen: View {
     private func sendPhotoMessage(imageData: Data) {
         guard let image = UIImage(data: imageData) else { return }
 
+        HapticFeedback.impact(.light)
         isSending = true
 
         photoUploadTask = Task {

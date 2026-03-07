@@ -101,6 +101,7 @@ struct ProofReviewScreen: View {
     }
     
     private func approveAndPay() {
+        HapticFeedback.confirmation()
         isProcessing = true
 
         Task {
@@ -126,6 +127,7 @@ struct ProofReviewScreen: View {
                     }
                 }
             } catch {
+                HapticFeedback.error()
                 HXLogger.error("ProofReview: API approve failed - \(error.localizedDescription)", category: "Task")
             }
             isProcessing = false
@@ -529,6 +531,7 @@ private struct RequestChangesSheet: View {
                         }
                         
                         HXButton("Send Request", variant: .primary) {
+                            HapticFeedback.warning()
                             // v2.2.0: Reject proof via real API
                             let feedback = "\(selectedReason ?? ""): \(instructions)"
                             Task {

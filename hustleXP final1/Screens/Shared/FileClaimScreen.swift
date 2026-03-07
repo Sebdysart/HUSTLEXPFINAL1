@@ -444,11 +444,13 @@ struct FileClaimScreen: View {
                 _ = try await InsuranceService.shared.fileClaim(request: request)
                 HXLogger.info("FileClaim: Claim submitted via API", category: "General")
                 isSubmitting = false
+                HapticFeedback.success()
                 withAnimation(.spring(response: 0.4)) {
                     showSuccess = true
                 }
             } catch {
                 // v2.5.0: Show error to user instead of silent fallback
+                HapticFeedback.error()
                 HXLogger.error("FileClaim: API submit failed - \(error.localizedDescription)", category: "General")
                 isSubmitting = false
                 submitError = "Could not submit your claim. Please check your connection and try again."
