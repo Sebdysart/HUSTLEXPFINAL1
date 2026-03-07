@@ -191,6 +191,7 @@ final class SubscriptionService {
             let result: SubscribeResponse = try await trpc.call(
                 router: "subscription",
                 procedure: "subscribe",
+                type: .mutation,
                 input: SubscribeInput(plan: plan, interval: interval)
             )
 
@@ -215,6 +216,7 @@ final class SubscriptionService {
             let _: CancelResponse = try await trpc.call(
                 router: "subscription",
                 procedure: "cancel",
+                type: .mutation,
                 input: EmptyInput()
             )
 
@@ -241,6 +243,7 @@ final class SubscriptionService {
             let _: ConfirmResponse = try await trpc.call(
                 router: "subscription",
                 procedure: "confirmSubscription",
+                type: .mutation,
                 input: ConfirmInput(stripeSubscriptionId: stripeSubscriptionId)
             )
 

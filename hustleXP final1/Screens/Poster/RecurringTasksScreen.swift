@@ -72,7 +72,9 @@ struct RecurringTasksScreen: View {
             CreateRecurringTaskSheet()
         }
         .sheet(isPresented: $showPaywall) {
+            let paywallContext: PaywallSheet.Context = subscriptionService.currentPlan == .premium ? .premiumAtLimit : .freeUser
             PaywallSheet(
+                context: paywallContext,
                 onViewPlans: {
                     showPaywall = false
                     router.navigateToSettings(.subscription)
@@ -82,6 +84,7 @@ struct RecurringTasksScreen: View {
                 }
             )
             .presentationDetents([.medium])
+            // System drag indicator hidden — PaywallSheet draws its own
             .presentationDragIndicator(.hidden)
         }
         .task {
@@ -172,28 +175,6 @@ struct RecurringTasksScreen: View {
         )
     }
 
-    private func suggestedCategoryCard(_ cat: RecurringCategory) -> some View {
-        Button {
-            viewModel.showCreateSheet = true
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: cat.icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(cat.color)
-
-                Text(cat.name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(Color.surfaceElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-        .buttonStyle(.plain)
-    }
 }
 
 // MARK: - Filter Enum

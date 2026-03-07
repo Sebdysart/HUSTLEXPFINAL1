@@ -16,9 +16,7 @@ struct SubscriptionScreen: View {
     @State private var showCancelConfirmation = false
     @State private var showPaymentConfirmation = false
     @State private var selectedPlan: SubscriptionService.SubscriptionPlan?
-    @State private var paymentProcessing = false
     @State private var paymentError: String?
-    @State private var paymentSuccess = false
 
     var body: some View {
         ZStack {
@@ -56,6 +54,14 @@ struct SubscriptionScreen: View {
             }
         } message: {
             Text("You will lose access to recurring tasks at the end of your billing period. This cannot be undone.")
+        }
+        .alert("Activation Failed", isPresented: Binding(
+            get: { paymentError != nil },
+            set: { if !$0 { paymentError = nil } }
+        )) {
+            Button("OK") { paymentError = nil }
+        } message: {
+            Text(paymentError ?? "")
         }
         .sheet(isPresented: $showPaymentConfirmation) {
             if let plan = selectedPlan {
@@ -401,8 +407,13 @@ struct SubscriptionScreen: View {
             showPaymentConfirmation = false
             selectedPlan = nil
             // Confirm with backend so plan activates in DB
+            // Clear pendingSubscriptionId before await to prevent stale-state on re-entry
             if let subId = subscriptionService.pendingSubscriptionId {
-                _ = await subscriptionService.confirmSubscription(stripeSubscriptionId: subId)
+                subscriptionService.pendingSubscriptionId = nil
+                let confirmed = await subscriptionService.confirmSubscription(stripeSubscriptionId: subId)
+                if !confirmed {
+                    paymentError = subscriptionService.error ?? "Failed to activate your plan. Please contact support."
+                }
             } else {
                 await subscriptionService.fetchSubscription()
             }

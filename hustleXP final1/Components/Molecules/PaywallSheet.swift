@@ -2,13 +2,21 @@
 //  PaywallSheet.swift
 //  hustleXP final1
 //
-//  Subscription upsell bottom sheet shown when a free user attempts
-//  to use a subscription-gated feature (recurring tasks).
+//  Subscription upsell bottom sheet shown when a user cannot create more recurring tasks.
+//  Two contexts:
+//   - .freeUser: No subscription — prompt to subscribe to Premium or Pro
+//   - .premiumAtLimit: Premium plan, 5/5 slots used — prompt to upgrade to Pro
 //
 
 import SwiftUI
 
 struct PaywallSheet: View {
+    enum Context {
+        case freeUser
+        case premiumAtLimit
+    }
+
+    let context: Context
     let onViewPlans: () -> Void
     let onDismiss: () -> Void
 
@@ -24,25 +32,25 @@ struct PaywallSheet: View {
             // Icon
             ZStack {
                 Circle()
-                    .fill(Color.recurringBlue.opacity(0.15))
+                    .fill(iconColor.opacity(0.15))
                     .frame(width: 72, height: 72)
 
-                Image(systemName: "repeat.circle.fill")
+                Image(systemName: iconName)
                     .font(.system(size: 36))
-                    .foregroundStyle(Color.recurringBlue)
+                    .foregroundStyle(iconColor)
             }
 
             Spacer().frame(height: 20)
 
-            // Title
+            // Title + subtitle
             VStack(spacing: 8) {
-                Text("Unlock Recurring Tasks")
+                Text(titleText)
                     .font(.title3.weight(.bold))
-                    .foregroundColor(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
 
-                Text("Subscribe to schedule tasks that repeat automatically and save time on regular help.")
+                Text(subtitleText)
                     .font(.subheadline)
-                    .foregroundColor(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
             }
@@ -52,27 +60,38 @@ struct PaywallSheet: View {
 
             // Plan teasers
             VStack(spacing: 10) {
-                planRow(
-                    icon: "star.circle.fill",
-                    name: "Premium",
-                    detail: "Up to 5 recurring tasks",
-                    price: "$9.99/mo",
-                    color: Color.brandPurple
-                )
-                planRow(
-                    icon: "bolt.circle.fill",
-                    name: "Pro",
-                    detail: "Unlimited recurring tasks",
-                    price: "$19.99/mo",
-                    color: Color.aiPurple
-                )
+                switch context {
+                case .freeUser:
+                    planRow(
+                        icon: "star.circle.fill",
+                        name: "Premium",
+                        detail: "Up to 5 recurring tasks",
+                        price: "$9.99/mo",
+                        color: Color.brandPurple
+                    )
+                    planRow(
+                        icon: "bolt.circle.fill",
+                        name: "Pro",
+                        detail: "Unlimited recurring tasks",
+                        price: "$19.99/mo",
+                        color: Color.aiPurple
+                    )
+                case .premiumAtLimit:
+                    planRow(
+                        icon: "bolt.circle.fill",
+                        name: "Pro",
+                        detail: "Unlimited recurring tasks",
+                        price: "$19.99/mo",
+                        color: Color.aiPurple
+                    )
+                }
             }
 
             Spacer().frame(height: 28)
 
             // CTAs
             VStack(spacing: 12) {
-                HXButton("View Plans", icon: "arrow.right", variant: .primary) {
+                HXButton(ctaLabel, icon: "arrow.right", variant: .primary) {
                     onViewPlans()
                 }
 
@@ -81,11 +100,11 @@ struct PaywallSheet: View {
                 } label: {
                     Text("Not Now")
                         .font(.subheadline)
-                        .foregroundColor(.textTertiary)
+                        .foregroundStyle(Color.textTertiary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                 }
-                .accessibilityLabel("Dismiss subscription paywall")
+                .accessibilityLabel("Dismiss paywall")
             }
 
             Spacer().frame(height: 8)
@@ -93,6 +112,45 @@ struct PaywallSheet: View {
         .padding(.horizontal, 24)
         .padding(.bottom, 16)
         .background(Color.surfaceElevated)
+    }
+
+    // MARK: - Context-Derived Properties
+
+    private var iconName: String {
+        switch context {
+        case .freeUser:     return "repeat.circle.fill"
+        case .premiumAtLimit: return "bolt.circle.fill"
+        }
+    }
+
+    private var iconColor: Color {
+        switch context {
+        case .freeUser:     return Color.recurringBlue
+        case .premiumAtLimit: return Color.aiPurple
+        }
+    }
+
+    private var titleText: String {
+        switch context {
+        case .freeUser:     return "Unlock Recurring Tasks"
+        case .premiumAtLimit: return "Upgrade to Pro"
+        }
+    }
+
+    private var subtitleText: String {
+        switch context {
+        case .freeUser:
+            return "Subscribe to schedule tasks that repeat automatically and save time on regular help."
+        case .premiumAtLimit:
+            return "You've used all 5 Premium slots. Upgrade to Pro for unlimited recurring tasks."
+        }
+    }
+
+    private var ctaLabel: String {
+        switch context {
+        case .freeUser:     return "View Plans"
+        case .premiumAtLimit: return "Upgrade to Pro"
+        }
     }
 
     // MARK: - Plan Row
@@ -112,18 +170,18 @@ struct PaywallSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.textPrimary)
+                    .foregroundStyle(Color.textPrimary)
 
                 Text(detail)
                     .font(.system(size: 13))
-                    .foregroundColor(.textSecondary)
+                    .foregroundStyle(Color.textSecondary)
             }
 
             Spacer()
 
             Text(price)
                 .font(.system(size: 15, weight: .bold))
-                .foregroundColor(.textPrimary)
+                .foregroundStyle(Color.textPrimary)
         }
         .padding(14)
         .background(Color.surfaceSecondary)
@@ -131,10 +189,18 @@ struct PaywallSheet: View {
     }
 }
 
-#Preview {
+#Preview("Free User") {
     ZStack {
         Color.brandBlack.ignoresSafeArea()
-        PaywallSheet(onViewPlans: {}, onDismiss: {})
+        PaywallSheet(context: .freeUser, onViewPlans: {}, onDismiss: {})
+            .padding(.horizontal, 4)
+    }
+}
+
+#Preview("Premium at Limit") {
+    ZStack {
+        Color.brandBlack.ignoresSafeArea()
+        PaywallSheet(context: .premiumAtLimit, onViewPlans: {}, onDismiss: {})
             .padding(.horizontal, 4)
     }
 }
