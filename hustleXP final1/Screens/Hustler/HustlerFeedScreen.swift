@@ -531,6 +531,7 @@ struct HustlerFeedScreen: View {
             ctaAction: {
                 selectedFilter = .all
                 searchText = ""
+                feedFilters = FeedFilterParams()
             }
         )
     }
