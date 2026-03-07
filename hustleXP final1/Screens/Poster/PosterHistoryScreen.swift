@@ -35,6 +35,9 @@ struct PosterHistoryScreen: View {
                         }
                         .padding(24)
                     }
+                    .refreshable {
+                        await refreshHistory()
+                    }
                 }
             }
         }
@@ -43,8 +46,16 @@ struct PosterHistoryScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .task {
+            await refreshHistory()
+        }
     }
-    
+
+    private func refreshHistory() async {
+        await dataService.refreshAll()
+        completedTasks = dataService.completedTasks.filter { $0.posterId == dataService.currentUser.id }
+    }
+
     private var filteredTasks: [HXTask] {
         switch selectedFilter {
         case .all:

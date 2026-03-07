@@ -105,6 +105,9 @@ struct PosterActiveTasksScreen: View {
             }
             .padding()
         }
+        .refreshable {
+            await dataService.refreshAll()
+        }
     }
     
     // MARK: - Empty State

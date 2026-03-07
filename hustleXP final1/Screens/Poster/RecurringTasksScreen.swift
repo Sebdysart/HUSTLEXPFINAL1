@@ -129,6 +129,9 @@ struct RecurringTasksScreen: View {
             }
             .padding(16)
         }
+        .refreshable {
+            await viewModel.loadData()
+        }
     }
 
     // MARK: - Empty State

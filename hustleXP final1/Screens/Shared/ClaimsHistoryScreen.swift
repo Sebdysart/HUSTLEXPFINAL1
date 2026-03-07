@@ -96,6 +96,16 @@ struct ClaimsHistoryScreen: View {
         }
         isLoading = false
     }
+
+    /// Pull-to-refresh variant: refreshes without showing the skeleton loading state.
+    private func refreshClaims() async {
+        do {
+            claims = try await InsuranceService.shared.getMyClaims()
+            HXLogger.info("ClaimsHistory: Refreshed \(claims.count) claims from API", category: "General")
+        } catch {
+            HXLogger.error("ClaimsHistory: Refresh failed - \(error.localizedDescription)", category: "General")
+        }
+    }
     
     // MARK: - API Error View (v2.5.0)
     
@@ -187,7 +197,7 @@ struct ClaimsHistoryScreen: View {
         VStack(spacing: 0) {
             // Filter tabs
             filterTabs
-            
+
             // Claims list
             ScrollView {
                 LazyVStack(spacing: 12) {
@@ -199,6 +209,9 @@ struct ClaimsHistoryScreen: View {
                     }
                 }
                 .padding(20)
+            }
+            .refreshable {
+                await refreshClaims()
             }
         }
     }

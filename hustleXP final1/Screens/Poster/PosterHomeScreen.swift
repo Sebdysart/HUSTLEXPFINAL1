@@ -35,19 +35,22 @@ struct PosterHomeScreen: View {
                         // Welcome header
                         welcomeHeader(isCompact: isCompact)
                             .padding(.top, isCompact ? 4 : 8)
-                        
+
                         // Post task CTA
                         postTaskCTA(isCompact: isCompact)
-                        
+
                         // Stats grid
                         statsSection(isCompact: isCompact)
-                        
+
                         // Active tasks section
                         activeTasksSection(isCompact: isCompact)
-                        
+
                         Spacer(minLength: max(24, geometry.safeAreaInsets.bottom + 16))
                     }
                     .padding(.vertical)
+                }
+                .refreshable {
+                    await dataService.refreshAll()
                 }
             }
         }

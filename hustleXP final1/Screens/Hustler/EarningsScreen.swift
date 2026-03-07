@@ -23,15 +23,18 @@ struct EarningsScreen: View {
                     VStack(spacing: isCompact ? 18 : 24) {
                         // Total earnings hero
                         earningsHero(isCompact: isCompact)
-                        
+
                         // Period breakdown
                         periodBreakdown(isCompact: isCompact)
-                        
+
                         // Recent earnings
                         recentEarnings(isCompact: isCompact)
                     }
                     .padding(.vertical, isCompact ? 12 : 16)
                     .padding(.bottom, max(16, geometry.safeAreaInsets.bottom))
+                }
+                .refreshable {
+                    await dataService.refreshAll()
                 }
             }
         }

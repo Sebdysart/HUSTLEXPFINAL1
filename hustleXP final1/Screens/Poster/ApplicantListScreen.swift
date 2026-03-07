@@ -66,6 +66,9 @@ struct ApplicantListScreen: View {
                     }
                     .padding(24)
                 }
+                .refreshable {
+                    await refreshApplicants()
+                }
             }
         }
         .navigationTitle("Applicants")
@@ -108,6 +111,16 @@ struct ApplicantListScreen: View {
             HXLogger.error("ApplicantList: Failed to load - \(error.localizedDescription)", category: "Task")
         }
         isLoading = false
+    }
+
+    /// Pull-to-refresh variant: refreshes without showing the skeleton loading state.
+    private func refreshApplicants() async {
+        do {
+            applicants = try await TaskService.shared.listApplicants(taskId: taskId)
+            HXLogger.info("ApplicantList: Refreshed \(applicants.count) applicants", category: "Task")
+        } catch {
+            HXLogger.error("ApplicantList: Refresh failed - \(error.localizedDescription)", category: "Task")
+        }
     }
 
     // MARK: - Actions

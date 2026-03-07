@@ -38,13 +38,16 @@ struct HustlerHistoryScreen: View {
             LazyVStack(spacing: 12) {
                 // Stats summary
                 statsSummary
-                
+
                 // Completed tasks
                 ForEach(dataService.completedTasks) { task in
                     CompletedTaskCard(task: task)
                 }
             }
             .padding()
+        }
+        .refreshable {
+            await dataService.refreshAll()
         }
     }
     
