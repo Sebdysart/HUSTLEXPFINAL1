@@ -23,6 +23,8 @@ struct LiveBroadcastsScreen: View {
     @State private var loadError: AppError?
     @State private var userLocation: GPSCoordinates?
     @State private var sseSubscription: AnyCancellable?
+    // IMP-2: debounce task reference to coalesce rapid SSE event bursts
+    @State private var refreshTask: Task<Void, Never>?
 
     // MARK: - Constants
 
@@ -169,9 +171,11 @@ struct LiveBroadcastsScreen: View {
     // MARK: - SSE Subscription
 
     private func subscribeToSSE() {
+        // IMP-1: cancel any existing subscription before creating a new one
+        sseSubscription?.cancel()
         sseSubscription = RealtimeSSEClient.shared.messageReceived
             .receive(on: DispatchQueue.main)
-            .sink { message in
+            .sink { [self] message in
                 let refreshEvents = [
                     "live_broadcast_new",
                     "live_broadcast_updated",
@@ -179,7 +183,11 @@ struct LiveBroadcastsScreen: View {
                 ]
                 guard refreshEvents.contains(message.event) else { return }
                 HXLogger.info("LiveBroadcasts: SSE '\(message.event)' — refreshing", category: "Network")
-                Task {
+                // IMP-2: debounce rapid SSE bursts — cancel in-flight refresh before scheduling
+                refreshTask?.cancel()
+                refreshTask = Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
                     await loadBroadcasts()
                 }
             }
@@ -278,7 +286,8 @@ private struct LiveBroadcastRow: View {
 
             // Pay amount
             VStack(alignment: .trailing, spacing: 4) {
-                Text("$\(Int(broadcast.price))")
+                // SUG-3: preserve cents — Int() truncates $9.99 to $9
+                Text(String(format: "$%.2f", broadcast.price))
                     .font(.system(size: 20, weight: .bold))
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.moneyGreen)

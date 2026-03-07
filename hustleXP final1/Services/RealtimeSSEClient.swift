@@ -53,16 +53,17 @@ final class RealtimeSSEClient: NSObject, ObservableObject {
 
     func connect(authToken: String) {
         lastAuthToken = authToken
+        // IMP-3: guard before starting monitor/heartbeat so they are only created once
+        guard task == nil else { return }
         startNetworkMonitoring()
         startHeartbeat()
-        guard task == nil else { return }
 
-        guard var components = URLComponents(string: streamURL) else { return }
-        components.queryItems = [URLQueryItem(name: "token", value: authToken)]
-        guard let url = components.url else { return }
+        // CRIT-1: use Authorization header — never put credentials in URL query strings
+        guard let url = URL(string: streamURL) else { return }
 
         var request = URLRequest(url: url)
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 0 // No timeout for SSE
 
         // Create a dedicated URLSession with this class as the delegate so that
@@ -130,14 +131,14 @@ final class RealtimeSSEClient: NSObject, ObservableObject {
 
     // MARK: - SSE Parsing
 
-    /// Process a UTF-8 text chunk that may contain one or more complete SSE messages.
-    /// The parser is intentionally stateless across chunks via `buffer` —
-    /// a message split across two chunks will be completed on the next call.
+    /// Process a complete SSE message block (text between double-newline boundaries).
+    /// Multiple `data:` lines in one event are concatenated with `\n` per the SSE spec
+    /// instead of the previous behaviour of overwriting with the last line.
     private func parseSSEChunk(_ text: String) {
         lastDataReceived = Date()
 
         var currentEvent = "message"
-        var currentData = ""
+        var dataLines: [String] = []
         var hasData = false
 
         let lines = text.components(separatedBy: "\n")
@@ -146,10 +147,12 @@ final class RealtimeSSEClient: NSObject, ObservableObject {
             if line.hasPrefix("event: ") {
                 currentEvent = String(line.dropFirst(7))
             } else if line.hasPrefix("data: ") {
-                currentData = String(line.dropFirst(6))
+                // CRIT-2: accumulate all data lines; join with \n per SSE spec
+                dataLines.append(String(line.dropFirst(6)))
                 hasData = true
             } else if line.isEmpty && hasData {
                 // Empty line = end of this SSE message block
+                let currentData = dataLines.joined(separator: "\n")
                 if let data = currentData.data(using: .utf8) {
                     let normalisedEvent = normaliseEventName(currentEvent)
                     messageReceived.send(SSEMessage(event: normalisedEvent, data: data))
@@ -157,7 +160,7 @@ final class RealtimeSSEClient: NSObject, ObservableObject {
                 }
                 // Reset for next message in this chunk
                 currentEvent = "message"
-                currentData = ""
+                dataLines = []
                 hasData = false
             }
         }
@@ -172,7 +175,8 @@ final class RealtimeSSEClient: NSObject, ObservableObject {
         }
 
         retryCount += 1
-        let delay = min(Double(1 << retryCount), 30.0) // Exponential backoff, max 30s
+        // SUG-2: use pow() instead of signed-int bitshift, which is fragile for large retryCount
+        let delay = min(pow(2.0, Double(retryCount)), 30.0) // Exponential backoff, max 30s
         let jitter = Double.random(in: 0...1)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + delay + jitter) { [weak self] in
@@ -211,7 +215,9 @@ final class RealtimeSSEClient: NSObject, ObservableObject {
     private func startHeartbeat() {
         heartbeatTimer?.invalidate()
         lastDataReceived = Date()
-        heartbeatTimer = Timer.scheduledTimer(withTimeInterval: 45, repeats: true) { [weak self] _ in
+        // IMP-4: use Timer(timeInterval:) + RunLoop.main.add(.common) so the timer
+        // fires even during UIScrollView tracking (which pauses the .default run loop mode).
+        heartbeatTimer = Timer(timeInterval: 45, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self = self, self.isConnected else { return }
                 if let lastData = self.lastDataReceived,
@@ -227,6 +233,7 @@ final class RealtimeSSEClient: NSObject, ObservableObject {
                 }
             }
         }
+        RunLoop.main.add(heartbeatTimer!, forMode: .common)
     }
 }
 
@@ -235,16 +242,58 @@ final class RealtimeSSEClient: NSObject, ObservableObject {
 extension RealtimeSSEClient: URLSessionDataDelegate {
 
     /// Called incrementally as each chunk of SSE data arrives from the server.
-    /// This is the key fix: `dataTask(with:completionHandler:)` would buffer
-    /// everything; the delegate fires per-chunk giving us true streaming.
+    /// CRIT-2: append to the shared buffer first, then scan for complete SSE message
+    /// boundaries (`\n\n` or `\r\n\r\n`). Only complete messages are dispatched to
+    /// parseSSEChunk; partial trailing data stays in the buffer for the next chunk.
     nonisolated func urlSession(
         _ session: URLSession,
         dataTask: URLSessionDataTask,
         didReceive data: Data
     ) {
-        guard let text = String(data: data, encoding: .utf8) else { return }
         Task { @MainActor [weak self] in
-            self?.parseSSEChunk(text)
+            guard let self else { return }
+            // Append incoming bytes to the accumulation buffer.
+            self.buffer.append(data)
+
+            // Scan for SSE message boundaries: messages end with \n\n or \r\n\r\n.
+            let doubleNewline = Data([0x0A, 0x0A])           // \n\n
+            let crlfDouble   = Data([0x0D, 0x0A, 0x0D, 0x0A]) // \r\n\r\n
+
+            while true {
+                // Find the earliest boundary in the buffer.
+                var boundaryRange: Range<Data.Index>?
+                var boundaryLength = 2
+
+                let nnRange   = self.buffer.range(of: doubleNewline)
+                let crlfRange = self.buffer.range(of: crlfDouble)
+
+                if let nn = nnRange, let crlf = crlfRange {
+                    if nn.lowerBound <= crlf.lowerBound {
+                        boundaryRange = nn
+                        boundaryLength = 2
+                    } else {
+                        boundaryRange = crlf
+                        boundaryLength = 4
+                    }
+                } else if let nn = nnRange {
+                    boundaryRange = nn
+                    boundaryLength = 2
+                } else if let crlf = crlfRange {
+                    boundaryRange = crlf
+                    boundaryLength = 4
+                }
+
+                guard let boundary = boundaryRange else { break }
+
+                // Extract the complete message block (excluding the boundary itself).
+                let messageData = self.buffer.subdata(in: self.buffer.startIndex..<boundary.lowerBound)
+                // Remove the message + boundary from the buffer.
+                self.buffer.removeSubrange(self.buffer.startIndex..<(boundary.lowerBound + boundaryLength))
+
+                if let text = String(data: messageData, encoding: .utf8), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    self.parseSSEChunk(text)
+                }
+            }
         }
     }
 
