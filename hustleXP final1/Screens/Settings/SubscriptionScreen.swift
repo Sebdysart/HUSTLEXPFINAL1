@@ -400,7 +400,12 @@ struct SubscriptionScreen: View {
             haptic.notificationOccurred(.success)
             showPaymentConfirmation = false
             selectedPlan = nil
-            await subscriptionService.fetchSubscription()
+            // Confirm with backend so plan activates in DB
+            if let subId = subscriptionService.pendingSubscriptionId {
+                _ = await subscriptionService.confirmSubscription(stripeSubscriptionId: subId)
+            } else {
+                await subscriptionService.fetchSubscription()
+            }
         case .canceled:
             break
         case .failed(let error):

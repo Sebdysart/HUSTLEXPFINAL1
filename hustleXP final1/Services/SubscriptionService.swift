@@ -24,6 +24,7 @@ final class SubscriptionService {
     var recurringTaskLimit: Int = 0
     var isLoading = false
     var error: String?
+    var pendingSubscriptionId: String?
 
     private let trpc = TRPCClient.shared
 
@@ -194,6 +195,7 @@ final class SubscriptionService {
             )
 
             isLoading = false
+            pendingSubscriptionId = result.subscriptionId
             HXLogger.info("SubscriptionService: Got clientSecret for \(plan) (\(interval))", category: "Payment")
             return result.clientSecret
         } catch {

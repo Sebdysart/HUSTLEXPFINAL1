@@ -18,6 +18,8 @@ struct RecurringTasksScreen: View {
     @Environment(AppState.self) private var appState
 
     @State private var viewModel = RecurringTasksViewModel()
+    @State private var subscriptionService = SubscriptionService.shared
+    @State private var showPaywall = false
 
     var body: some View {
         ZStack {
@@ -50,7 +52,11 @@ struct RecurringTasksScreen: View {
             if viewModel.isUnlocked {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        viewModel.showCreateSheet = true
+                        if subscriptionService.canCreateRecurringTask {
+                            viewModel.showCreateSheet = true
+                        } else {
+                            showPaywall = true
+                        }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .foregroundStyle(Color.recurringBlue)
@@ -65,9 +71,23 @@ struct RecurringTasksScreen: View {
         )) {
             CreateRecurringTaskSheet()
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallSheet(
+                onViewPlans: {
+                    showPaywall = false
+                    router.navigateToSettings(.subscription)
+                },
+                onDismiss: {
+                    showPaywall = false
+                }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.hidden)
+        }
         .task {
             viewModel.appState = appState
             await viewModel.loadData()
+            await subscriptionService.fetchSubscription()
             viewModel.animateContentIn()
         }
     }
@@ -142,7 +162,13 @@ struct RecurringTasksScreen: View {
             title: viewModel.selectedFilter == .active ? "No Active Recurring Tasks" : "No Recurring Tasks",
             message: "Schedule tasks that repeat automatically. Perfect for lawn care, cleaning, and more.",
             ctaLabel: "Create Recurring Task",
-            ctaAction: { viewModel.showCreateSheet = true }
+            ctaAction: {
+                if subscriptionService.canCreateRecurringTask {
+                    viewModel.showCreateSheet = true
+                } else {
+                    showPaywall = true
+                }
+            }
         )
     }
 
