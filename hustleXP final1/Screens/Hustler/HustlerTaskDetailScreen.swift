@@ -28,6 +28,12 @@ struct HustlerTaskDetailScreen: View {
     @State private var showRatingSheet = false
     @State private var sseSubscription: AnyCancellable?
 
+    // Application state
+    @State private var hasApplied = false
+    @State private var isApplying = false
+    @State private var showApplySheet = false
+    @State private var applicationMessage = ""
+
     // v1.9.0 Spatial Intelligence
     @State private var userLocation: GPSCoordinates?
     @State private var walkingETA: WalkingETA?
@@ -128,6 +134,61 @@ struct HustlerTaskDetailScreen: View {
                     isPresented: $showRatingSheet
                 )
                 .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            // Application sheet
+            .sheet(isPresented: $showApplySheet) {
+                NavigationStack {
+                    VStack(spacing: 20) {
+                        Text("Apply for Task")
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(Color.textPrimary)
+
+                        Text("Send a message to the poster explaining why you're a great fit.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.textSecondary)
+                            .multilineTextAlignment(.center)
+
+                        TextEditor(text: $applicationMessage)
+                            .frame(minHeight: 100, maxHeight: 200)
+                            .padding(8)
+                            .background(Color.surfaceElevated)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.1))
+                            )
+
+                        Button(action: {
+                            applyForTask()
+                        }) {
+                            HStack {
+                                if isApplying {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Image(systemName: "paperplane.fill")
+                                }
+                                Text(isApplying ? "Submitting..." : "Submit Application")
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color.brandPurple)
+                            .cornerRadius(14)
+                        }
+                        .disabled(isApplying)
+                    }
+                    .padding(24)
+                    .background(Color.brandBlack.ignoresSafeArea())
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Cancel") { showApplySheet = false }
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
             }
         } else {
@@ -682,7 +743,9 @@ struct HustlerTaskDetailScreen: View {
                 } else {
                     Button(action: {
                         if task.state == .posted {
-                            acceptTask(task)
+                            if !hasApplied {
+                                showApplySheet = true
+                            }
                         } else {
                             router.navigateToHustler(.taskInProgress(taskId: task.id))
                         }
@@ -692,11 +755,11 @@ struct HustlerTaskDetailScreen: View {
                                 ProgressView()
                                     .tint(.white)
                             } else {
-                                Image(systemName: task.state == .posted ? "checkmark.circle.fill" : "arrow.right.circle.fill")
+                                Image(systemName: task.state == .posted ? (hasApplied ? "checkmark.seal.fill" : "paperplane.fill") : "arrow.right.circle.fill")
                                     .font(.system(size: 18, weight: .semibold))
                             }
 
-                            Text(task.state == .posted ? "Accept Task" : "View Progress")
+                            Text(task.state == .posted ? (hasApplied ? "Applied ✓" : "Apply Now") : "View Progress")
                                 .font(.headline.weight(.semibold))
                         }
                         .foregroundStyle(.white)
@@ -720,7 +783,7 @@ struct HustlerTaskDetailScreen: View {
                         )
                         .shadow(color: isEligible ? Color.brandPurple.opacity(0.3) : .clear, radius: 12, y: 4)
                     }
-                    .disabled(!isEligible || isAccepting)
+                    .disabled(!isEligible || isAccepting || hasApplied || isApplying)
                 }
             }
             .padding(.horizontal, 16)
@@ -860,7 +923,33 @@ struct HustlerTaskDetailScreen: View {
         dataService.claimTask(task.id)
         router.navigateToHustler(.taskInProgress(taskId: task.id))
     }
-    
+
+    // MARK: - Apply for Task
+
+    private func applyForTask() {
+        guard let task = task else { return }
+        isApplying = true
+        Task {
+            do {
+                _ = try await taskService.applyForTask(
+                    taskId: task.id,
+                    message: applicationMessage.isEmpty ? nil : applicationMessage
+                )
+                hasApplied = true
+                showApplySheet = false
+                applicationMessage = ""
+
+                let impact = UINotificationFeedbackGenerator()
+                impact.notificationOccurred(.success)
+            } catch {
+                HXLogger.error("TaskDetail: Apply failed - \(error.localizedDescription)", category: "Task")
+                acceptError = "Could not submit application. Please try again."
+                showAcceptError = true
+            }
+            isApplying = false
+        }
+    }
+
     // v2.2.0: Load task from API
     private func loadTaskFromAPI() async {
         do {

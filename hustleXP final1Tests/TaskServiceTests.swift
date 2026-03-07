@@ -134,4 +134,28 @@ final class TaskServiceTests: XCTestCase {
         _ = try await service.getTask(id: "task-1")
         XCTAssertFalse(service.isLoading)
     }
+
+    // MARK: - applyForTask
+
+    func testApplyForTask() async throws {
+        let json = """
+        {"id":"app-001","task_id":"task-001","status":"pending","message":"I can help!","applied_at":"2026-03-06T00:00:00Z"}
+        """
+        mockClient.stubJSON("task.applyForTask", json: json)
+
+        let result = try await service.applyForTask(taskId: "task-001", message: "I can help!")
+
+        XCTAssertEqual(result.id, "app-001")
+        XCTAssertEqual(result.status, "pending")
+    }
+
+    func testWithdrawApplication() async throws {
+        let json = """
+        {"success":true}
+        """
+        mockClient.stubJSON("task.withdrawApplication", json: json)
+
+        try await service.withdrawApplication(taskId: "task-001")
+        // No assertion needed - success means it didn't throw
+    }
 }

@@ -320,6 +320,47 @@ final class TaskService: ObservableObject {
         HXLogger.info("TaskService: Rejected applicant \(workerId) for task \(taskId)", category: "Task")
     }
 
+    // MARK: - Application (Hustler)
+
+    /// Hustler applies for a task with optional message
+    func applyForTask(taskId: String, message: String? = nil) async throws -> ApplicationResponse {
+        isLoading = true
+        defer { isLoading = false }
+
+        struct ApplyInput: Codable {
+            let taskId: String
+            let message: String?
+        }
+
+        let response: ApplicationResponse = try await trpc.call(
+            router: "task",
+            procedure: "applyForTask",
+            input: ApplyInput(taskId: taskId, message: message)
+        )
+
+        HXLogger.info("TaskService: Applied for task \(taskId)", category: "Task")
+        return response
+    }
+
+    /// Hustler withdraws their application
+    func withdrawApplication(taskId: String) async throws {
+        struct WithdrawInput: Codable {
+            let taskId: String
+        }
+
+        struct SuccessResponse: Codable {
+            let success: Bool
+        }
+
+        let _: SuccessResponse = try await trpc.call(
+            router: "task",
+            procedure: "withdrawApplication",
+            input: WithdrawInput(taskId: taskId)
+        )
+
+        HXLogger.info("TaskService: Withdrew application for task \(taskId)", category: "Task")
+    }
+
     // MARK: - Task Listings
 
     /// Gets all open tasks (available for workers)
@@ -736,4 +777,31 @@ struct MatchFactor: Codable {
     let name: String
     let score: Double
     let description: String
+}
+
+// MARK: - Application Response
+
+struct ApplicationResponse: Codable, Identifiable {
+    let id: String
+    let taskId: String
+    let status: String
+    let message: String?
+    let appliedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case taskId = "task_id"
+        case status
+        case message
+        case appliedAt = "applied_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        taskId = (try? container.decode(String.self, forKey: .taskId)) ?? ""
+        status = (try? container.decode(String.self, forKey: .status)) ?? "pending"
+        message = try? container.decode(String.self, forKey: .message)
+        appliedAt = try? container.decode(Date.self, forKey: .appliedAt)
+    }
 }
