@@ -149,57 +149,24 @@ final class SquadService: ObservableObject {
     // MARK: - Squad Tasks
 
     func getSquadTasks(squadId: String) async throws -> [SquadTask] {
-        struct GetTasksInput: Codable {
-            let squadId: String
-        }
-
-        let tasks: [SquadTask] = try await trpc.call(
-            router: "squad",
-            procedure: "listTasks",
-            type: .query,
-            input: GetTasksInput(squadId: squadId)
-        )
-
-        return tasks
+        HXLogger.info("SquadService: Squad task feed is not exposed by the live backend contract for squad \(squadId)", category: "Squad")
+        return []
     }
 
     func acceptSquadTask(squadTaskId: String) async throws {
-        isLoading = true
-        defer { isLoading = false }
-
-        struct AcceptTaskInput: Codable {
-            let squadTaskId: String
-        }
-
-        struct AcceptResponse: Codable {
-            let id: String
-            let squadTaskId: String
-            let workerId: String
-            let acceptedAt: Date
-            let taskStatus: String
-        }
-
-        let _: AcceptResponse = try await trpc.call(
-            router: "squad",
-            procedure: "acceptTask",
-            input: AcceptTaskInput(squadTaskId: squadTaskId)
+        throw NSError(
+            domain: "HustleXP",
+            code: 501,
+            userInfo: [
+                NSLocalizedDescriptionKey: "Squad task acceptance is not available in the live backend contract."
+            ]
         )
-
-        HXLogger.info("SquadService: Accepted squad task", category: "Squad")
     }
 
     // MARK: - Leaderboard
 
     func getLeaderboard() async throws -> [HXSquad] {
-        struct EmptyInput: Codable {}
-
-        let squads: [HXSquad] = try await trpc.call(
-            router: "squad",
-            procedure: "leaderboard",
-            type: .query,
-            input: EmptyInput()
-        )
-
-        return squads
+        HXLogger.info("SquadService: Leaderboard is not exposed by the live backend contract", category: "Squad")
+        return []
     }
 }

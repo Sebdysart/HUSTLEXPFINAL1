@@ -2,9 +2,8 @@
 //  MovementTrackingService.swift
 //  hustleXP final1
 //
-//  Real tRPC service for movement tracking during task execution
-//  Maps to backend tracking.ts router
-//  Replaces MockMovementTrackingService
+//  Local movement tracking during task execution
+//  Replaces the removed tracking API contract with client-side session state
 //
 
 import Foundation
@@ -46,17 +45,11 @@ struct MovementStats: Codable {
 final class MovementTrackingService {
     static let shared = MovementTrackingService()
 
-    private let trpc = TRPCClient.shared
-
     // MARK: - State
 
     private(set) var activeSession: MovementSession?
     private(set) var isTracking = false
     private(set) var error: Error?
-
-    // Local GPS buffer for periodic backend sync
-    private var gpsBuffer: [GPSPoint] = []
-    private var syncTimer: Timer?
 
     private init() {}
 
@@ -66,50 +59,28 @@ final class MovementTrackingService {
     func startTracking(taskId: String, initialLocation: GPSCoordinates) async throws -> MovementSession {
         isTracking = true
         error = nil
-
-        struct StartInput: Codable {
-            let taskId: String
-            let initialLocation: GPSPointInput
-        }
-
-        struct GPSPointInput: Codable {
-            let latitude: Double
-            let longitude: Double
-            let accuracy: Double
-            let timestamp: Date
-        }
-
-        let input = StartInput(
-            taskId: taskId,
-            initialLocation: GPSPointInput(
-                latitude: initialLocation.latitude,
-                longitude: initialLocation.longitude,
-                accuracy: initialLocation.accuracyMeters,
-                timestamp: initialLocation.timestamp
-            )
+        let startingPoint = GPSPoint(
+            latitude: initialLocation.latitude,
+            longitude: initialLocation.longitude,
+            accuracy: initialLocation.accuracyMeters,
+            timestamp: initialLocation.timestamp
         )
 
-        do {
-            let session: MovementSession = try await trpc.call(
-                router: "tracking",
-                procedure: "startSession",
-                input: input
-            )
+        let session = MovementSession(
+            id: "local-track-\(UUID().uuidString)",
+            taskId: taskId,
+            userId: "local-tracker",
+            startedAt: initialLocation.timestamp,
+            endedAt: nil,
+            gpsTrail: [startingPoint],
+            totalDistance: 0,
+            averageSpeed: 0,
+            status: "ACTIVE"
+        )
 
-            self.activeSession = session
-            gpsBuffer = []
-
-            // Start periodic sync
-            startPeriodicSync(sessionId: session.id)
-
-            HXLogger.info("Movement tracking started for task: \(taskId)", category: "Tracking")
-            return session
-        } catch {
-            self.error = error
-            isTracking = false
-            HXLogger.error("Failed to start movement tracking: \(error.localizedDescription)", category: "Tracking")
-            throw error
-        }
+        activeSession = session
+        HXLogger.info("Movement tracking started locally for task: \(taskId)", category: "Tracking")
+        return session
     }
 
     /// Update location during tracking
@@ -123,11 +94,14 @@ final class MovementTrackingService {
             timestamp: location.timestamp
         )
 
-        gpsBuffer.append(point)
-
-        // Update local session
         var updatedSession = session
         updatedSession.gpsTrail.append(point)
+        updatedSession.totalDistance = calculateDistance(for: updatedSession.gpsTrail)
+        updatedSession.averageSpeed = calculateAverageSpeed(
+            distance: updatedSession.totalDistance,
+            startedAt: updatedSession.startedAt,
+            endedAt: point.timestamp
+        )
         activeSession = updatedSession
     }
 
@@ -136,114 +110,62 @@ final class MovementTrackingService {
         guard let session = activeSession else { return nil }
 
         isTracking = false
-        stopPeriodicSync()
-
-        // Flush remaining GPS points
-        if !gpsBuffer.isEmpty {
-            await syncGPSPoints()
-        }
-
-        struct StopInput: Codable {
-            let sessionId: String
-        }
-
-        let input = StopInput(sessionId: session.id)
-
-        do {
-            let finalSession: MovementSession = try await trpc.call(
-                router: "tracking",
-                procedure: "stopSession",
-                input: input
-            )
-
-            activeSession = nil
-            HXLogger.info("Movement tracking stopped. Distance: \(String(format: "%.0f", finalSession.totalDistance))m", category: "Tracking")
-            return finalSession
-        } catch {
-            self.error = error
-            HXLogger.error("Failed to stop movement tracking: \(error.localizedDescription)", category: "Tracking")
-            throw error
-        }
+        var finalSession = session
+        finalSession.endedAt = Date()
+        finalSession.totalDistance = calculateDistance(for: finalSession.gpsTrail)
+        finalSession.averageSpeed = calculateAverageSpeed(
+            distance: finalSession.totalDistance,
+            startedAt: finalSession.startedAt,
+            endedAt: finalSession.endedAt ?? Date()
+        )
+        finalSession.status = "COMPLETED"
+        activeSession = nil
+        HXLogger.info("Movement tracking stopped locally. Distance: \(String(format: "%.0f", finalSession.totalDistance))m", category: "Tracking")
+        return finalSession
     }
 
     /// Get session statistics
     func getStats(sessionId: String) async throws -> MovementStats {
-        struct StatsInput: Codable {
-            let sessionId: String
+        guard let session = activeSession, session.id == sessionId else {
+            return MovementStats(
+                totalDistance: 0,
+                duration: 0,
+                averageSpeed: 0,
+                topSpeed: 0,
+                estimatedArrival: nil
+            )
         }
 
-        let input = StatsInput(sessionId: sessionId)
-
-        let stats: MovementStats = try await trpc.call(
-            router: "tracking",
-            procedure: "getStats",
-            type: .query,
-            input: input
+        let duration = max(0, Date().timeIntervalSince(session.startedAt))
+        return MovementStats(
+            totalDistance: session.totalDistance,
+            duration: duration,
+            averageSpeed: session.averageSpeed,
+            topSpeed: session.averageSpeed,
+            estimatedArrival: nil
         )
-
-        return stats
     }
 
-    // MARK: - Private - Periodic Sync
+    private func calculateDistance(for trail: [GPSPoint]) -> Double {
+        guard trail.count > 1 else { return 0 }
 
-    private func startPeriodicSync(sessionId: String) {
-        syncTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.syncGPSPoints()
-            }
+        var distance: Double = 0
+        for index in 1..<trail.count {
+            let previous = CLLocation(
+                latitude: trail[index - 1].latitude,
+                longitude: trail[index - 1].longitude
+            )
+            let current = CLLocation(
+                latitude: trail[index].latitude,
+                longitude: trail[index].longitude
+            )
+            distance += current.distance(from: previous)
         }
+        return distance
     }
 
-    private func stopPeriodicSync() {
-        syncTimer?.invalidate()
-        syncTimer = nil
-    }
-
-    private func syncGPSPoints() async {
-        guard !gpsBuffer.isEmpty, let session = activeSession else { return }
-
-        let pointsToSync = gpsBuffer
-        gpsBuffer = []
-
-        // Send each point to backend
-        for point in pointsToSync {
-            do {
-                struct UpdateInput: Codable {
-                    let sessionId: String
-                    let location: GPSPointInput
-                }
-
-                struct UpdateLocationResponse: Codable {
-                    let success: Bool?
-                }
-
-                struct GPSPointInput: Codable {
-                    let latitude: Double
-                    let longitude: Double
-                    let accuracy: Double
-                    let timestamp: Date
-                }
-
-                let input = UpdateInput(
-                    sessionId: session.id,
-                    location: GPSPointInput(
-                        latitude: point.latitude,
-                        longitude: point.longitude,
-                        accuracy: point.accuracy,
-                        timestamp: point.timestamp
-                    )
-                )
-
-                let _: UpdateLocationResponse = try await trpc.call(
-                    router: "tracking",
-                    procedure: "updateLocation",
-                    input: input
-                )
-            } catch {
-                HXLogger.error("Failed to sync GPS point: \(error.localizedDescription)", category: "Tracking")
-                // Re-add to buffer for retry
-                gpsBuffer.append(point)
-            }
-        }
+    private func calculateAverageSpeed(distance: Double, startedAt: Date, endedAt: Date) -> Double {
+        let duration = max(endedAt.timeIntervalSince(startedAt), 1)
+        return distance / duration
     }
 }

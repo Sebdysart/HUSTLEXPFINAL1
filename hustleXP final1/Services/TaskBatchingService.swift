@@ -2,9 +2,8 @@
 //  TaskBatchingService.swift
 //  hustleXP final1
 //
-//  Real tRPC service for AI-powered task batching and route optimization
-//  Maps to backend batching.ts router
-//  Replaces MockTaskBatchingService
+//  Local heuristic service for task batching and route optimization
+//  Replaces the removed batching API contract with deterministic client-side behavior
 //
 
 import Foundation
@@ -42,8 +41,6 @@ private struct TaskBatchSavingsResponse: Codable {
 final class TaskBatchingService {
     static let shared = TaskBatchingService()
 
-    private let trpc = TRPCClient.shared
-
     // MARK: - State
 
     private(set) var currentRecommendation: BatchRecommendation?
@@ -54,7 +51,7 @@ final class TaskBatchingService {
 
     // MARK: - Generate Recommendation
 
-    /// Generate batch recommendation from available tasks
+    /// Generates a recommendation using the local batching heuristic.
     func generateRecommendation(
         availableTasks: [HXTask],
         currentLocation: GPSCoordinates? = nil
@@ -67,112 +64,37 @@ final class TaskBatchingService {
         error = nil
         defer { isLoading = false }
 
-        struct GenerateInput: Codable {
-            let availableTasks: [TaskInput]
-            let currentLocation: LocationInput?
+        let available = availableTasks.filter(\.isAvailable)
+        guard let primaryTask = selectPrimaryTask(from: available, currentLocation: currentLocation) else {
+            currentRecommendation = nil
+            return nil
         }
 
-        struct TaskInput: Codable {
-            let id: String
-            let title: String
-            let price: Int
-            let location: String
-            let latitude: Double?
-            let longitude: Double?
-            let estimatedDuration: Int?
-        }
-
-        struct LocationInput: Codable {
-            let lat: Double
-            let lng: Double
-        }
-
-        let taskInputs = availableTasks.map { task in
-            TaskInput(
-                id: task.id,
-                title: task.title,
-                price: Int(task.payment * 100), // Convert to cents
-                location: task.location,
-                latitude: task.latitude,
-                longitude: task.longitude,
-                estimatedDuration: parseDuration(task.estimatedDuration)
-            )
-        }
-
-        let locationInput = currentLocation.map { loc in
-            LocationInput(lat: loc.latitude, lng: loc.longitude)
-        }
-
-        let input = GenerateInput(
-            availableTasks: taskInputs,
-            currentLocation: locationInput
+        let fallbackLocation = currentLocation ?? primaryTask.gpsCoordinates ?? GPSCoordinates(
+            latitude: primaryTask.latitude ?? 0,
+            longitude: primaryTask.longitude ?? 0,
+            accuracyMeters: 0,
+            timestamp: Date()
         )
 
-        do {
-            let recommendation: TaskBatchRecommendationResponse? = try await trpc.call(
-                router: "batching",
-                procedure: "generateRecommendation",
-                type: .query,
-                input: input
-            )
+        let recommendation = generateRecommendation(
+            for: primaryTask,
+            availableTasks: available,
+            userLocation: fallbackLocation
+        )
 
-            let mapped = recommendation.map { rec in
-                mapRecommendation(rec, fallbackTasks: availableTasks)
-            }
-            self.currentRecommendation = mapped
-
-            if let rec = recommendation {
-                HXLogger.info("Batch recommendation: \(rec.additionalTasks.count + 1) tasks, $\(String(format: "%.0f", rec.earningsPerHour))/hr", category: "Batching")
-            }
-
-            return mapped
-        } catch {
-            self.error = error
-            HXLogger.error("Failed to generate batch recommendation: \(error.localizedDescription)", category: "Batching")
-            throw error
+        if let recommendation {
+            HXLogger.info("TaskBatchingService: Generated local recommendation for \(recommendation.taskCount) tasks", category: "Batching")
         }
+
+        return recommendation
     }
 
     // MARK: - Calculate Savings
 
-    /// Calculate savings for specific tasks
+    /// Calculates batch savings using the same local heuristic as the UI.
     func calculateBatchSavingsFromAPI(tasks: [HXTask]) async throws -> BatchSavings {
-        struct CalculateInput: Codable {
-            let tasks: [TaskInput]
-        }
-
-        struct TaskInput: Codable {
-            let id: String
-            let title: String
-            let price: Int
-            let location: String
-            let latitude: Double?
-            let longitude: Double?
-            let estimatedDuration: Int?
-        }
-
-        let taskInputs = tasks.map { task in
-            TaskInput(
-                id: task.id,
-                title: task.title,
-                price: Int(task.payment * 100),
-                location: task.location,
-                latitude: task.latitude,
-                longitude: task.longitude,
-                estimatedDuration: parseDuration(task.estimatedDuration)
-            )
-        }
-
-        let input = CalculateInput(tasks: taskInputs)
-
-        let savings: TaskBatchSavingsResponse = try await trpc.call(
-            router: "batching",
-            procedure: "calculateSavings",
-            type: .query,
-            input: input
-        )
-
-        return mapSavingsResponse(savings)
+        calculateBatchSavingsLocal(tasks: tasks)
     }
 
     // MARK: - Local Fallbacks
@@ -298,6 +220,40 @@ final class TaskBatchingService {
         }
 
         return nil
+    }
+
+    private func selectPrimaryTask(
+        from availableTasks: [HXTask],
+        currentLocation: GPSCoordinates?
+    ) -> HXTask? {
+        let candidates = availableTasks.filter { $0.gpsCoordinates != nil || ($0.latitude != nil && $0.longitude != nil) }
+        guard !candidates.isEmpty else {
+            return availableTasks.first
+        }
+
+        guard let currentLocation else {
+            return candidates.max(by: { $0.payment < $1.payment })
+        }
+
+        return candidates.min { lhs, rhs in
+            let lhsDistance = distance(from: currentLocation, to: lhs)
+            let rhsDistance = distance(from: currentLocation, to: rhs)
+            if lhsDistance == rhsDistance {
+                return lhs.payment > rhs.payment
+            }
+            return lhsDistance < rhsDistance
+        }
+    }
+
+    private func distance(from origin: GPSCoordinates, to task: HXTask) -> Double {
+        guard let taskCoordinates = task.gpsCoordinates ?? {
+            guard let latitude = task.latitude, let longitude = task.longitude else { return nil }
+            return GPSCoordinates(latitude: latitude, longitude: longitude, accuracyMeters: 0, timestamp: Date())
+        }() else {
+            return .greatestFiniteMagnitude
+        }
+
+        return LocationService.current.calculateDistance(from: origin, to: taskCoordinates)
     }
 
     func clearRecommendation() {

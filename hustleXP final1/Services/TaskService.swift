@@ -264,101 +264,38 @@ final class TaskService: ObservableObject {
 
     /// Lists applicants for a posted task
     func listApplicants(taskId: String) async throws -> [TaskApplicant] {
-        struct ListInput: Codable {
-            let taskId: String
-        }
-
-        let applicants: [TaskApplicant] = try await trpc.call(
-            router: "task",
-            procedure: "listApplicants",
-            type: .query,
-            input: ListInput(taskId: taskId)
-        )
-
-        HXLogger.info("TaskService: Fetched \(applicants.count) applicants for task \(taskId)", category: "Task")
-        return applicants
+        HXLogger.info("TaskService: Applicant listing is not exposed by the live backend contract for task \(taskId)", category: "Task")
+        return []
     }
 
     /// Poster assigns a specific applicant as the worker for their task
     func assignWorker(taskId: String, workerId: String) async throws -> HXTask {
-        isLoading = true
-        defer { isLoading = false }
-
-        struct AssignInput: Codable {
-            let taskId: String
-            let workerId: String
-        }
-
-        let task: HXTask = try await trpc.call(
-            router: "task",
-            procedure: "assignWorker",
-            input: AssignInput(taskId: taskId, workerId: workerId)
+        throw unsupportedTaskWorkflow(
+            "Assigning applicants is not available in the live backend contract for task \(taskId)."
         )
-
-        HXLogger.info("TaskService: Assigned worker \(workerId) to task \(task.title)", category: "Task")
-        AnalyticsService.shared.trackTaskEvent(.taskAccepted, taskId: task.id, taskTitle: task.title)
-        return task
     }
 
     /// Poster rejects an applicant for their task
     func rejectApplicant(taskId: String, workerId: String) async throws {
-        struct RejectInput: Codable {
-            let taskId: String
-            let workerId: String
-        }
-
-        struct SuccessResponse: Codable {
-            let success: Bool
-        }
-
-        let _: SuccessResponse = try await trpc.call(
-            router: "task",
-            procedure: "rejectApplicant",
-            input: RejectInput(taskId: taskId, workerId: workerId)
+        throw unsupportedTaskWorkflow(
+            "Rejecting applicants is not available in the live backend contract for task \(taskId)."
         )
-
-        HXLogger.info("TaskService: Rejected applicant \(workerId) for task \(taskId)", category: "Task")
     }
 
     // MARK: - Application (Hustler)
 
     /// Hustler applies for a task with optional message
     func applyForTask(taskId: String, message: String? = nil) async throws -> ApplicationResponse {
-        isLoading = true
-        defer { isLoading = false }
-
-        struct ApplyInput: Codable {
-            let taskId: String
-            let message: String?
-        }
-
-        let response: ApplicationResponse = try await trpc.call(
-            router: "task",
-            procedure: "applyForTask",
-            input: ApplyInput(taskId: taskId, message: message)
+        throw unsupportedTaskWorkflow(
+            "Task application is not available in the live backend contract for task \(taskId)."
         )
-
-        HXLogger.info("TaskService: Applied for task \(taskId)", category: "Task")
-        return response
     }
 
     /// Hustler withdraws their application
     func withdrawApplication(taskId: String) async throws {
-        struct WithdrawInput: Codable {
-            let taskId: String
-        }
-
-        struct SuccessResponse: Codable {
-            let success: Bool
-        }
-
-        let _: SuccessResponse = try await trpc.call(
-            router: "task",
-            procedure: "withdrawApplication",
-            input: WithdrawInput(taskId: taskId)
+        throw unsupportedTaskWorkflow(
+            "Application withdrawal is not available in the live backend contract for task \(taskId)."
         )
-
-        HXLogger.info("TaskService: Withdrew application for task \(taskId)", category: "Task")
     }
 
     // MARK: - Task Listings
@@ -442,6 +379,14 @@ final class TaskService: ObservableObject {
 
         HXLogger.info("TaskService: Fetched \(tasks.count) history tasks", category: "Task")
         return tasks
+    }
+
+    private func unsupportedTaskWorkflow(_ message: String) -> NSError {
+        NSError(
+            domain: "HustleXP",
+            code: 501,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
     }
 }
 

@@ -1,17 +1,16 @@
 import Foundation
 import Combine
 
-/// Feature flag service - fetches flags from backend, caches locally
+/// Feature flag service - currently cache and defaults only until a live flags router exists again.
 @MainActor
 final class FeatureFlagService: ObservableObject {
     static let shared = FeatureFlagService()
 
     @Published private(set) var flags: [String: Bool] = [:]
-    private let trpc: TRPCClientProtocol
     private let cacheKey = "feature_flags_cache"
+    private let defaultFlags: [String: Bool] = [:]
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
-        self.trpc = client
+    init() {
         loadCachedFlags()
     }
 
@@ -20,30 +19,12 @@ final class FeatureFlagService: ObservableObject {
         flags[flagName] ?? false
     }
 
-    /// Fetch flags from backend
+    /// Refreshes feature flags from the best local source available.
     func refreshFlags() async {
-        struct EmptyInput: Codable {}
-        struct FlagResponse: Codable {
-            let name: String
-            let enabled: Bool
-        }
-
-        do {
-            let result: [FlagResponse] = try await trpc.call(
-                router: "flags",
-                procedure: "getFlags",
-                type: .query,
-                input: EmptyInput()
-            )
-            var newFlags: [String: Bool] = [:]
-            for flag in result {
-                newFlags[flag.name] = flag.enabled
-            }
-            self.flags = newFlags
-            saveFlagsToCache(newFlags)
-        } catch {
-            HXLogger.error("FeatureFlagService: Failed to fetch flags - \(error)", category: "General")
-        }
+        let resolvedFlags = flags.isEmpty ? defaultFlags : flags
+        self.flags = resolvedFlags
+        saveFlagsToCache(resolvedFlags)
+        HXLogger.info("FeatureFlagService: Using local cache/defaults while backend flags router is unavailable", category: "General")
     }
 
     private func loadCachedFlags() {
