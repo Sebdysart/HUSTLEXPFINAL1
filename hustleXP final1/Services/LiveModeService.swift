@@ -73,13 +73,30 @@ struct InstantTask: Codable, Identifiable {
     let waitingSeconds: Int?
 }
 
-/// Instant mode metrics (for testing/debugging)
+/// Time-to-accept statistics bucket — nested inside InstantModeMetrics
+/// CORRECTED Mar 2026: backend returns nested objects, not flat fields
+struct InstantTimeStats: Codable {
+    let count: Int
+    let median: Double?
+    let p90: Double?
+    let min: Double?
+    let max: Double?
+    let all: [Double]
+}
+
+/// Dismiss rate stats bucket — nested inside InstantModeMetrics
+struct InstantDismissStats: Codable {
+    let total: Int
+    let dismissed: Int
+}
+
+/// Instant mode metrics returned by instant.metrics
+/// Maps directly to backend instant.ts router output
 struct InstantModeMetrics: Codable {
-    let medianTimeToAccept: Double?
-    let p90TimeToAccept: Double?
-    let minTimeToAccept: Double?
-    let maxTimeToAccept: Double?
-    let dismissRate: Double?
+    let timeToAccept: InstantTimeStats       // was flat medianTimeToAccept/p90/etc — CORRECTED
+    let notificationLatency: InstantTimeStats
+    let dismissRate: Double
+    let dismissStats: InstantDismissStats
 }
 
 // MARK: - Live Mode Service

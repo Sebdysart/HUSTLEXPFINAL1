@@ -242,6 +242,10 @@ final class TRPCClient: ObservableObject, TRPCClientProtocol {
 
         // Decode response - unwrap tRPC envelope { "result": { "data": ... } }
         let decoder = JSONDecoder()
+        // Backend returns raw DB rows with snake_case column names (e.g. task_id, created_at).
+        // convertFromSnakeCase maps these to camelCase Swift properties automatically.
+        // camelCase fields from manually-constructed JS objects pass through unchanged.
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let dateString = try container.decode(String.self)

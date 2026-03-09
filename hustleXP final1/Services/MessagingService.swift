@@ -143,7 +143,7 @@ final class MessagingService: ObservableObject {
 
     /// Marks messages as read
     func markAsRead(taskId: String) async throws {
-        struct MarkReadInput: Codable {
+        struct MarkAllAsReadInput: Codable {   // renamed to avoid collision with MarkAsReadInput below
             let taskId: String
         }
 
@@ -152,7 +152,7 @@ final class MessagingService: ObservableObject {
         let _: EmptyResponse = try await trpc.call(
             router: "messaging",
             procedure: "markAllAsRead",
-            input: MarkReadInput(taskId: taskId)
+            input: MarkAllAsReadInput(taskId: taskId)
         )
 
         HXLogger.info("MessagingService: Marked messages as read for task \(taskId)", category: "General")
@@ -166,7 +166,8 @@ final class MessagingService: ObservableObject {
         struct EmptyInput: Codable {}
 
         struct CountResponse: Codable {
-            let count: Int
+            let unreadCount: Int  // primary field — backend returns both for compat
+            let count: Int        // alias for unreadCount (same value)
         }
 
         let response: CountResponse = try await trpc.call(
@@ -176,8 +177,8 @@ final class MessagingService: ObservableObject {
             input: EmptyInput()
         )
 
-        self.unreadCount = response.count
-        return response.count
+        self.unreadCount = response.unreadCount
+        return response.unreadCount
     }
 
     /// Refreshes unread count silently
@@ -220,7 +221,7 @@ final class MessagingService: ObservableObject {
 
     /// Marks a single message as read by message ID
     func markMessageAsRead(messageId: String) async throws {
-        struct MarkReadInput: Codable {
+        struct MarkAsReadInput: Codable {   // renamed to avoid collision with MarkAllAsReadInput above
             let messageId: String
         }
 
@@ -229,7 +230,7 @@ final class MessagingService: ObservableObject {
         let _: EmptyResponse = try await trpc.call(
             router: "messaging",
             procedure: "markAsRead",
-            input: MarkReadInput(messageId: messageId)
+            input: MarkAsReadInput(messageId: messageId)
         )
 
         HXLogger.info("MessagingService: Marked message \(messageId) as read", category: "General")

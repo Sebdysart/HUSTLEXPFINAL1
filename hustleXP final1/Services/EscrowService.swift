@@ -3,20 +3,27 @@
 //  hustleXP final1
 //
 //  Real tRPC service for escrow and payment operations
-//  Integrates with Stripe via backend
+//  Maps to backend escrow.ts router + EscrowService.ts
+//
+//  CORRECTED Mar 2026:
+//  - EscrowState rawValues fixed to UPPERCASE (matching backend EscrowState)
+//  - Escrow struct: "amount" (not "amountCents"), removed phantom fee fields
+//  - XPAwardResult replaced with XPLedgerEntry (actual backend return type)
 //
 
 import Foundation
 import Combine
 
-/// Escrow states matching backend
-enum EscrowState: String, Codable {
-    case pending = "pending"
-    case funded = "funded"
-    case held = "held"
-    case released = "released"
-    case refunded = "refunded"
-    case disputed = "disputed"
+// MARK: - Escrow State
+
+/// Backend escrow state — must match EscrowState in types.ts (uppercase string values)
+enum EscrowState: String, Codable, CaseIterable {
+    case pending      = "PENDING"
+    case funded       = "FUNDED"
+    case lockedDispute = "LOCKED_DISPUTE"   // was "held" with rawValue "held" — CORRECTED
+    case released     = "RELEASED"
+    case refunded     = "REFUNDED"
+    case refundPartial = "REFUND_PARTIAL"   // was "disputed" — CORRECTED
 
     /// Safe decode — unknown values default to .pending
     init(from decoder: Decoder) throws {
@@ -26,42 +33,91 @@ enum EscrowState: String, Codable {
     }
 }
 
-/// Escrow record from backend
+// MARK: - Escrow Model
+
+/// Escrow DB row returned by all escrow.* procedures
+/// Decoded with keyDecodingStrategy = .convertFromSnakeCase
 struct Escrow: Codable, Identifiable {
+    // Core fields (always present)
     let id: String
-    let taskId: String
-    let posterId: String
-    let workerId: String?
-    let amountCents: Int
-    let platformFeeCents: Int
-    let taxWithholdingCents: Int
-    let insuranceContributionCents: Int
+    let taskId: String                      // DB: task_id
+    let amount: Int                         // DB: amount — USD cents (was "amountCents" — CORRECTED)
     let state: EscrowState
-    let stripePaymentIntentId: String?
-    let createdAt: Date
-    let fundedAt: Date?
-    let releasedAt: Date?
 
-    var amount: Double {
-        Double(amountCents) / 100.0
-    }
+    // Partial refund tracking
+    let refundAmount: Int?                  // DB: refund_amount
+    let releaseAmount: Int?                 // DB: release_amount
 
-    var platformFee: Double {
-        Double(platformFeeCents) / 100.0
-    }
+    // Stripe references
+    let stripePaymentIntentId: String?      // DB: stripe_payment_intent_id
+    let stripeTransferId: String?           // DB: stripe_transfer_id
+    let stripeRefundId: String?             // DB: stripe_refund_id
 
-    var workerPayout: Double {
-        Double(amountCents - platformFeeCents - taxWithholdingCents - insuranceContributionCents) / 100.0
-    }
+    // Joined from tasks table (only on escrow.getById — optional elsewhere)
+    let posterId: String?                   // DB: poster_id (JOIN only — not on fund/release/refund)
+    let workerId: String?                   // DB: worker_id (JOIN only)
+
+    // Timestamps
+    let fundedAt: Date?                     // DB: funded_at
+    let releasedAt: Date?                   // DB: released_at
+    let refundedAt: Date?                   // DB: refunded_at
+    let createdAt: Date                     // DB: created_at
+    let updatedAt: Date                     // DB: updated_at
 }
 
-/// Payment intent response for Stripe
+// MARK: - Escrow UI Helpers (extension — not decoded from API)
+
+extension Escrow {
+    /// Amount in dollars (UI convenience)
+    var amountDollars: Double { Double(amount) / 100.0 }
+
+    /// Backward-compat alias (old field name was amountCents)
+    var amountCents: Int { amount }
+}
+
+// MARK: - Payment Intent Response
+
+/// Response from escrow.createPaymentIntent
 struct PaymentIntentResponse: Codable {
-    let clientSecret: String
-    let paymentIntentId: String
-    let amountCents: Int
     let escrowId: String
+    let paymentIntentId: String
+    let clientSecret: String
+    let amountCents: Int                    // This procedure uses "amountCents" as field name
 }
+
+// MARK: - XP Ledger Entry
+
+/// Returned by escrow.awardXP — maps to XPLedgerEntry in XPService.ts
+/// Decoded with keyDecodingStrategy = .convertFromSnakeCase
+struct XPLedgerEntry: Codable {
+    let id: String
+    let userId: String                      // DB: user_id
+    let taskId: String                      // DB: task_id
+    let escrowId: String                    // DB: escrow_id
+    let baseXp: Int                         // DB: base_xp (was "amount" in old phantom struct)
+    let streakMultiplier: Double            // DB: streak_multiplier
+    let trustMultiplier: Double             // DB: trust_multiplier
+    let liveModeMultiplier: Double          // DB: live_mode_multiplier (1.25× for Live tasks)
+    let effectiveXp: Int                    // DB: effective_xp (baseXp × all multipliers)
+    let reason: String
+    let userXpBefore: Int                   // DB: user_xp_before
+    let userXpAfter: Int                    // DB: user_xp_after
+    let userLevelBefore: Int                // DB: user_level_before
+    let userLevelAfter: Int                 // DB: user_level_after
+    let userStreakAtAward: Int              // DB: user_streak_at_award
+    let awardedAt: Date                     // DB: awarded_at
+}
+
+// MARK: - XPLedgerEntry UI Helpers (extension — not decoded from API)
+
+extension XPLedgerEntry {
+    /// Whether the user leveled up from this XP award
+    var didLevelUp: Bool { userLevelAfter > userLevelBefore }
+    /// Net XP gain
+    var xpGained: Int { userXpAfter - userXpBefore }
+}
+
+// MARK: - Service
 
 /// Manages all escrow and payment operations via tRPC
 @MainActor
@@ -157,10 +213,25 @@ final class EscrowService: ObservableObject {
         return response.state
     }
 
+    /// Gets escrow details by escrow ID (returns posterId/workerId via JOIN)
+    func getById(escrowId: String) async throws -> Escrow {
+        struct GetByIdInput: Codable {
+            let escrowId: String
+        }
+
+        let escrow: Escrow = try await trpc.call(
+            router: "escrow",
+            procedure: "getById",
+            type: .query,
+            input: GetByIdInput(escrowId: escrowId)
+        )
+
+        return escrow
+    }
+
     // MARK: - Payout (Worker receives)
 
     /// Releases escrow funds to worker after task completion
-    /// Called automatically by backend when poster approves proof
     func releaseToWorker(escrowId: String, stripeTransferId: String? = nil) async throws -> Escrow {
         isLoading = true
         defer { isLoading = false }
@@ -220,25 +291,6 @@ final class EscrowService: ObservableObject {
         return escrows
     }
 
-    // MARK: - Get By ID
-
-    /// Gets escrow details by escrow ID
-    /// Only poster or worker of the associated task can view
-    func getById(escrowId: String) async throws -> Escrow {
-        struct GetByIdInput: Codable {
-            let escrowId: String
-        }
-
-        let escrow: Escrow = try await trpc.call(
-            router: "escrow",
-            procedure: "getById",
-            type: .query,
-            input: GetByIdInput(escrowId: escrowId)
-        )
-
-        return escrow
-    }
-
     // MARK: - Dispute Lock
 
     /// Locks escrow for dispute resolution
@@ -265,7 +317,7 @@ final class EscrowService: ObservableObject {
     /// Awards XP after escrow release
     /// INV-1: Will fail if escrow is not RELEASED
     /// INV-5: Will fail if XP already awarded for this escrow
-    func awardXP(taskId: String, escrowId: String, baseXP: Int) async throws -> XPAwardResult {
+    func awardXP(taskId: String, escrowId: String, baseXP: Int) async throws -> XPLedgerEntry {
         isLoading = true
         defer { isLoading = false }
 
@@ -275,23 +327,15 @@ final class EscrowService: ObservableObject {
             let baseXP: Int
         }
 
-        let result: XPAwardResult = try await trpc.call(
+        let entry: XPLedgerEntry = try await trpc.call(
             router: "escrow",
             procedure: "awardXP",
             input: AwardXPInput(taskId: taskId, escrowId: escrowId, baseXP: baseXP)
         )
 
-        HXLogger.info("EscrowService: Awarded XP for escrow \(escrowId)", category: "Payment")
-        return result
+        HXLogger.info("EscrowService: Awarded \(entry.effectiveXp) XP for escrow \(escrowId)", category: "Payment")
+        return entry
     }
-}
-
-/// XP award result from escrow
-struct XPAwardResult: Codable {
-    let xpAwarded: Int
-    let newTotalXP: Int
-    let bonusXP: Int?
-    let tierUp: Bool?
 }
 
 // MARK: - Stripe Integration Helper
