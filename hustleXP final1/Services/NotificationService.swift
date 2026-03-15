@@ -112,6 +112,29 @@ struct NotificationPreferences {
         marketingEmails = backend.categoryPreferences?["marketingEmails"] ?? false
     }
 
+    /// Convenience init for UI screens that only manage the 6 visible toggles.
+    /// SMS and quiet-hours fields are not exposed in the UI and default to off/nil;
+    /// they are also excluded from `backendInput` so they are never written back.
+    init(
+        pushEnabled: Bool,
+        emailEnabled: Bool,
+        taskUpdates: Bool,
+        paymentUpdates: Bool,
+        messageNotifications: Bool,
+        marketingEmails: Bool
+    ) {
+        self.pushEnabled = pushEnabled
+        self.emailEnabled = emailEnabled
+        self.smsEnabled = false
+        self.quietHoursEnabled = false
+        self.quietHoursStart = nil
+        self.quietHoursEnd = nil
+        self.taskUpdates = taskUpdates
+        self.paymentUpdates = paymentUpdates
+        self.messageNotifications = messageNotifications
+        self.marketingEmails = marketingEmails
+    }
+
     /// Maps to backend notification.updatePreferences input
     var backendInput: BackendNotificationPrefsInput {
         BackendNotificationPrefsInput(
