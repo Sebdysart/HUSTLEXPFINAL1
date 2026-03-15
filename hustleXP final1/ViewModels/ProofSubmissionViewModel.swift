@@ -266,21 +266,59 @@ final class ProofSubmissionViewModel {
                     biometricHash: biometricHash
                 )
 
-                // Create biometric proof submission for local validation
-                let photoURL: URL? = photoUrls.first.flatMap { URL(string: $0) }
-                let submission = BiometricProofSubmission(
-                    proofId: UUID().uuidString,
-                    photoURL: photoURL,
-                    gpsCoordinates: coords,
+                // Submit biometric proof for real validation via tRPC
+                let proofId = UUID().uuidString
+                let photoUrlString = photoUrls.first ?? localProofPhotoURL
+                let now = ISO8601DateFormatter().string(from: Date())
+                let gpsTs = ISO8601DateFormatter().string(from: coords.timestamp)
+
+                // Use the task's known location for GPS proximity check;
+                // fall back to the hustler's current coords if unavailable.
+                let taskLat = task?.latitude ?? coords.latitude
+                let taskLon = task?.longitude ?? coords.longitude
+
+                let biometricInput = BiometricProofInput(
+                    proofId: proofId,
+                    taskId: taskId,
+                    photoUrl: photoUrlString,
+                    gpsCoordinates: BiometricProofInput.GPSPoint(
+                        latitude: coords.latitude,
+                        longitude: coords.longitude
+                    ),
                     gpsAccuracyMeters: coords.accuracyMeters,
-                    gpsTimestamp: coords.timestamp,
-                    deviceModel: "iPhone16,3",
-                    osVersion: "18.0"
+                    gpsTimestamp: gpsTs,
+                    taskLocation: BiometricProofInput.GPSPoint(
+                        latitude: taskLat,
+                        longitude: taskLon
+                    ),
+                    lidarDepthMapUrl: nil,
+                    timeLockHash: biometricHash,
+                    submissionTimestamp: now
                 )
 
-                let result = dataService.validateBiometricProof(
-                    submission: submission,
-                    taskId: taskId
+                let apiResult = try await BiometricService.shared.submitBiometricProof(biometricInput)
+
+                // Map BiometricVerificationResult → BiometricValidationResult
+                let recommendation = ValidationRecommendation(rawValue: apiResult.recommendation) ?? .manualReview
+                let scores = ValidationScores(
+                    liveness: Int((apiResult.biometricScores?.livenessScore ?? 0) * 100),
+                    deepfake: Int((apiResult.biometricScores?.deepfakeScore ?? 0) * 100),
+                    gpsProximity: apiResult.gpsValidation?.passed == true ? 90 : 30
+                )
+                let riskLevel: RiskLevel = {
+                    switch apiResult.gpsValidation?.riskLevel {
+                    case "HIGH": return .high
+                    case "MEDIUM": return .medium
+                    case "LOW": return .low
+                    default: return recommendation == .approve ? .low : .medium
+                    }
+                }()
+                let result = BiometricValidationResult(
+                    recommendation: recommendation,
+                    reasoning: apiResult.reasoning ?? "Biometric validation complete.",
+                    flags: apiResult.flags,
+                    scores: scores,
+                    riskLevel: riskLevel
                 )
 
                 isSubmitting = false
@@ -293,27 +331,20 @@ final class ProofSubmissionViewModel {
                 HXLogger.debug("[ProofSubmission] Validation result: \(result.recommendation.rawValue)", category: "Task")
 
             } catch {
-                HXLogger.error("ProofSubmission: API failed - \(error.localizedDescription)", category: "Task")
+                HXLogger.error("ProofSubmission: Biometric API failed - \(error.localizedDescription)", category: "Task")
 
-                // Fall back to mock validation
-                let photoURL: URL? = uploadedPhotoUrls.first.flatMap { URL(string: $0) }
-                let submission = BiometricProofSubmission(
-                    proofId: UUID().uuidString,
-                    photoURL: photoURL,
-                    gpsCoordinates: coords,
-                    gpsAccuracyMeters: coords.accuracyMeters,
-                    gpsTimestamp: coords.timestamp,
-                    deviceModel: "iPhone16,3",
-                    osVersion: "18.0"
-                )
-
-                let result = dataService.validateBiometricProof(
-                    submission: submission,
-                    taskId: taskId
+                // Degrade gracefully: surface a manual_review result so the proof
+                // is not silently lost — the poster will review it manually.
+                let fallbackResult = BiometricValidationResult(
+                    recommendation: .manualReview,
+                    reasoning: "Automatic validation unavailable. The poster will review your submission.",
+                    flags: ["validation_service_unavailable"],
+                    scores: ValidationScores(liveness: 0, deepfake: 0, gpsProximity: 0),
+                    riskLevel: .medium
                 )
 
                 isSubmitting = false
-                validationResult = result
+                validationResult = fallbackResult
 
                 withAnimation(.spring(response: 0.4)) {
                     showValidationFeedback = true
