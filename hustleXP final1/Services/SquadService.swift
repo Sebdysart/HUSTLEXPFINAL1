@@ -77,8 +77,8 @@ final class SquadService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        struct DisbandInput: Codable {
-            let id: String
+        struct DisbandInput: Encodable {
+            let squadId: String
         }
 
         struct EmptyResponse: Codable {}
@@ -86,7 +86,7 @@ final class SquadService: ObservableObject {
         let _: EmptyResponse = try await trpc.call(
             router: "squad",
             procedure: "disband",
-            input: DisbandInput(id: id)
+            input: DisbandInput(squadId: id)
         )
 
         HXLogger.info("SquadService: Disbanded squad \(id)", category: "General")
@@ -149,24 +149,39 @@ final class SquadService: ObservableObject {
     // MARK: - Squad Tasks
 
     func getSquadTasks(squadId: String) async throws -> [SquadTask] {
-        HXLogger.info("SquadService: Squad task feed is not exposed by the live backend contract for squad \(squadId)", category: "Squad")
-        return []
+        struct ListTasksInput: Encodable {
+            let squadId: String
+        }
+        return try await trpc.call(
+            router: "squad",
+            procedure: "listTasks",
+            type: .query,
+            input: ListTasksInput(squadId: squadId)
+        )
     }
 
     func acceptSquadTask(squadTaskId: String) async throws {
-        throw NSError(
-            domain: "HustleXP",
-            code: 501,
-            userInfo: [
-                NSLocalizedDescriptionKey: "Squad task acceptance is not available in the live backend contract."
-            ]
+        struct AcceptTaskInput: Encodable {
+            let squadTaskId: String
+        }
+        struct VoidOutput: Decodable {}
+        let _: VoidOutput = try await trpc.call(
+            router: "squad",
+            procedure: "acceptTask",
+            input: AcceptTaskInput(squadTaskId: squadTaskId)
         )
+        HXLogger.info("SquadService: Accepted squad task \(squadTaskId)", category: "Squad")
     }
 
     // MARK: - Leaderboard
 
     func getLeaderboard() async throws -> [HXSquad] {
-        HXLogger.info("SquadService: Leaderboard is not exposed by the live backend contract", category: "Squad")
-        return []
+        struct EmptyInput: Encodable {}
+        return try await trpc.call(
+            router: "squad",
+            procedure: "leaderboard",
+            type: .query,
+            input: EmptyInput()
+        )
     }
 }
