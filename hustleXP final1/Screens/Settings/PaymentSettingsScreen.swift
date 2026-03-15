@@ -186,32 +186,39 @@ private struct HistoryRow: View {
     let icon: String
     let title: String
     let subtitle: String
-    
+    @State private var isPresented = false
+
     var body: some View {
-        NavigationLink(destination: TransactionHistoryView()) {
+        Button {
+            isPresented = true
+        } label: {
             HStack(spacing: 14) {
                 ZStack {
                     Circle()
                         .fill(Color.textSecondary.opacity(0.15))
                         .frame(width: 44, height: 44)
-                    
+
                     Image(systemName: icon)
                         .font(.system(size: 18))
                         .foregroundStyle(Color.textSecondary)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     HXText(title, style: .body)
                     HXText(subtitle, style: .caption, color: .textSecondary)
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14))
                     .foregroundStyle(Color.textTertiary)
             }
             .padding(16)
+        }
+        .buttonStyle(.plain)
+        .navigationDestination(isPresented: $isPresented) {
+            TransactionHistoryView()
         }
     }
 }

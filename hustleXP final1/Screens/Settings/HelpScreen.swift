@@ -142,9 +142,12 @@ private struct FAQSection: View {
 // MARK: - FAQ Row
 private struct FAQRow: View {
     let question: String
-    
+    @State private var isPresented = false
+
     var body: some View {
-        NavigationLink(destination: FAQDetailView(question: question)) {
+        Button {
+            isPresented = true
+        } label: {
             HStack {
                 HXText(question, style: .body)
                 Spacer()
@@ -153,6 +156,10 @@ private struct FAQRow: View {
                     .foregroundStyle(Color.textTertiary)
             }
             .padding(16)
+        }
+        .buttonStyle(.plain)
+        .navigationDestination(isPresented: $isPresented) {
+            FAQDetailView(question: question)
         }
     }
 }
@@ -461,9 +468,12 @@ private struct LegalSection: View {
 // MARK: - Legal Row
 private struct LegalRow: View {
     let title: String
-    
+    @State private var isPresented = false
+
     var body: some View {
-        NavigationLink(destination: LegalDetailView(title: title)) {
+        Button {
+            isPresented = true
+        } label: {
             HStack {
                 HXText(title, style: .body)
                 Spacer()
@@ -472,6 +482,10 @@ private struct LegalRow: View {
                     .foregroundStyle(Color.textTertiary)
             }
             .padding(16)
+        }
+        .buttonStyle(.plain)
+        .navigationDestination(isPresented: $isPresented) {
+            LegalDetailView(title: title)
         }
     }
 }

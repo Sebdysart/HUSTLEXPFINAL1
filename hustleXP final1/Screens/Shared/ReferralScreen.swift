@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ReferralScreen: View {
-    @StateObject private var referralService = ReferralService()
+    @ObservedObject private var referralService = ReferralService.shared
     @State private var showShareSheet = false
     @State private var redeemCode = ""
     @State private var showRedeemField = false
