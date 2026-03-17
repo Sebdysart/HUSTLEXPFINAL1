@@ -269,7 +269,7 @@ final class AIConversationService {
         if text.contains("elder") || text.contains("senior") || text.contains("companion") {
             return .elderCare
         }
-        if text.contains("dog") || text.contains("pet") || text.contains("cat") || text.contains("walk") {
+        if text.contains("dog walk") || text.contains("pet walk") || text.contains("dog") || text.contains("pet") || text.contains("cat") {
             return .petCare
         }
         // In-home signals
@@ -299,7 +299,7 @@ final class AIConversationService {
             return .tech
         }
         // Wildcard — anything with enough detail that doesn't match standard categories
-        let wordCount = text.split(separator: " ").count
+        let wordCount = text.components(separatedBy: .whitespaces).filter { !$0.isEmpty }.count
         if wordCount > 4 {
             return .wildcardBizarre
         }
