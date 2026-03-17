@@ -37,6 +37,7 @@ class AITaskDraft {
     var duration: String = ""
     var category: TaskCategory?
     var requiredTier: TrustTier = .rookie
+    var wildcardFollowUpStep: Int = 0
 
     var hasBasicInfo: Bool {
         !title.isEmpty && !description.isEmpty
@@ -148,7 +149,16 @@ final class AIConversationService {
         }
 
         // Generate follow-up response
-        let response = generateFollowUpResponse(draft: draft, category: category)
+        let response: AIConversationMessage
+        if category == .wildcardBizarre {
+            response = AIConversationMessage(
+                content: "Interesting! This sounds like a one-of-a-kind task. What's the most unusual or performance-based part of it? (This helps us price it correctly)",
+                isFromAI: true
+            )
+            draft.wildcardFollowUpStep = 1
+        } else {
+            response = generateFollowUpResponse(draft: draft, category: category)
+        }
 
         return (draft, response)
     }
@@ -157,6 +167,24 @@ final class AIConversationService {
 
     private func processRefinement(_ input: String, draft: AITaskDraft) -> (AITaskDraft, AIConversationMessage) {
         let lowercased = input.lowercased()
+
+        // Wildcard multi-step follow-up
+        if draft.category == .wildcardBizarre && draft.wildcardFollowUpStep == 1 {
+            draft.description += " | Unique aspect: \(input)"
+            draft.wildcardFollowUpStep = 2
+            return (draft, AIConversationMessage(
+                content: "Got it. What proof would make you 100% confident this task was completed correctly?",
+                isFromAI: true
+            ))
+        }
+        if draft.category == .wildcardBizarre && draft.wildcardFollowUpStep == 2 {
+            draft.description += " | Completion proof: \(input)"
+            draft.wildcardFollowUpStep = 3
+            return (draft, AIConversationMessage(
+                content: "Perfect — I have what I need to price this. Does this look good, or would you like to adjust anything?",
+                isFromAI: true
+            ))
+        }
 
         // Check for confirmation
         if isConfirmation(lowercased) {
@@ -212,22 +240,68 @@ final class AIConversationService {
     // MARK: - Category Detection
 
     private func detectCategory(from text: String) -> TaskCategory {
+        // Content creator signals
+        if text.contains("stream") || text.contains("youtube") || text.contains("tiktok") ||
+           text.contains("podcast") || text.contains("collab") || text.contains("gaming") ||
+           text.contains("twitch") || text.contains("influencer") {
+            return .contentCreator
+        }
+        // Creative production signals
+        if text.contains("photo shoot") || text.contains("video shoot") || text.contains("model") ||
+           text.contains("recording session") || text.contains("film") {
+            return .creativeProduction
+        }
+        // Event signals
+        if text.contains("event") || text.contains("party") || text.contains("ambassador") ||
+           text.contains("promoter") || text.contains("mascot") || text.contains("appearance") {
+            return .eventAppearance
+        }
+        // Licensed/specialized signals
+        if text.contains("electrician") || text.contains("plumber") || text.contains("notary") ||
+           text.contains("tutor") || text.contains("trainer") || text.contains("licensed") ||
+           text.contains("therapist") || text.contains("hvac") {
+            return .specializedLicensed
+        }
+        // Care signals
+        if text.contains("babysit") || text.contains("childcare") || text.contains("child") {
+            return .childcare
+        }
+        if text.contains("elder") || text.contains("senior") || text.contains("companion") {
+            return .elderCare
+        }
+        if text.contains("dog") || text.contains("pet") || text.contains("cat") || text.contains("walk") {
+            return .petCare
+        }
+        // In-home signals
+        if text.contains("handyman") || text.contains("repair") || text.contains("fix") || text.contains("paint") {
+            return .handyman
+        }
+        if text.contains("clean") || text.contains("tidy") || text.contains("wash") {
+            return .cleaning
+        }
+        // Standard physical
         if text.contains("deliver") || text.contains("pickup") || text.contains("drop off") || text.contains("package") {
             return .delivery
-        } else if text.contains("clean") || text.contains("tidy") || text.contains("wash") {
-            return .cleaning
-        } else if text.contains("move") || text.contains("furniture") || text.contains("haul") || text.contains("lift") {
+        }
+        if text.contains("move") || text.contains("furniture") || text.contains("haul") || text.contains("lift") {
             return .moving
-        } else if text.contains("yard") || text.contains("lawn") || text.contains("garden") || text.contains("mow") || text.contains("rake") {
+        }
+        if text.contains("yard") || text.contains("lawn") || text.contains("garden") || text.contains("mow") || text.contains("rake") {
             return .yardWork
-        } else if text.contains("dog") || text.contains("pet") || text.contains("walk") || text.contains("cat") {
-            return .petCare
-        } else if text.contains("shop") || text.contains("grocery") || text.contains("store") || text.contains("buy") {
+        }
+        if text.contains("shop") || text.contains("grocery") || text.contains("store") || text.contains("buy") {
             return .shopping
-        } else if text.contains("assemble") || text.contains("build") || text.contains("ikea") || text.contains("fix") || text.contains("repair") {
+        }
+        if text.contains("assemble") || text.contains("build") || text.contains("ikea") {
             return .assembly
-        } else if text.contains("computer") || text.contains("tech") || text.contains("wifi") || text.contains("setup") {
+        }
+        if text.contains("computer") || text.contains("tech") || text.contains("wifi") || text.contains("setup") {
             return .tech
+        }
+        // Wildcard — anything with enough detail that doesn't match standard categories
+        let wordCount = text.split(separator: " ").count
+        if wordCount > 4 {
+            return .wildcardBizarre
         }
         return .other
     }
@@ -286,6 +360,22 @@ final class AIConversationService {
                 return "\(prefix) Assembly Pro Needed"
             case .tech:
                 return "\(prefix) Tech Wizard Wanted"
+            case .contentCreator:
+                return "\(prefix) Content Creator Collab"
+            case .eventAppearance:
+                return "\(prefix) Event Appearance"
+            case .creativeProduction:
+                return "\(prefix) Creative Production"
+            case .specializedLicensed:
+                return "\(prefix) Specialist Needed"
+            case .childcare:
+                return "\(prefix) Childcare Help"
+            case .elderCare:
+                return "\(prefix) Elder Care Support"
+            case .handyman:
+                return "\(prefix) Handyman Needed"
+            case .wildcardBizarre:
+                return "\(prefix) One-of-a-Kind Task"
             case .other:
                 return "\(prefix) Task Help"
             }
