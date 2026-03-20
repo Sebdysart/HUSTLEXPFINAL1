@@ -477,7 +477,14 @@ struct AITaskCreationScreen: View {
         
         taskDraft = updatedDraft
         isTyping = false
-        
+
+        // Template badge: show detected template inline if non-generic
+        // e.g. "✦ Content & Creator template detected" shown below the AI message
+        if let detectedCategory = taskDraft.category, detectedCategory != .other {
+            // Badge displayed in message list — handled by TemplateDetectedBadge view
+            _ = detectedCategory.templateSlug  // access templateSlug for future tRPC call
+        }
+
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             messages.append(response)
         }

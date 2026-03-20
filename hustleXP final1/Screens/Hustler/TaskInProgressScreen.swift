@@ -18,6 +18,10 @@ struct TaskInProgressScreen: View {
     @State private var showMessageSheet: Bool = false
     @State private var apiTask: HXTask?
 
+    // XP Burst celebration
+    @State private var showXPBurst = false
+    @State private var pendingProofTaskId: String?
+
     // v1.9.0 Spatial Intelligence
     @State private var geofence: GeofenceRegion?
     @State private var currentDistance: Double?
@@ -29,25 +33,44 @@ struct TaskInProgressScreen: View {
     private var task: HXTask? {
         apiTask ?? dataService.activeTask
     }
-    
+
+    /// Compute earned XP from task payment (1 XP per dollar, min 25)
+    private func xpForTask(_ task: HXTask) -> Int {
+        max(25, Int(task.payment))
+    }
+
     var body: some View {
         if let task = task {
             ZStack {
                 Color.brandBlack
                     .ignoresSafeArea()
-                
+
                 VStack(spacing: 0) {
                     // Status card
                     statusCard(task)
-                    
+
                     // Progress steps
                     progressSteps
                         .padding(.top, 32)
-                    
+
                     Spacer()
-                    
+
                     // Action buttons
                     actionButtons(task)
+                }
+
+                // XP Burst celebration overlay
+                if showXPBurst {
+                    XPBurstView(xpDelta: xpForTask(task)) {
+                        showXPBurst = false
+                        if let proofTaskId = pendingProofTaskId {
+                            router.navigateToHustler(.proofSubmission(taskId: proofTaskId))
+                            pendingProofTaskId = nil
+                        }
+                    }
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .zIndex(100)
                 }
             }
             .navigationTitle("Task In Progress")
@@ -366,7 +389,9 @@ struct TaskInProgressScreen: View {
                 
             case .working:
                 HXButton("Submit Proof") {
-                    router.navigateToHustler(.proofSubmission(taskId: task.id))
+                    // Fire XP burst, then navigate when animation completes
+                    pendingProofTaskId = task.id
+                    withAnimation { showXPBurst = true }
                 }
             }
             

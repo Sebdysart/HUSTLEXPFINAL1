@@ -186,10 +186,10 @@ struct ConversationScreen: View {
                 messages = hxMessages.map { msg in
                     ChatMessage(
                         id: msg.id,
-                        text: msg.content,
+                        text: msg.content ?? "",
                         isFromCurrentUser: msg.senderId == currentUserId,
                         timestamp: msg.timestamp,
-                        senderName: msg.senderName,
+                        senderName: msg.senderId == currentUserId ? "You" : otherUserName,
                         isRead: msg.isRead,
                         photoUrls: msg.photoUrls ?? []
                     )
@@ -252,10 +252,10 @@ struct ConversationScreen: View {
                 if let index = messages.firstIndex(where: { $0.id == optimisticMessage.id }) {
                     messages[index] = ChatMessage(
                         id: sentMessage.id,
-                        text: sentMessage.content,
+                        text: sentMessage.content ?? "",
                         isFromCurrentUser: true,
                         timestamp: sentMessage.timestamp,
-                        senderName: sentMessage.senderName
+                        senderName: "You"
                     )
                 }
                 
@@ -304,10 +304,10 @@ struct ConversationScreen: View {
                 // Step 3: Append to local message list with photo URL
                 let chatMessage = ChatMessage(
                     id: sentMessage.id,
-                    text: sentMessage.content,
+                    text: sentMessage.content ?? "",
                     isFromCurrentUser: true,
                     timestamp: sentMessage.timestamp,
-                    senderName: sentMessage.senderName,
+                    senderName: "You",
                     photoUrls: [publicUrl]
                 )
 

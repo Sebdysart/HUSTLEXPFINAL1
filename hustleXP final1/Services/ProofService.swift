@@ -10,11 +10,13 @@ import Foundation
 import UIKit
 import Combine
 
-/// Proof submission record
+/// Proof submission record — mirrors the `proofs` DB table (columns snake_case → camelCase via decoder).
+/// `submitterId` is the worker who submitted the proof (DB: submitter_id).
+/// `reviewedBy` is the poster who reviewed it (DB: reviewed_by), populated after review.
 struct ProofSubmission: Codable, Identifiable {
     let id: String
     let taskId: String
-    let workerId: String
+    let submitterId: String        // DB: submitter_id — the worker who submitted proof
     let photoUrls: [String]
     let notes: String?
     let gpsLatitude: Double?
@@ -22,8 +24,16 @@ struct ProofSubmission: Codable, Identifiable {
     let biometricHash: String?
     let submittedAt: Date
     let reviewedAt: Date?
+    let reviewedBy: String?        // DB: reviewed_by — populated after poster reviews
     let approved: Bool?
     let reviewerFeedback: String?
+}
+
+/// Wraps the nested { task, proof } response from task.submitProof.
+/// Backend returns both so the caller can update task state and display the proof record.
+private struct SubmitProofWrapper: Codable {
+    let task: HXTask
+    let proof: ProofSubmission
 }
 
 /// Pre-signed URL response for R2 upload
@@ -165,14 +175,15 @@ final class ProofService: ObservableObject {
             biometricHash: biometricHash
         )
 
-        let proof: ProofSubmission = try await trpc.call(
+        // Backend returns { task: HXTask, proof: ProofRecord } — unwrap via SubmitProofWrapper
+        let response: SubmitProofWrapper = try await trpc.call(
             router: "task",
             procedure: "submitProof",
             input: input
         )
 
         HXLogger.info("ProofService: Submitted proof for task \(taskId)", category: "Task")
-        return proof
+        return response.proof
     }
 
     /// Gets proof submission for a task

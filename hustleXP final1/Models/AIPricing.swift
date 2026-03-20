@@ -122,6 +122,14 @@ enum TaskCategory: String, Codable, CaseIterable {
     case petCare = "pet_care"
     case shopping = "shopping"
     case tech = "tech"
+    case contentCreator = "content_creator"
+    case eventAppearance = "event_appearance"
+    case creativeProduction = "creative_production"
+    case specializedLicensed = "specialized_licensed"
+    case childcare = "childcare"
+    case elderCare = "elder_care"
+    case handyman = "handyman"
+    case wildcardBizarre = "wildcard_bizarre"
     case other = "other"
 
     /// Safe decode — unknown categories default to .other
@@ -141,6 +149,14 @@ enum TaskCategory: String, Codable, CaseIterable {
         case .petCare: return "Pet Care"
         case .shopping: return "Shopping"
         case .tech: return "Tech Help"
+        case .contentCreator:      return "Content & Creator"
+        case .eventAppearance:     return "Event & Appearance"
+        case .creativeProduction:  return "Creative Production"
+        case .specializedLicensed: return "Specialized / Licensed"
+        case .childcare:           return "Childcare"
+        case .elderCare:           return "Elder Care"
+        case .handyman:            return "Handyman"
+        case .wildcardBizarre:     return "Wildcard / Custom"
         case .other: return "Other"
         }
     }
@@ -155,6 +171,14 @@ enum TaskCategory: String, Codable, CaseIterable {
         case .petCare: return "pawprint"
         case .shopping: return "cart"
         case .tech: return "laptopcomputer"
+        case .contentCreator:      return "video.badge.plus"
+        case .eventAppearance:     return "person.crop.circle.badge.checkmark"
+        case .creativeProduction:  return "camera.aperture"
+        case .specializedLicensed: return "checkmark.seal"
+        case .childcare:           return "figure.and.child.holdinghands"
+        case .elderCare:           return "figure.seated.seatbelt"
+        case .handyman:            return "hammer"
+        case .wildcardBizarre:     return "sparkle.magnifyingglass"
         case .other: return "questionmark.circle"
         }
     }
@@ -170,7 +194,29 @@ enum TaskCategory: String, Codable, CaseIterable {
         case .petCare: return 2000...6000
         case .shopping: return 2000...5000
         case .tech: return 4000...10000
+        case .contentCreator:      return 7500...40000
+        case .eventAppearance:     return 5000...25000
+        case .creativeProduction:  return 5000...40000
+        case .specializedLicensed: return 4000...15000
+        case .childcare:           return 3000...10000
+        case .elderCare:           return 3000...10000
+        case .handyman:            return 5000...15000
+        case .wildcardBizarre:     return 2500...50000
         case .other: return 2000...10000
+        }
+    }
+
+    /// Maps category → backend template slug
+    var templateSlug: String {
+        switch self {
+        case .delivery, .moving, .assembly, .shopping, .yardWork: return "standard_physical"
+        case .cleaning, .handyman:                                  return "in_home"
+        case .petCare, .childcare, .elderCare:                      return "care"
+        case .contentCreator:                                       return "content_creator"
+        case .eventAppearance:                                      return "event_appearance"
+        case .creativeProduction:                                   return "creative_production"
+        case .specializedLicensed, .tech:                          return "specialized_licensed"
+        case .wildcardBizarre, .other:                             return "wildcard_bizarre"
         }
     }
 }

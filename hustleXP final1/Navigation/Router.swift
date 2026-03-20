@@ -118,14 +118,6 @@ enum SettingsRoute: Hashable {
     case betaDashboard
 }
 
-enum EdgeRoute: Hashable {
-    case noTasks
-    case eligibility
-    case networkError
-    case maintenance
-    case forceUpdate
-}
-
 // MARK: - Router
 
 @MainActor

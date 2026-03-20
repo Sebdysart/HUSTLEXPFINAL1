@@ -17,6 +17,8 @@ struct DisputeScreen: View {
     @State private var isSubmitting = false
     @State private var showConfirmation = false
     @State private var attachedPhotos: [String] = []
+    @State private var errorMessage: String?
+    @State private var createdDisputeId: String?
     
     var body: some View {
         ZStack {
@@ -24,7 +26,7 @@ struct DisputeScreen: View {
                 .ignoresSafeArea()
             
             if showConfirmation {
-                DisputeConfirmationView(onDone: { dismiss() })
+                DisputeConfirmationView(disputeId: createdDisputeId, onDone: { dismiss() })
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
@@ -68,18 +70,52 @@ struct DisputeScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .alert("Submission Failed", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
+        }
     }
-    
+
+    // MARK: - Input / Output types for dispute.create
+
+    private struct CreateDisputeInput: Encodable {
+        let taskId: String
+        let reason: String
+        let description: String
+    }
+
+    private struct CreateDisputeResponse: Decodable {
+        let id: String
+        let state: String
+    }
+
     private func submitDispute() {
-        guard selectedReason != nil else { return }
-        
+        guard let reason = selectedReason else { return }
         isSubmitting = true
-        
-        // Simulate submission
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            isSubmitting = false
-            withAnimation(.spring(response: 0.5)) {
-                showConfirmation = true
+        Task {
+            defer { isSubmitting = false }
+            do {
+                let response: CreateDisputeResponse = try await TRPCClient.shared.call(
+                    router: "dispute",
+                    procedure: "create",
+                    input: CreateDisputeInput(
+                        taskId: taskId,
+                        reason: reason.backendValue,
+                        description: details.isEmpty ? reason.rawValue : details
+                    )
+                )
+                createdDisputeId = response.id
+                withAnimation(.spring(response: 0.5)) {
+                    showConfirmation = true
+                }
+            } catch let error as APIError {
+                errorMessage = error.userFacingMessage
+            } catch {
+                errorMessage = "Network error. Please try again."
             }
         }
     }
@@ -109,6 +145,20 @@ enum DisputeReason: String, CaseIterable {
     
     var isCritical: Bool {
         self == .safety
+    }
+
+    /// Maps the UI-facing enum case to the backend `reason` string accepted by
+    /// `dispute.create`. The backend accepts any non-empty string up to 500 chars.
+    var backendValue: String {
+        switch self {
+        case .notCompleted:  return "WORK_NOT_DONE"
+        case .qualityIssue:  return "QUALITY_ISSUE"
+        case .noShow:        return "NO_SHOW"
+        case .wrongItem:     return "WRONG_ITEM"
+        case .safety:        return "SAFETY_CONCERN"
+        case .communication: return "COMMUNICATION"
+        case .other:         return "OTHER"
+        }
     }
 }
 
@@ -399,6 +449,7 @@ private struct SubmitActionBar: View {
 
 // MARK: - Dispute Confirmation View
 private struct DisputeConfirmationView: View {
+    let disputeId: String?
     let onDone: () -> Void
     
     @State private var showCheckmark = false
@@ -436,10 +487,13 @@ private struct DisputeConfirmationView: View {
             }
             .padding(.horizontal, 24)
             
-            // Case number
+            // Case number — use first 8 chars of real dispute UUID as human-readable ref
             VStack(spacing: 8) {
                 HXText("Case Number", style: .caption, color: .textTertiary)
-                HXText("DSP-\(Int.random(in: 100000...999999))", style: .headline)
+                HXText(
+                    "DSP-\(disputeId.map { String($0.prefix(8)).uppercased() } ?? "PENDING")",
+                    style: .headline
+                )
             }
             .padding(20)
             .background(Color.surfaceElevated)

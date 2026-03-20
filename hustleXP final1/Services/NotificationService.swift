@@ -67,16 +67,75 @@ enum NotificationCategory: String, Codable, CaseIterable {
     }
 }
 
-/// Notification preferences
-struct NotificationPreferences: Codable {
+/// DB shape returned by notification.getPreferences (snake_case → camelCase via TRPCClient decoder).
+struct BackendNotificationPreferences: Codable {
+    let id: String                      // DB: id
+    let userId: String                  // DB: user_id
+    let pushEnabled: Bool               // DB: push_enabled
+    let emailEnabled: Bool              // DB: email_enabled
+    let smsEnabled: Bool                // DB: sms_enabled
+    let quietHoursEnabled: Bool         // DB: quiet_hours_enabled
+    let quietHoursStart: String?        // DB: quiet_hours_start (HH:MM format)
+    let quietHoursEnd: String?          // DB: quiet_hours_end (HH:MM format)
+    let categoryPreferences: [String: Bool]?  // DB: category_preferences (JSONB)
+    let createdAt: Date                 // DB: created_at
+    let updatedAt: Date                 // DB: updated_at
+}
+
+/// UI model for notification preferences — hydrated from BackendNotificationPreferences.
+/// taskUpdates, paymentUpdates etc. expand the categoryPreferences JSONB for UI convenience.
+/// This is NOT directly Codable — decode via BackendNotificationPreferences → init(from:).
+struct NotificationPreferences {
     var pushEnabled: Bool
     var emailEnabled: Bool
+    var smsEnabled: Bool
+    var quietHoursEnabled: Bool
+    var quietHoursStart: String?
+    var quietHoursEnd: String?
+    // Category toggles sourced from categoryPreferences JSONB
     var taskUpdates: Bool
     var paymentUpdates: Bool
     var messageNotifications: Bool
     var marketingEmails: Bool
 
-    /// Maps frontend preferences to backend updatePreferences input
+    /// Hydrate from the backend DB row
+    init(from backend: BackendNotificationPreferences) {
+        pushEnabled = backend.pushEnabled
+        emailEnabled = backend.emailEnabled
+        smsEnabled = backend.smsEnabled
+        quietHoursEnabled = backend.quietHoursEnabled
+        quietHoursStart = backend.quietHoursStart
+        quietHoursEnd = backend.quietHoursEnd
+        taskUpdates = backend.categoryPreferences?["taskUpdates"] ?? true
+        paymentUpdates = backend.categoryPreferences?["paymentUpdates"] ?? true
+        messageNotifications = backend.categoryPreferences?["messageNotifications"] ?? true
+        marketingEmails = backend.categoryPreferences?["marketingEmails"] ?? false
+    }
+
+    /// Convenience init for UI screens that only manage the 6 visible toggles.
+    /// SMS and quiet-hours fields are not exposed in the UI and default to off/nil;
+    /// they are also excluded from `backendInput` so they are never written back.
+    init(
+        pushEnabled: Bool,
+        emailEnabled: Bool,
+        taskUpdates: Bool,
+        paymentUpdates: Bool,
+        messageNotifications: Bool,
+        marketingEmails: Bool
+    ) {
+        self.pushEnabled = pushEnabled
+        self.emailEnabled = emailEnabled
+        self.smsEnabled = false
+        self.quietHoursEnabled = false
+        self.quietHoursStart = nil
+        self.quietHoursEnd = nil
+        self.taskUpdates = taskUpdates
+        self.paymentUpdates = paymentUpdates
+        self.messageNotifications = messageNotifications
+        self.marketingEmails = marketingEmails
+    }
+
+    /// Maps to backend notification.updatePreferences input
     var backendInput: BackendNotificationPrefsInput {
         BackendNotificationPrefsInput(
             pushEnabled: pushEnabled,
@@ -242,13 +301,15 @@ final class NotificationService: ObservableObject {
     func getPreferences() async throws -> NotificationPreferences {
         struct EmptyInput: Codable {}
 
-        let prefs: NotificationPreferences = try await trpc.call(
+        // Decode the raw DB row shape, then hydrate into the UI model
+        let backend: BackendNotificationPreferences = try await trpc.call(
             router: "notification",
             procedure: "getPreferences",
             type: .query,
             input: EmptyInput()
         )
 
+        let prefs = NotificationPreferences(from: backend)
         self.preferences = prefs
         return prefs
     }

@@ -45,11 +45,27 @@ struct UserBadge: Codable, Identifiable {
 
 // MARK: - Onboarding Types
 
-/// Onboarding status from backend
+/// Onboarding status from backend (user.getOnboardingStatus)
+/// Field names match the backend response exactly.
 struct OnboardingStatus: Codable {
-    let hasCompletedOnboarding: Bool
-    let completedSteps: [String]
-    let currentStep: String?
+    /// Whether the user has completed the onboarding flow.
+    let onboardingComplete: Bool
+    /// User's primary role: "hustler" or "poster" (backend maps worker→hustler).
+    let role: String
+    /// Whether the user has completed their first task (XP celebration milestone).
+    let hasCompletedFirstTask: Bool
+    /// ISO-8601 timestamp of when the XP first-task celebration was shown, or nil.
+    let xpFirstCelebrationShownAt: String?
+}
+
+// MARK: - Role Certainty Tier
+
+/// Backend-validated enum for role certainty after calibration.
+/// Backend uses z.enum(['STRONG', 'MODERATE', 'WEAK']) — sending any other value → 400.
+enum RoleCertaintyTier: String, Codable {
+    case strong   = "STRONG"
+    case moderate = "MODERATE"
+    case weak     = "WEAK"
 }
 
 // MARK: - User Profile Service
@@ -235,14 +251,14 @@ final class UserProfileService: ObservableObject {
         version: String = "1.0",
         roleConfidenceWorker: Double = 0.5,
         roleConfidencePoster: Double = 0.5,
-        roleCertaintyTier: String = "MODERATE",
+        roleCertaintyTier: RoleCertaintyTier = .moderate,
         inconsistencyFlags: [String]? = nil
     ) async throws {
         struct CompleteOnboardingInput: Codable {
             let version: String
             let roleConfidenceWorker: Double
             let roleConfidencePoster: Double
-            let roleCertaintyTier: String
+            let roleCertaintyTier: RoleCertaintyTier
             let inconsistencyFlags: [String]?
         }
         struct EmptyResponse: Codable {}

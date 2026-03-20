@@ -9,6 +9,8 @@ import SwiftUI
 import Combine
 
 class ReferralService: ObservableObject {
+    static let shared = ReferralService()
+
     @Published var referralCode: String?
     @Published var referralCount: Int = 0
     @Published var totalEarned: Int = 0 // cents
