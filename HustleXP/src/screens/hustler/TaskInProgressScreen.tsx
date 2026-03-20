@@ -15,6 +15,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBanner, TaskCard, ActionBar } from '../../components/molecules';
 import { SPACING } from '../../../constants';
 import { BRAND, GRAY } from '../../../constants/colors';
@@ -23,6 +24,7 @@ import { getTaskProgressData } from '../../data/adapters';
 import type { TaskProgressProps } from '../../data/adapters';
 import type { AdapterState } from '../../data/types';
 import { logScreenMount, logError, ERROR_CODES } from '../../observability';
+import { TRPCClient } from '../../network/trpcClient';
 
 // --- Progress (local atom, not a molecule) ---
 function Progress({ value }: { value: number }) {
@@ -54,18 +56,21 @@ const progressStyles = StyleSheet.create({
   },
 });
 
-// Hardcoded task ID for now (no navigation changes allowed)
-const TASK_ID = 'task-1';
-
 // --- TaskInProgressScreen ---
 export default function TaskInProgressScreen() {
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const taskId: string = route.params?.taskId ?? 'task-1';
+
   const [state, setState] = useState<AdapterState>('loading');
   const [data, setData] = useState<TaskProgressProps | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isActing, setIsActing] = useState(false);
 
   useEffect(() => {
     logScreenMount('TaskInProgressScreen');
 
-    getTaskProgressData(TASK_ID).then((result) => {
+    getTaskProgressData(taskId).then((result) => {
       setState(result.state);
       setData(result.props);
 
@@ -76,7 +81,7 @@ export default function TaskInProgressScreen() {
         });
       }
     });
-  }, []);
+  }, [taskId]);
 
   // Loading state — skeleton placeholder
   if (state === 'loading') {
@@ -118,8 +123,53 @@ export default function TaskInProgressScreen() {
     ? elapsedTime / (task.estimatedDuration * 60)
     : 0;
 
+  const handlePrimary = async () => {
+    if (isActing) return;
+    setIsActing(true);
+    setActionError(null);
+    try {
+      if (isEnRoute) {
+        await TRPCClient.shared.call<{ taskId: string }, any>('task', 'start', 'mutation', { taskId });
+        // Refresh state from REST adapter
+        const result = await getTaskProgressData(taskId);
+        setState(result.state);
+        if (result.state === 'success') setData(result.props);
+      } else {
+        navigation.navigate('ProofSubmission', { taskId });
+      }
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to update task');
+    } finally {
+      setIsActing(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (isActing) return;
+    setIsActing(true);
+    setActionError(null);
+    try {
+      await TRPCClient.shared.call<{ taskId: string; reason: string | null }, any>(
+        'task',
+        'cancel',
+        'mutation',
+        { taskId, reason: null }
+      );
+      navigation.goBack();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to cancel task');
+    } finally {
+      setIsActing(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
+      {actionError ? (
+        <View style={styles.errorBanner}>
+          <StatusBanner tone="danger" text={actionError} />
+        </View>
+      ) : null}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -153,7 +203,12 @@ export default function TaskInProgressScreen() {
         <View style={styles.spacer} />
       </ScrollView>
 
-      <ActionBar primaryLabel={primaryLabel} secondaryLabel="Cancel" />
+      <ActionBar
+        primary={{ label: primaryLabel, loading: isActing, disabled: false }}
+        secondary={{ label: 'Cancel', disabled: false }}
+        onPrimary={handlePrimary}
+        onSecondary={handleCancel}
+      />
     </SafeAreaView>
   );
 }
@@ -162,6 +217,10 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: GRAY[50],
+  },
+  errorBanner: {
+    paddingHorizontal: SPACING[4],
+    paddingTop: SPACING[2],
   },
   scroll: {
     flex: 1,

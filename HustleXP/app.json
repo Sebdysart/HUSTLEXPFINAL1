@@ -1,4 +1,21 @@
 {
-  "name": "HustleXP",
-  "displayName": "HustleXP"
+  "expo": {
+    "name": "HustleXP",
+    "slug": "hustlexp",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "hustlexp",
+    "platforms": ["ios", "android"],
+    "jsEngine": "hermes",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.hustlexp"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
 }
