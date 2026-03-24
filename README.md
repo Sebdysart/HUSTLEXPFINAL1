@@ -1,9 +1,10 @@
-Hello, My Friend.
-Accidently My Discord Account has been blocked and I am trying to contact them for recovering my account.
-Meanwhile, I am trying to contact you via your email but you didn't respond, so I set the background with my large-font text that I was finding you on the VPS.
+Hello my friend,
 
-I created new Discord Account and my username is standten0000.
-Please DM me right after you've read this text.
+My Discord account was accidentally blocked, and I’m currently working with support to recover it. In the meantime, I tried reaching you via email but didn’t receive a response, so I left a message on the VPS background to get your attention.
 
-Best Regards.
+I’ve created a new Discord account: **standten0000**. Please send me a DM once you see this.
+
+Looking forward to reconnecting and continuing our collaboration.
+
+Best regards,
 Chee Ming
