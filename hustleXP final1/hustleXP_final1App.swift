@@ -70,6 +70,7 @@ struct hustleXP_final1App: App {
     @State private var router = Router()
     @State private var dataService = LiveDataService.shared
     @State private var deepLinkManager = DeepLinkManager.shared
+    @State private var serviceAreaManager = ServiceAreaManager.shared
     
     // Splash screen state - start as true so splash shows immediately
     @State private var isInitialized = false
@@ -102,6 +103,7 @@ struct hustleXP_final1App: App {
             .environment(appState)
             .environment(router)
             .environment(dataService)
+            .environment(serviceAreaManager)
             .adaptiveLayout()  // Inject AdaptiveLayout for consistent responsive sizing
             .onAppear {
                 // Bridge AuthService to AppState for coordinated auth state

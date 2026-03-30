@@ -41,7 +41,11 @@ final class MockLocationService: LocationServiceProtocol {
     var currentAccuracy: Double = 0
     var isCapturing: Bool = false
     var captureTimestamp: Date?
-    
+
+    var locationAuthorizationStatus: CLAuthorizationStatus { .authorizedWhenInUse }
+
+    func requestLocationPermission() {}
+
     // MARK: - San Francisco Area Mock Locations
     
     private var mockLocations: [(name: String, coords: GPSCoordinates)] {

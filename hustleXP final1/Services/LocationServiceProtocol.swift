@@ -17,6 +17,12 @@ protocol LocationServiceProtocol: AnyObject {
     var isCapturing: Bool { get }
     var captureTimestamp: Date? { get }
 
+    /// Current Core Location authorization (used for service-area gating).
+    var locationAuthorizationStatus: CLAuthorizationStatus { get }
+
+    /// Prompts for when-in-use location if status is `.notDetermined`.
+    func requestLocationPermission()
+
     /// Capture current GPS location asynchronously
     func captureLocation() async -> (coordinates: GPSCoordinates, accuracy: Double)
 

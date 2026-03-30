@@ -23,7 +23,9 @@ struct RootNavigator: View {
                 OnboardingStack()
                 
             case .authenticated:
-                MainTabView()
+                ServiceAreaGate {
+                    MainTabView()
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -102,5 +104,6 @@ struct MainTabView: View {
     RootNavigator()
         .environment(AppState())
         .environment(Router())
+        .environment(ServiceAreaManager.shared)
         .environmentObject(AuthService.shared)
 }

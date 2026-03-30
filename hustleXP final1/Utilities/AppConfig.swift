@@ -56,4 +56,26 @@ enum AppConfig {
         return true
         #endif
     }
+
+    // MARK: - Service area (single-city / regional launch)
+
+    /// When `true`, the main app is only usable within `serviceAreaRadiusMeters` of the center point.
+    /// Set to `true` in DEBUG as well if you need to test the gate from a simulator (mock location stays in SF).
+    static var isServiceAreaLimited: Bool {
+        #if DEBUG
+        return false
+        #else
+        return true
+        #endif
+    }
+
+    /// Shown on the out-of-area screen.
+    static let serviceAreaDisplayName = "San Francisco Bay Area"
+
+    /// Center of the allowed region (WGS84).
+    static let serviceAreaCenterLatitude = 37.7749
+    static let serviceAreaCenterLongitude = -122.4194
+
+    /// Radius from center in meters (e.g. 30_000 ≈ 30 km from downtown SF).
+    static let serviceAreaRadiusMeters: Double = 30_000
 }

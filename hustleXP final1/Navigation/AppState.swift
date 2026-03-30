@@ -5,6 +5,7 @@
 //  Central app state management
 //
 
+import Foundation
 import SwiftUI
 
 // MARK: - User Role
@@ -89,6 +90,13 @@ enum AuthState {
 @MainActor
 @Observable
 final class AppState {
+    /// Per-user persistence so returning users skip onboarding after a cold start.
+    private static let onboardingCompleteKeyPrefix = "com.hustlexp.onboardingComplete."
+
+    private static func onboardingStorageKey(for userId: String) -> String {
+        onboardingCompleteKeyPrefix + userId
+    }
+
     // Auth
     var authState: AuthState = .unauthenticated
     var isLoggedIn: Bool = false
@@ -111,6 +119,9 @@ final class AppState {
         self.userId = userId
         self.userRole = role
         self.isLoggedIn = true
+        self.hasCompletedOnboarding = UserDefaults.standard.bool(
+            forKey: Self.onboardingStorageKey(for: userId)
+        )
         self.authState = hasCompletedOnboarding ? .authenticated : .onboarding
         HXLogger.info("[AppState] User logged in: \(userId), role: \(role.rawValue)", category: "Navigation")
     }
@@ -119,12 +130,16 @@ final class AppState {
         self.userId = nil
         self.userRole = nil
         self.isLoggedIn = false
+        self.hasCompletedOnboarding = false
         self.authState = .unauthenticated
         self.selectedTab = 0
         HXLogger.info("[AppState] User logged out", category: "Navigation")
     }
     
     func completeOnboarding() {
+        if let userId {
+            UserDefaults.standard.set(true, forKey: Self.onboardingStorageKey(for: userId))
+        }
         self.hasCompletedOnboarding = true
         self.authState = .authenticated
         HXLogger.info("[AppState] Onboarding completed", category: "Navigation")

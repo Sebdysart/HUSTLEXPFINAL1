@@ -45,8 +45,16 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
 
     // MARK: - Permission
 
-    func requestPermission() {
+    var locationAuthorizationStatus: CLAuthorizationStatus {
+        locationManager.authorizationStatus
+    }
+
+    func requestLocationPermission() {
         locationManager.requestWhenInUseAuthorization()
+    }
+
+    func requestPermission() {
+        requestLocationPermission()
     }
 
     // MARK: - Capture Location (Async)
