@@ -12,6 +12,10 @@ final class KeychainManager {
     private var inMemoryStore: [String: String] = [:]
     private let inMemoryLock = NSLock()
 
+    /// Prevents noisy repeated "not found" logs for frequently-checked keys (e.g. authToken on cold start).
+    private static var missingKeyLogOnce: Set<String> = []
+    private static let missingKeyLogLock = NSLock()
+
     private init() {}
 
     private func shouldUseInMemoryFallback(status: OSStatus) -> Bool {
@@ -99,7 +103,14 @@ final class KeychainManager {
                 HXLogger.debug("Keychain: Retrieved in-memory fallback for key: \(key)", category: "Auth")
                 return fallback
             }
-            HXLogger.debug("Keychain: No value found for key: \(key)", category: "Auth")
+            // Log "not found" only once per key per launch (expected on first launch / after logout).
+            Self.missingKeyLogLock.lock()
+            let shouldLog = !Self.missingKeyLogOnce.contains(key)
+            if shouldLog { Self.missingKeyLogOnce.insert(key) }
+            Self.missingKeyLogLock.unlock()
+            if shouldLog {
+                HXLogger.debug("Keychain: No value found for key: \(key)", category: "Auth")
+            }
         } else if shouldUseInMemoryFallback(status: status) {
             if let fallback = readInMemory(forKey: key) {
                 HXLogger.debug("Keychain: Retrieved in-memory fallback for key: \(key)", category: "Auth")

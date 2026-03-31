@@ -48,6 +48,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         HXLogger.info("APNs device token registered with Firebase", category: "Push")
     }
 
+    /// When Firebase Messaging method swizzling is disabled (FirebaseAppDelegateProxyEnabled = NO),
+    /// forward remote notifications to FCM manually for analytics / delivery metrics.
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable : Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        Messaging.messaging().appDidReceiveMessage(userInfo)
+        completionHandler(.noData)
+    }
+
     /// Logs remote notification registration failures.
     func application(
         _ application: UIApplication,

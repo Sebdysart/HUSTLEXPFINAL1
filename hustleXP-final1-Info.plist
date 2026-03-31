@@ -23,6 +23,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
 	<key>Launch​Background</key>
 	<string></string>
 	<key>UIBackgroundModes</key>
