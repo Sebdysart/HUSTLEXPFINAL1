@@ -18,7 +18,7 @@
 | E2E Tests | ZERO | No end-to-end test coverage |
 | Security | 5 OPEN FINDINGS | 2 Critical, 3 High — see below |
 | Architecture | DUAL (RN + Swift) | Decision pending: single path or both? |
-| Backend Integration | PARTIAL | Targeting hustlexp-api (23 frozen endpoints) |
+| Backend Integration | PARTIAL | Targeting hustlexp-ai-backend (23 frozen endpoints) |
 
 **All known issues tracked in [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart/HUSTLEXP-ERRORS-AND-TODOS)**
 
@@ -80,9 +80,7 @@ Two GitHub Actions workflows (non-blocking):
 
 ## Backend Connection
 
-This client targets **[hustlexp-api](https://github.com/Sebdysart/hustlexp-api)** — the production Fastify backend with 23 frozen endpoints. The API contract is defined in `UI_CONTRACT.md` in that repo.
-
-> **Note**: There is no repo called "hustlexp-ai-backend." The actual backend is `hustlexp-api`.
+This client targets **[hustlexp-ai-backend](https://github.com/Sebdysart/hustlexp-ai-backend)** — the production backend built with Hono + tRPC, featuring 85 services, 50 routers, and 290+ procedures. Deployed on Railway with 103 tables on Neon PostgreSQL. Includes 5,448 tests and 4 CI/CD workflows. The API contract is defined in `UI_CONTRACT.md` in that repo.
 
 ---
 
@@ -102,7 +100,7 @@ See the full roadmap in [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart
 
 | Repo | Role |
 |------|------|
-| [hustlexp-api](https://github.com/Sebdysart/hustlexp-api) | Production Backend |
+| [hustlexp-ai-backend](https://github.com/Sebdysart/hustlexp-ai-backend) | Production Backend |
 | [omni-link-hustlexp](https://github.com/Sebdysart/omni-link-hustlexp) | Engineering Control Plane |
 | [HUSTLEXP-DOCS](https://github.com/Sebdysart/HUSTLEXP-DOCS) | Documentation Authority |
 | [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart/HUSTLEXP-ERRORS-AND-TODOS) | Error & Todo Tracker |
