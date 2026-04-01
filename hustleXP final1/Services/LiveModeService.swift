@@ -104,7 +104,7 @@ struct InstantModeMetrics: Codable {
 /// Manages Live Mode operations via tRPC
 @MainActor
 final class LiveModeService: ObservableObject {
-    static let shared = LiveModeService()
+    static let shared = LiveModeService(client: TRPCClient.shared)
 
     private let trpc: TRPCClientProtocol
 
@@ -116,7 +116,7 @@ final class LiveModeService: ObservableObject {
     /// Polling timer for live broadcasts
     private var pollTask: Task<Void, Never>?
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
     }
 
@@ -344,7 +344,7 @@ final class LiveModeService: ObservableObject {
 /// Manages Instant Mode task operations via tRPC
 @MainActor
 final class InstantModeService: ObservableObject {
-    static let shared = InstantModeService()
+    static let shared = InstantModeService(client: TRPCClient.shared)
 
     private let trpc: TRPCClientProtocol
 
@@ -352,7 +352,7 @@ final class InstantModeService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
     }
 

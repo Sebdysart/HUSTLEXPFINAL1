@@ -216,7 +216,7 @@ final class ProofSubmissionViewModel {
 
     func submitProof() {
         guard hasPhoto, let coords = gpsCoordinates else { return }
-        guard let dataService else { return }
+        guard dataService != nil else { return }
 
         isSubmitting = true
         HXLogger.debug("[ProofSubmission] Submitting proof for task: \(taskId)", category: "Task")
@@ -256,15 +256,7 @@ final class ProofSubmissionViewModel {
 
                 HXLogger.info("ProofSubmission: Proof submitted via API", category: "Task")
 
-                // Also submit via TaskService to update task state
-                _ = try await taskService.submitProof(
-                    taskId: taskId,
-                    photoUrls: photoUrls.isEmpty ? [localProofPhotoURL] : photoUrls,
-                    notes: notes.isEmpty ? nil : notes,
-                    gpsLatitude: coords.latitude,
-                    gpsLongitude: coords.longitude,
-                    biometricHash: biometricHash
-                )
+                // Generate biometric hash
 
                 // Submit biometric proof for real validation via tRPC
                 let proofId = UUID().uuidString

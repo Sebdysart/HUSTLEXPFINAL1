@@ -625,9 +625,12 @@ struct SquadDetailScreen: View {
             async let squadResult = SquadService.shared.getSquad(id: squadId)
             async let tasksResult = SquadService.shared.getSquadTasks(squadId: squadId)
 
-            let (fetchedSquad, fetchedTasks) = try await (squadResult, tasksResult)
+            let fetchedSquad = try await squadResult
+            let fetchedTasks = try await tasksResult
             self.squad = fetchedSquad
-            self.activeTasks = fetchedTasks.filter { $0.status != .completed && $0.status != .cancelled }
+            self.activeTasks = fetchedTasks.filter { task in
+                task.status != SquadTaskStatus.completed && task.status != SquadTaskStatus.cancelled
+            }
             HXLogger.info("SquadDetail: Loaded squad '\(fetchedSquad.name)' with \(fetchedTasks.count) tasks", category: "Squad")
         } catch {
             HXLogger.error("SquadDetail: API load failed - \(error.localizedDescription)", category: "Squad")

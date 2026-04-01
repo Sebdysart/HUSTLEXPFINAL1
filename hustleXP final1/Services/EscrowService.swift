@@ -122,14 +122,14 @@ extension XPLedgerEntry {
 /// Manages all escrow and payment operations via tRPC
 @MainActor
 final class EscrowService: ObservableObject {
-    static let shared = EscrowService()
+    static let shared = EscrowService(client: TRPCClient.shared)
 
     private let trpc: TRPCClientProtocol
 
     @Published var isLoading = false
     @Published var error: Error?
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
     }
 

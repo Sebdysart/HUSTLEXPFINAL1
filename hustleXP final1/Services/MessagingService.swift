@@ -25,7 +25,7 @@ struct APIConversationSummary: Codable, Identifiable {
 /// Manages in-app messaging via tRPC
 @MainActor
 final class MessagingService: ObservableObject {
-    static let shared = MessagingService()
+    static let shared = MessagingService(client: TRPCClient.shared)
 
     private let trpc: TRPCClientProtocol
 
@@ -35,7 +35,7 @@ final class MessagingService: ObservableObject {
 
     private var sseCancellable: AnyCancellable?
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
     }
 
@@ -249,3 +249,4 @@ private struct SSENewMessagePayload: Codable {
 }
 
 // NOTE: RatingService has been moved to its own file: RatingService.swift
+

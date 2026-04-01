@@ -73,16 +73,6 @@ struct BetaKillSignal: Decodable, Identifiable {
     var id: String { name }
 }
 
-// MARK: - Input Models
-
-struct BetaMetricsInput: Encodable {
-    let windowDays: Int
-}
-
-/// Placeholder for procedures that take no input.
-/// Encodes to `{}` which TRPCClient treats as empty.
-private struct EmptyInput: Encodable {}
-
 // MARK: - View
 
 struct BetaDashboardScreen: View {
@@ -143,7 +133,7 @@ struct BetaDashboardScreen: View {
 
     // MARK: - Data Loading
 
-    private func loadDashboard() async {
+    @MainActor private func loadDashboard() async {
         isLoading = true
         errorMessage = nil
 
@@ -158,13 +148,13 @@ struct BetaDashboardScreen: View {
                 router: "betaDashboard",
                 procedure: "getStatus",
                 type: .query,
-                input: EmptyInput()
+                input: BetaDashboardEmptyInput()
             )
             async let killCall: BetaKillSignalsResponse = TRPCClient.shared.call(
                 router: "betaDashboard",
                 procedure: "getKillSignals",
                 type: .query,
-                input: EmptyInput()
+                input: BetaDashboardEmptyInput()
             )
 
             let (m, s, k) = try await (metricsCall, statusCall, killCall)
@@ -488,3 +478,4 @@ struct BetaDashboardScreen: View {
         BetaDashboardScreen()
     }
 }
+

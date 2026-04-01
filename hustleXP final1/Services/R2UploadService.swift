@@ -70,7 +70,7 @@ private struct PresignedURLResponse: Decodable {
 /// ```
 @MainActor
 final class R2UploadService: ObservableObject {
-    static let shared = R2UploadService()
+    static let shared = R2UploadService(client: TRPCClient.shared)
 
     private let trpc: TRPCClientProtocol
 
@@ -80,7 +80,7 @@ final class R2UploadService: ObservableObject {
     /// Whether an upload is currently in progress.
     @Published var isUploading = false
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
     }
 

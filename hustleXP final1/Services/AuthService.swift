@@ -14,7 +14,7 @@ import CryptoKit
 /// 4. Session state management
 @MainActor
 final class AuthService: ObservableObject {
-    static let shared = AuthService()
+    static let shared = AuthService(client: TRPCClient.shared)
 
     // MARK: - Demo Mode
     // Set to true to bypass Firebase and use mock authentication
@@ -32,7 +32,7 @@ final class AuthService: ObservableObject {
 
     private let trpc: TRPCClientProtocol
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
 
         // In demo mode, skip Firebase token restoration

@@ -74,7 +74,7 @@ enum RoleCertaintyTier: String, Codable {
 /// Separate from AuthService to handle non-auth profile features
 @MainActor
 final class UserProfileService: ObservableObject {
-    static let shared = UserProfileService()
+    static let shared = UserProfileService(client: TRPCClient.shared)
 
     private let trpc: TRPCClientProtocol
 
@@ -84,7 +84,7 @@ final class UserProfileService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
     }
 

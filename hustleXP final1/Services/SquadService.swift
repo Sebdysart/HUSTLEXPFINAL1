@@ -11,14 +11,14 @@ import Combine
 
 @MainActor
 final class SquadService: ObservableObject {
-    static let shared = SquadService()
+    static let shared = SquadService(client: TRPCClient.shared)
 
     private let trpc: TRPCClientProtocol
 
     @Published var isLoading = false
     @Published var error: Error?
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
     }
 

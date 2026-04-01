@@ -162,7 +162,7 @@ struct BackendNotificationPrefsInput: Codable {
 /// Manages in-app notifications via tRPC
 @MainActor
 final class NotificationService: ObservableObject {
-    static let shared = NotificationService()
+    static let shared = NotificationService(client: TRPCClient.shared)
 
     private let trpc: TRPCClientProtocol
 
@@ -172,7 +172,7 @@ final class NotificationService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
     }
 

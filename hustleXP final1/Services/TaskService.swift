@@ -12,14 +12,14 @@ import Combine
 /// Manages all task-related API operations via tRPC
 @MainActor
 final class TaskService: ObservableObject {
-    static let shared = TaskService()
+    static let shared = TaskService(client: TRPCClient.shared)
 
     private let trpc: TRPCClientProtocol
 
     @Published var isLoading = false
     @Published var error: Error?
 
-    init(client: TRPCClientProtocol = TRPCClient.shared) {
+    init(client: TRPCClientProtocol) {
         self.trpc = client
     }
 

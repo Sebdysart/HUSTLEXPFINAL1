@@ -5,6 +5,7 @@
 //  Enforces a single launch region using GPS vs AppConfig center + radius.
 //
 
+import CoreLocation
 import Foundation
 
 // MARK: - Phase
@@ -22,7 +23,7 @@ enum ServiceAreaGatePhase: Equatable {
 
 // MARK: - Manager
 
-@MainActor
+@MainActor 
 @Observable
 final class ServiceAreaManager {
     static let shared = ServiceAreaManager()
