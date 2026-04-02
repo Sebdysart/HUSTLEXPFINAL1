@@ -8,9 +8,10 @@
 
 /// Identifies the destination key prefix in Cloudflare R2.
 /// Raw values must match the backend `upload.getPresignedUrl` procedure's
-/// `purpose` enum: ['proof', 'license', 'message'].
+/// `purpose` enum: ['proof', 'license', 'message', 'avatar'].
 enum UploadPurpose: String, Codable {
     case proof   = "proof"
     case license = "license"
     case message = "message"
+    case avatar  = "avatar"
 }

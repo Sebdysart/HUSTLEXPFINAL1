@@ -44,7 +44,7 @@ enum R2UploadError: Error, LocalizedError {
 /// Input for `upload.getPresignedUrl` mutation.
 /// Field names match the backend Zod schema exactly.
 private struct PresignedURLInput: Encodable {
-    let taskId: String
+    let taskId: String?
     let filename: String
     let contentType: String
     let fileSize: Int?
@@ -124,9 +124,6 @@ final class R2UploadService: ObservableObject {
         // 2. Generate a unique filename
         let filename = "\(UUID().uuidString).jpg"
 
-        // Backend requires a UUID for taskId; use a placeholder for non-task uploads (e.g., license)
-        let resolvedTaskId = taskId ?? UUID().uuidString
-
         // 3. Request presigned URL from backend
         let presignedResponse: PresignedURLResponse
         do {
@@ -135,7 +132,7 @@ final class R2UploadService: ObservableObject {
                 procedure: "getPresignedUrl",
                 type: .mutation,
                 input: PresignedURLInput(
-                    taskId: resolvedTaskId,
+                    taskId: taskId,
                     filename: filename,
                     contentType: "image/jpeg",
                     fileSize: imageData.count,

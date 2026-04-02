@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct HustlerProfileScreen: View {
     @Environment(AppState.self) private var appState
@@ -24,7 +25,8 @@ struct HustlerProfileScreen: View {
                         userName: appState.userName ?? "Hustler",
                         trustTier: appState.trustTier,
                         rating: dataService.currentUser.rating,
-                        totalRatings: dataService.currentUser.totalRatings
+                        totalRatings: dataService.currentUser.totalRatings,
+                        avatarURL: dataService.currentUser.avatarURL
                     )
 
                     // XP tier progression
@@ -102,52 +104,92 @@ private struct ProfileHeaderSection: View {
     let trustTier: TrustTier
     let rating: Double
     let totalRatings: Int
-    
+    var avatarURL: URL?
+
+    @State private var selectedItem: PhotosPickerItem?
+    @State private var isUploading = false
+    @State private var uploadError: String?
+    @State private var localAvatarImage: UIImage?
+
     var body: some View {
         VStack(spacing: 16) {
-            // Avatar
-            ZStack {
+            // Avatar with photo picker
+            ZStack(alignment: .bottomTrailing) {
+                PhotosPicker(selection: $selectedItem, matching: .images) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.brandPurple.opacity(0.3), Color.brandPurple.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 100, height: 100)
+
+                        if let localAvatarImage {
+                            Image(uiImage: localAvatarImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipShape(Circle())
+                        } else if let avatarURL {
+                            AsyncImage(url: avatarURL) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                ProgressView()
+                            }
+                            .frame(width: 100, height: 100)
+                            .clipShape(Circle())
+                        } else {
+                            HXText(
+                                String(userName.prefix(2)).uppercased(),
+                                style: .largeTitle,
+                                color: .brandPurple
+                            )
+                        }
+
+                        if isUploading {
+                            Color.black.opacity(0.4)
+                                .clipShape(Circle())
+                            ProgressView().tint(.white)
+                        }
+                    }
+                }
+
+                // Camera badge
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.brandPurple.opacity(0.3), Color.brandPurple.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 100, height: 100)
-                
-                HXText(
-                    String(userName.prefix(2)).uppercased(),
-                    style: .largeTitle,
-                    color: .brandPurple
-                )
-                
-                // Verified badge
-                Circle()
-                    .fill(Color.brandBlack)
-                    .frame(width: 32, height: 32)
+                    .fill(Color.brandPurple)
+                    .frame(width: 30, height: 30)
                     .overlay(
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.brandPurple)
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.white)
                     )
-                    .offset(x: 35, y: 35)
+                    .offset(x: 4, y: 4)
             }
-            
+            .onChange(of: selectedItem) { _, newItem in
+                guard let newItem else { return }
+                Task { await uploadAvatar(newItem) }
+            }
+
+            if let uploadError {
+                HXText(uploadError, style: .caption, color: .errorRed)
+            }
+
             VStack(spacing: 8) {
                 HXText(userName, style: .title2)
-                
+
                 HStack(spacing: 12) {
                     HXBadge(variant: .tier(trustTier))
-                    
+
                     HStack(spacing: 4) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 14))
                             .foregroundStyle(Color.warningOrange)
-                        
+
                         HXText(String(format: "%.1f", rating), style: .subheadline)
-                        
+
                         HXText("(\(totalRatings))", style: .caption, color: .textSecondary)
                     }
                 }
@@ -157,6 +199,33 @@ private struct ProfileHeaderSection: View {
         .padding(24)
         .background(Color.surfaceElevated)
         .cornerRadius(20)
+    }
+
+    private func uploadAvatar(_ item: PhotosPickerItem) async {
+        isUploading = true
+        uploadError = nil
+        defer { isUploading = false }
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data) else {
+                uploadError = "Could not load image"
+                return
+            }
+
+            localAvatarImage = image
+
+            let publicUrl = try await R2UploadService.shared.uploadPhoto(
+                image,
+                purpose: .avatar,
+                taskId: nil
+            )
+
+            _ = try await UserProfileService.shared.updateProfile(avatarURL: publicUrl)
+        } catch {
+            uploadError = "Upload failed: \(error.localizedDescription)"
+            localAvatarImage = nil
+        }
     }
 }
 
