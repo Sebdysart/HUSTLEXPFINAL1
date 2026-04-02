@@ -110,19 +110,26 @@ final class AuthService: ObservableObject {
             // Step 2: Get Firebase ID token
             let idToken = try await authResult.user.getIDToken()
 
-            // Step 3: Register with backend
+            // Step 3: Register with backend.
+            // idToken is required by the backend for Firebase token ownership proof.
+            // dateOfBirth is required for COPPA compliance; placeholder used until
+            // the sign-up screen collects it (tracked separately).
             struct RegisterInput: Codable {
+                let idToken: String
                 let firebaseUid: String
                 let email: String
                 let fullName: String
                 let defaultMode: String
+                let dateOfBirth: String
             }
 
             let input = RegisterInput(
+                idToken: idToken,
                 firebaseUid: authResult.user.uid,
                 email: email,
                 fullName: fullName,
-                defaultMode: defaultMode.rawValue
+                defaultMode: defaultMode.rawValue,
+                dateOfBirth: "2000-01-01" // TODO: collect from user in sign-up screen
             )
 
             let user: HXUser = try await trpc.call(
@@ -210,8 +217,22 @@ final class AuthService: ObservableObject {
             TRPCClient.shared.setAuthToken(idToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
 
-            // Step 4: Load user from backend
-            await loadCurrentUser()
+            // Step 4: Load user from backend.
+            // silentFail: true so that a backend error does NOT call signOut() —
+            // that would destroy the valid Firebase session we just acquired.
+            await loadCurrentUser(silentFail: true)
+
+            // Step 5: Verify user was loaded. If the backend returned 401 (e.g.
+            // Firebase Admin not configured, or user not in DB), currentUser stays
+            // nil. Propagate as a thrown error so the UI shows the failure.
+            if currentUser == nil {
+                TRPCClient.shared.clearAuthToken()
+                throw NSError(
+                    domain: "HustleXP",
+                    code: 401,
+                    userInfo: [NSLocalizedDescriptionKey: "Unable to sign in. Please check your connection and try again."]
+                )
+            }
 
             HXLogger.info("Auth: User signed in successfully", category: "Auth")
             AnalyticsService.shared.track(.signIn, properties: ["method": "email"])
@@ -275,17 +296,21 @@ final class AuthService: ObservableObject {
                 : fullName
 
             struct RegisterInput: Codable {
+                let idToken: String
                 let firebaseUid: String
                 let email: String
                 let fullName: String
                 let defaultMode: String
+                let dateOfBirth: String
             }
 
             let input = RegisterInput(
+                idToken: idToken,
                 firebaseUid: authResult.user.uid,
                 email: authResult.user.email ?? "",
                 fullName: displayName,
-                defaultMode: UserRole.hustler.rawValue
+                defaultMode: UserRole.hustler.rawValue,
+                dateOfBirth: "2000-01-01" // TODO: collect from user in sign-up screen
             )
 
             let user: HXUser = try await trpc.call(
@@ -347,17 +372,21 @@ final class AuthService: ObservableObject {
 
             // User doesn't exist on backend yet, register them
             struct RegisterInput: Codable {
+                let idToken: String
                 let firebaseUid: String
                 let email: String
                 let fullName: String
                 let defaultMode: String
+                let dateOfBirth: String
             }
 
             let input = RegisterInput(
+                idToken: firebaseToken,
                 firebaseUid: authResult.user.uid,
                 email: authResult.user.email ?? "",
                 fullName: authResult.user.displayName ?? "HustleXP User",
-                defaultMode: UserRole.hustler.rawValue
+                defaultMode: UserRole.hustler.rawValue,
+                dateOfBirth: "2000-01-01" // TODO: collect from user in sign-up screen
             )
 
             HXLogger.info("Auth: Registering new Google user - uid: \(authResult.user.uid), email: \(authResult.user.email ?? "nil")", category: "Auth")
