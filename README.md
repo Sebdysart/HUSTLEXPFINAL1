@@ -10,7 +10,7 @@
 
 ---
 
-## Current Status (April 2026)
+## Current Status (April 2, 2026)
 
 | Domain | Status | Detail |
 |--------|--------|--------|
@@ -18,9 +18,10 @@
 | E2E Tests | ZERO | No end-to-end test coverage |
 | Security | 5 OPEN FINDINGS | 2 Critical, 3 High — see below |
 | Architecture | DUAL (RN + Swift) | Decision pending: single path or both? |
-| Backend Integration | PARTIAL | Targeting hustlexp-ai-backend (23 frozen endpoints) |
+| Backend Integration | PARTIAL | Targeting hustlexp-ai-backend (290+ procedures, 38 routers) |
+| Backend Audit | **3 CRITICAL, 4 HIGH** | Service layer fixes required — see [ERRORS-AND-TODOS](https://github.com/Sebdysart/HUSTLEXP-ERRORS-AND-TODOS) |
 
-**All known issues tracked in [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart/HUSTLEXP-ERRORS-AND-TODOS)**
+**64 total TODOs tracked** across the platform in [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart/HUSTLEXP-ERRORS-AND-TODOS). Frontend-specific: TODO-002, 003, 005, 014, 015, 016, 017, 020, 021, 024, 025, 052, 053.
 
 ---
 
@@ -86,13 +87,29 @@ This client targets **[hustlexp-ai-backend](https://github.com/Sebdysart/hustlex
 
 ## What's NOT Done Yet
 
-- Replace placeholder SSL pin hashes with real certificate pins
-- Enable Crashlytics and production logging
-- Implement input validation
-- Write E2E tests for the full payment path
-- Decide single-architecture path (RN vs Swift)
+**P0 — Launch Blockers:**
+- TODO-002: Replace placeholder SSL pin hashes with real SPKI hashes (`ssl-pinning.ts`)
+- TODO-003: Remove C7 rehearsal failure injection code (`client.ts:38-40`)
+- TODO-005: Add frontend CI/CD pipeline (GitHub Actions: lint, typecheck, test, build)
 
-See the full roadmap in [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart/HUSTLEXP-ERRORS-AND-TODOS).
+**P2 — Code Quality:**
+- TODO-014: Add client-side input validation to all 14 TextInput fields
+- TODO-015: Enable Firebase Crashlytics
+- TODO-016: Enable structured logging in production
+- TODO-017: Remove 39 `as any` type assertions
+
+**P3 — Testing:**
+- TODO-020: Write E2E tests covering full payment flow (login → task → escrow → pay → XP)
+- TODO-021: Verify GoogleService-Info.plist is gitignored and not leaking credentials
+
+**P4 — Growth & Architecture:**
+- TODO-024: Implement Phase 2 native SSL pinning (react-native-ssl-pinning)
+- TODO-025: Replace 16 frontend console.log calls with structured logger
+- TODO-052: Add social share deeplinks with OG meta tags for completed task celebrations
+- TODO-053: Build "Invite Contacts" flow with pre-populated referral codes
+- Architecture decision: React Native only, Swift only, or both
+
+See the full 64-item roadmap in [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart/HUSTLEXP-ERRORS-AND-TODOS).
 
 ---
 
@@ -100,7 +117,12 @@ See the full roadmap in [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart
 
 | Repo | Role |
 |------|------|
-| [hustlexp-ai-backend](https://github.com/Sebdysart/hustlexp-ai-backend) | Production Backend |
-| [omni-link-hustlexp](https://github.com/Sebdysart/omni-link-hustlexp) | Engineering Control Plane |
-| [HUSTLEXP-DOCS](https://github.com/Sebdysart/HUSTLEXP-DOCS) | Documentation Authority |
-| [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart/HUSTLEXP-ERRORS-AND-TODOS) | Error & Todo Tracker |
+| [hustlexp-ai-backend](https://github.com/Sebdysart/hustlexp-ai-backend) | Production Backend (68 services, 290+ procedures) |
+| [omni-link-hustlexp](https://github.com/Sebdysart/omni-link-hustlexp) | Engineering Control Plane (887 tests) |
+| [HUSTLEXP-DOCS](https://github.com/Sebdysart/HUSTLEXP-DOCS) | Documentation Authority (316 markdown files) |
+| [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/Sebdysart/HUSTLEXP-ERRORS-AND-TODOS) | Error & TODO Tracker (64 items, 12 STOP errors) |
+| [HustleXP-Vault](https://github.com/Sebdysart/HustleXP-Vault) | Obsidian Knowledge Vault (16 audit pages) |
+
+---
+
+**Last README update**: 2026-04-02 — grounded to full source-level audit + adversarial stress test
