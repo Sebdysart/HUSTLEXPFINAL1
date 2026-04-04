@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct ProfileSetupScreen: View {
     @Environment(AppState.self) private var appState
@@ -16,6 +17,7 @@ struct ProfileSetupScreen: View {
     @State private var city: String = ""
     @State private var showImagePicker = false
     @State private var avatarImage: UIImage?
+    @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isLoading = false
     @FocusState private var focusedField: Field?
 
@@ -109,7 +111,17 @@ struct ProfileSetupScreen: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Add profile photo")
-            
+            .photosPicker(isPresented: $showImagePicker, selection: $selectedPhotoItem, matching: .images)
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                guard let newItem else { return }
+                Task {
+                    if let data = try? await newItem.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        avatarImage = image
+                    }
+                }
+            }
+
             Text("Add a photo")
                 .font(.subheadline)
                 .foregroundStyle(Color.brandPurple)

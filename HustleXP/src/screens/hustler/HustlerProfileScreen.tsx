@@ -7,12 +7,14 @@
  * No logic. No fetching. Registry-compliant layout only.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionBar } from '../../components/molecules';
@@ -22,22 +24,47 @@ import { FONT_SIZE } from '../../../constants/typography';
 
 const AVATAR_SIZE_LG = 80;
 
-// --- Avatar (atom pattern, placeholder) ---
-function Avatar({ size = 'lg' }: { size?: 'lg' }) {
+// --- Avatar (tappable, supports photo URI) ---
+function Avatar({
+  size = 'lg',
+  uri,
+  onPress,
+}: {
+  size?: 'lg';
+  uri?: string | null;
+  onPress?: () => void;
+}) {
   const sizePx = size === 'lg' ? AVATAR_SIZE_LG : AVATAR_SIZE_LG;
   return (
-    <View
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.75}
       style={[
         avatarStyles.circle,
         { width: sizePx, height: sizePx, borderRadius: sizePx / 2 },
       ]}
-    />
+    >
+      {uri ? (
+        <Image
+          source={{ uri }}
+          style={{ width: sizePx, height: sizePx, borderRadius: sizePx / 2 }}
+        />
+      ) : (
+        <Text style={avatarStyles.cameraIcon}>📷</Text>
+      )}
+    </TouchableOpacity>
   );
 }
 
 const avatarStyles = StyleSheet.create({
   circle: {
     backgroundColor: GRAY[300],
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cameraIcon: {
+    fontSize: 24,
   },
 });
 
