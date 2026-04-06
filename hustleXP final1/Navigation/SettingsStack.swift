@@ -22,6 +22,10 @@ struct SettingsStack: View {
                         SettingsMainScreen()
                     case .account:
                         AccountSettingsScreen()
+                    case .editProfile:
+                        EditProfileScreen()
+                    case .changePassword:
+                        ChangePasswordScreen()
                     case .notifications:
                         NotificationSettingsScreen()
                     case .payments:

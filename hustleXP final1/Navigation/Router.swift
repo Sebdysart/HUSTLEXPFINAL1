@@ -108,6 +108,8 @@ enum SharedRoute: Hashable {
 enum SettingsRoute: Hashable {
     case main
     case account
+    case editProfile
+    case changePassword
     case notifications
     case payments
     case privacy

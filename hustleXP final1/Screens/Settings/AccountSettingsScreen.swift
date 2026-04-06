@@ -9,8 +9,9 @@ import SwiftUI
 
 struct AccountSettingsScreen: View {
     @Environment(AppState.self) private var appState
+    @Environment(Router.self) private var router
     @Environment(LiveDataService.self) private var dataService
-    
+
     @State private var showDeleteConfirmation: Bool = false
     
     var body: some View {
@@ -51,15 +52,15 @@ struct AccountSettingsScreen: View {
             
             // Actions
             Section {
-                Button(action: {}) {
+                Button { router.navigateToSettings(.editProfile) } label: {
                     HStack {
                         HXIcon("pencil", size: .small, color: .infoBlue)
                         HXText("Edit Profile", style: .body, color: .infoBlue)
                     }
                 }
                 .accessibilityLabel("Edit profile")
-                
-                Button(action: {}) {
+
+                Button { router.navigateToSettings(.changePassword) } label: {
                     HStack {
                         HXIcon("key.fill", size: .small, color: .infoBlue)
                         HXText("Change Password", style: .body, color: .infoBlue)
@@ -120,5 +121,6 @@ struct AccountInfoRow: View {
         AccountSettingsScreen()
     }
     .environment(AppState())
+    .environment(Router())
     .environment(LiveDataService.shared)
 }
