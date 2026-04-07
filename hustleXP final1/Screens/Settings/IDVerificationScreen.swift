@@ -16,6 +16,7 @@ struct IDVerificationScreen: View {
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var dateOfBirth = ""
+    @State private var workState = "CA"
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var checkrURL: URL?
@@ -170,8 +171,76 @@ struct IDVerificationScreen: View {
                     .keyboardType(.numbersAndPunctuation)
             }
 
+            // Work state
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Work State")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.textSecondary)
+
+                Menu {
+                    ForEach(Self.usStates, id: \.code) { state in
+                        Button(state.name) { workState = state.code }
+                    }
+                } label: {
+                    HStack {
+                        Text(Self.usStates.first(where: { $0.code == workState })?.name ?? workState)
+                            .font(.body)
+                            .foregroundStyle(Color.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.textTertiary)
+                    }
+                    .padding(14)
+                    .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.borderSubtle, lineWidth: 1)
+                    )
+                }
+
+                Text("State where you'll primarily work")
+                    .font(.caption)
+                    .foregroundStyle(Color.textMuted)
+            }
         }
     }
+
+    // MARK: - US States
+
+    private struct USState {
+        let code: String
+        let name: String
+    }
+
+    private static let usStates: [USState] = [
+        .init(code: "AL", name: "Alabama"), .init(code: "AK", name: "Alaska"),
+        .init(code: "AZ", name: "Arizona"), .init(code: "AR", name: "Arkansas"),
+        .init(code: "CA", name: "California"), .init(code: "CO", name: "Colorado"),
+        .init(code: "CT", name: "Connecticut"), .init(code: "DE", name: "Delaware"),
+        .init(code: "FL", name: "Florida"), .init(code: "GA", name: "Georgia"),
+        .init(code: "HI", name: "Hawaii"), .init(code: "ID", name: "Idaho"),
+        .init(code: "IL", name: "Illinois"), .init(code: "IN", name: "Indiana"),
+        .init(code: "IA", name: "Iowa"), .init(code: "KS", name: "Kansas"),
+        .init(code: "KY", name: "Kentucky"), .init(code: "LA", name: "Louisiana"),
+        .init(code: "ME", name: "Maine"), .init(code: "MD", name: "Maryland"),
+        .init(code: "MA", name: "Massachusetts"), .init(code: "MI", name: "Michigan"),
+        .init(code: "MN", name: "Minnesota"), .init(code: "MS", name: "Mississippi"),
+        .init(code: "MO", name: "Missouri"), .init(code: "MT", name: "Montana"),
+        .init(code: "NE", name: "Nebraska"), .init(code: "NV", name: "Nevada"),
+        .init(code: "NH", name: "New Hampshire"), .init(code: "NJ", name: "New Jersey"),
+        .init(code: "NM", name: "New Mexico"), .init(code: "NY", name: "New York"),
+        .init(code: "NC", name: "North Carolina"), .init(code: "ND", name: "North Dakota"),
+        .init(code: "OH", name: "Ohio"), .init(code: "OK", name: "Oklahoma"),
+        .init(code: "OR", name: "Oregon"), .init(code: "PA", name: "Pennsylvania"),
+        .init(code: "RI", name: "Rhode Island"), .init(code: "SC", name: "South Carolina"),
+        .init(code: "SD", name: "South Dakota"), .init(code: "TN", name: "Tennessee"),
+        .init(code: "TX", name: "Texas"), .init(code: "UT", name: "Utah"),
+        .init(code: "VT", name: "Vermont"), .init(code: "VA", name: "Virginia"),
+        .init(code: "WA", name: "Washington"), .init(code: "WV", name: "West Virginia"),
+        .init(code: "WI", name: "Wisconsin"), .init(code: "WY", name: "Wyoming"),
+        .init(code: "DC", name: "Washington D.C."),
+    ]
 
     // MARK: - Submit
 
@@ -260,6 +329,7 @@ struct IDVerificationScreen: View {
                     let firstName: String
                     let lastName: String
                     let dateOfBirth: String
+                    let workState: String
                 }
                 struct StartResponse: Codable {
                     let checkId: String
@@ -273,7 +343,8 @@ struct IDVerificationScreen: View {
                     input: StartInput(
                         firstName: firstName.trimmingCharacters(in: .whitespaces),
                         lastName: lastName.trimmingCharacters(in: .whitespaces),
-                        dateOfBirth: dateOfBirth
+                        dateOfBirth: dateOfBirth,
+                        workState: workState
                     )
                 )
 
