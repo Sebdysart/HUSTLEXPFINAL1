@@ -14,11 +14,13 @@ struct VerificationSettingsScreen: View {
 
     @State private var phoneVerified = false
     @State private var emailVerified = false
+    @State private var idStatus = "NOT_STARTED" // NOT_STARTED, PENDING, IN_PROGRESS, CLEAR, CONSIDER, FAILED
     @State private var isLoading = true
     @State private var errorMessage: String?
 
     @State private var showPhoneVerify = false
     @State private var showEmailVerify = false
+    @State private var showIDVerify = false
 
     var body: some View {
         ZStack {
@@ -57,9 +59,13 @@ struct VerificationSettingsScreen: View {
             }
 
             // Bottom CTA
-            VStack {
-                Spacer()
-                VerificationCTA()
+            if idStatus == "NOT_STARTED" || idStatus == "FAILED" {
+                VStack {
+                    Spacer()
+                    VerificationCTA {
+                        showIDVerify = true
+                    }
+                }
             }
         }
         .navigationTitle("Verification")
@@ -80,9 +86,42 @@ struct VerificationSettingsScreen: View {
                 showEmailVerify = false
             })
         }
+        .sheet(isPresented: $showIDVerify) {
+            IDVerificationScreen(onComplete: {
+                idStatus = "PENDING"
+                showIDVerify = false
+            })
+        }
     }
 
     // MARK: - Steps Section
+
+    private var idVerificationStatus: VerificationStatus {
+        switch idStatus {
+        case "CLEAR": return .complete
+        case "PENDING", "IN_PROGRESS", "CONSIDER": return .pending
+        default: return .notStarted
+        }
+    }
+
+    private var idSubtitle: String {
+        switch idStatus {
+        case "CLEAR": return "Verified"
+        case "PENDING", "IN_PROGRESS": return "Verification in progress"
+        case "CONSIDER": return "Under review"
+        case "FAILED": return "Verification failed — try again"
+        default: return "Verify your identity via Checkr"
+        }
+    }
+
+    // Background check is bundled with ID verification in Checkr
+    private var bgCheckStatus: VerificationStatus {
+        switch idStatus {
+        case "CLEAR": return .complete
+        case "PENDING", "IN_PROGRESS", "CONSIDER": return .pending
+        default: return .notStarted
+        }
+    }
 
     private var verificationStepsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -107,14 +146,18 @@ struct VerificationSettingsScreen: View {
 
                 VerificationStepRow(
                     title: "Identity Verification",
-                    subtitle: "Upload your ID to verify",
-                    status: .notStarted
-                ) {}
+                    subtitle: idSubtitle,
+                    status: idVerificationStatus
+                ) {
+                    if idStatus == "NOT_STARTED" || idStatus == "FAILED" {
+                        showIDVerify = true
+                    }
+                }
 
                 VerificationStepRow(
                     title: "Background Check",
-                    subtitle: "Complete after ID verification",
-                    status: .notStarted
+                    subtitle: idStatus == "CLEAR" ? "Completed" : "Included with identity verification",
+                    status: bgCheckStatus
                 ) {}
             }
         }
@@ -126,6 +169,7 @@ struct VerificationSettingsScreen: View {
         isLoading = true
         errorMessage = nil
 
+        // Fetch phone/email status
         do {
             struct StatusResponse: Codable {
                 let phoneVerified: Bool
@@ -144,6 +188,25 @@ struct VerificationSettingsScreen: View {
         } catch {
             errorMessage = "Failed to load verification status"
             HXLogger.error("Verification: \(error.localizedDescription)", category: "Network")
+        }
+
+        // Fetch ID verification status
+        do {
+            struct IDStatusResponse: Codable {
+                let status: String
+            }
+
+            let idResponse: IDStatusResponse = try await TRPCClient.shared.call(
+                router: "verification",
+                procedure: "getIdentityVerificationStatus",
+                type: .query,
+                input: EmptyInput()
+            )
+
+            idStatus = idResponse.status
+        } catch {
+            // Non-fatal — just leave as NOT_STARTED
+            HXLogger.error("ID Verification status: \(error.localizedDescription)", category: "Network")
         }
 
         isLoading = false
@@ -352,13 +415,15 @@ private struct BenefitRow: View {
 
 // MARK: - Verification CTA
 private struct VerificationCTA: View {
+    let action: () -> Void
+
     var body: some View {
         VStack(spacing: 0) {
             Divider()
                 .background(Color.borderSubtle)
 
             HXButton("Start Identity Verification", variant: .primary) {
-                // Start verification — future implementation
+                action()
             }
             .accessibilityLabel("Start identity verification")
             .padding(20)
