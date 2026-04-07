@@ -16,7 +16,6 @@ struct IDVerificationScreen: View {
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var dateOfBirth = ""
-    @State private var ssnLast4 = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var checkrURL: URL?
@@ -24,7 +23,7 @@ struct IDVerificationScreen: View {
     @State private var checkStarted = false
     @FocusState private var focusedField: Field?
 
-    private enum Field: Hashable { case first, last, dob, ssn }
+    private enum Field: Hashable { case first, last, dob }
 
     private var isValid: Bool {
         !firstName.trimmingCharacters(in: .whitespaces).isEmpty
@@ -171,33 +170,6 @@ struct IDVerificationScreen: View {
                     .keyboardType(.numbersAndPunctuation)
             }
 
-            // SSN last 4 (optional)
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Last 4 of SSN (optional)")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.textSecondary)
-
-                SecureField("1234", text: $ssnLast4)
-                    .font(.body)
-                    .foregroundStyle(Color.textPrimary)
-                    .padding(14)
-                    .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(focusedField == .ssn ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
-                    )
-                    .focused($focusedField, equals: .ssn)
-                    .keyboardType(.numberPad)
-                    .onChange(of: ssnLast4) { _, newValue in
-                        if newValue.count > 4 {
-                            ssnLast4 = String(newValue.prefix(4))
-                        }
-                    }
-
-                Text("Helps speed up verification. Never stored.")
-                    .font(.caption)
-                    .foregroundStyle(Color.textMuted)
-            }
         }
     }
 
@@ -288,7 +260,6 @@ struct IDVerificationScreen: View {
                     let firstName: String
                     let lastName: String
                     let dateOfBirth: String
-                    let ssnLast4: String?
                 }
                 struct StartResponse: Codable {
                     let checkId: String
@@ -302,8 +273,7 @@ struct IDVerificationScreen: View {
                     input: StartInput(
                         firstName: firstName.trimmingCharacters(in: .whitespaces),
                         lastName: lastName.trimmingCharacters(in: .whitespaces),
-                        dateOfBirth: dateOfBirth,
-                        ssnLast4: ssnLast4.isEmpty ? nil : ssnLast4
+                        dateOfBirth: dateOfBirth
                     )
                 )
 

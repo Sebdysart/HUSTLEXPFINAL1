@@ -78,6 +78,24 @@ final class StripePaymentManager {
         }
     }
 
+    // MARK: - Setup Sheet (for saving cards without charging)
+
+    /// Prepare a setup sheet for saving a payment method
+    func prepareSetupSheet(clientSecret: String, customerId: String, merchantDisplayName: String = "HustleXP") {
+        var configuration = PaymentSheet.Configuration()
+        configuration.merchantDisplayName = merchantDisplayName
+        configuration.allowsDelayedPaymentMethods = false
+        configuration.style = .alwaysDark
+        configuration.customer = .init(id: customerId, ephemeralKeySecret: "")
+
+        paymentSheet = PaymentSheet(
+            setupIntentClientSecret: clientSecret,
+            configuration: configuration
+        )
+
+        HXLogger.info("StripePaymentManager: Setup sheet prepared for adding card", category: "Payment")
+    }
+
     /// Resets the payment sheet (e.g., after completion or cancellation)
     func reset() {
         paymentSheet = nil

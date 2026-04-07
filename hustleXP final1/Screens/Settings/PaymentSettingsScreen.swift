@@ -2,90 +2,45 @@
 //  PaymentSettingsScreen.swift
 //  hustleXP final1
 //
-//  Archetype: D (Calibration/Capability)
+//  Payment method management — lists saved cards, add/remove via Stripe.
 //
 
 import SwiftUI
+import StripePaymentSheet
 
 struct PaymentSettingsScreen: View {
-    @State private var showAddPaymentMethod = false
-    @State private var showAddBankAccount = false
-    
+    @Environment(LiveDataService.self) private var dataService
+
+    @State private var paymentMethods: [SavedCard] = []
+    @State private var isLoading = true
+    @State private var isAdding = false
+    @State private var errorMessage: String?
+    @State private var showAddSheet = false
+
     var body: some View {
         ZStack {
             Color.brandBlack
                 .ignoresSafeArea()
-            
+
             ScrollView {
                 VStack(spacing: 24) {
                     // Balance card
-                    BalanceCard()
-                    
-                    // Payment Methods Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        HXText("Payment Methods", style: .caption, color: .textSecondary)
-                            .padding(.leading, 4)
-                        
-                        VStack(spacing: 0) {
-                            // Empty state or cards
-                            EmptyPaymentMethodRow(
-                                icon: "creditcard.fill",
-                                title: "Add Payment Method",
-                                subtitle: "Add a card to pay for tasks"
-                            ) {
-                                showAddPaymentMethod = true
-                            }
-                        }
-                        .background(Color.surfaceElevated)
-                        .cornerRadius(16)
-                    }
-                    
+                    BalanceCard(user: dataService.currentUser)
+
+                    // Saved payment methods
+                    paymentMethodsSection
+
+                    // Add payment method button
+                    addCardButton
+
                     // Payout Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        HXText("Payout", style: .caption, color: .textSecondary)
-                            .padding(.leading, 4)
-                        
-                        VStack(spacing: 0) {
-                            EmptyPaymentMethodRow(
-                                icon: "building.columns.fill",
-                                title: "Add Bank Account",
-                                subtitle: "Connect a bank to receive payouts"
-                            ) {
-                                showAddBankAccount = true
-                            }
-                        }
-                        .background(Color.surfaceElevated)
-                        .cornerRadius(16)
-                    }
-                    
+                    payoutSection
+
                     // History Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        HXText("History", style: .caption, color: .textSecondary)
-                            .padding(.leading, 4)
-                        
-                        VStack(spacing: 0) {
-                            HistoryRow(
-                                icon: "clock.arrow.circlepath",
-                                title: "Transaction History",
-                                subtitle: "View all payments and payouts"
-                            )
-                        }
-                        .background(Color.surfaceElevated)
-                        .cornerRadius(16)
-                    }
-                    
+                    historySection
+
                     // Security note
-                    HStack(spacing: 12) {
-                        Image(systemName: "lock.shield.fill")
-                            .foregroundStyle(Color.successGreen)
-                        
-                        HXText(
-                            "Your payment information is encrypted and securely stored using industry-standard security.",
-                            style: .caption,
-                            color: .textTertiary
-                        )
-                    }
-                    .padding(16)
+                    securityNote
                 }
                 .padding(24)
             }
@@ -95,42 +50,373 @@ struct PaymentSettingsScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .sheet(isPresented: $showAddPaymentMethod) {
-            AddPaymentMethodSheet()
+        .task { await fetchPaymentMethods() }
+    }
+
+    // MARK: - Payment Methods Section
+
+    private var paymentMethodsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HXText("Payment Methods", style: .caption, color: .textSecondary)
+                .padding(.leading, 4)
+
+            if isLoading {
+                HStack {
+                    Spacer()
+                    ProgressView().tint(.brandPurple)
+                    Spacer()
+                }
+                .padding(24)
+                .background(Color.surfaceElevated)
+                .cornerRadius(16)
+            } else if paymentMethods.isEmpty {
+                HStack(spacing: 14) {
+                    Image(systemName: "creditcard")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.textMuted)
+
+                    HXText("No saved payment methods", style: .body, color: .textSecondary)
+
+                    Spacer()
+                }
+                .padding(16)
+                .background(Color.surfaceElevated)
+                .cornerRadius(16)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(paymentMethods) { card in
+                        SavedCardRow(card: card, onRemove: { removeCard(card.id) }, onSetDefault: { setDefault(card.id) })
+
+                        if card.id != paymentMethods.last?.id {
+                            HXDivider().padding(.leading, 72)
+                        }
+                    }
+                }
+                .background(Color.surfaceElevated)
+                .cornerRadius(16)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(Color.errorRed)
+            }
         }
-        .sheet(isPresented: $showAddBankAccount) {
-            AddBankAccountSheet()
+    }
+
+    // MARK: - Add Card Button
+
+    private var addCardButton: some View {
+        Button { addPaymentMethod() } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.brandPurple.opacity(0.15))
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.brandPurple)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HXText("Add Payment Method", style: .body)
+                    HXText("Credit or debit card", style: .caption, color: .textSecondary)
+                }
+
+                Spacer()
+
+                if isAdding {
+                    ProgressView().tint(.brandPurple)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.textTertiary)
+                }
+            }
+            .padding(16)
+            .background(Color.surfaceElevated)
+            .cornerRadius(16)
         }
+        .buttonStyle(.plain)
+        .disabled(isAdding)
+    }
+
+    // MARK: - Payout Section
+
+    private var payoutSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HXText("Payout", style: .caption, color: .textSecondary)
+                .padding(.leading, 4)
+
+            EmptyPaymentMethodRow(
+                icon: "building.columns.fill",
+                title: "Add Bank Account",
+                subtitle: "Connect a bank to receive payouts"
+            ) {}
+            .background(Color.surfaceElevated)
+            .cornerRadius(16)
+        }
+    }
+
+    // MARK: - History Section
+
+    private var historySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HXText("History", style: .caption, color: .textSecondary)
+                .padding(.leading, 4)
+
+            HistoryRow(
+                icon: "clock.arrow.circlepath",
+                title: "Transaction History",
+                subtitle: "View all payments and payouts"
+            )
+            .background(Color.surfaceElevated)
+            .cornerRadius(16)
+        }
+    }
+
+    // MARK: - Security Note
+
+    private var securityNote: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "lock.shield.fill")
+                .foregroundStyle(Color.successGreen)
+
+            HXText(
+                "Your payment information is encrypted and securely stored by Stripe. We never see your full card number.",
+                style: .caption,
+                color: .textTertiary
+            )
+        }
+        .padding(16)
+    }
+
+    // MARK: - Actions
+
+    private func fetchPaymentMethods() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            struct EmptyInput: Codable {}
+            struct ListResponse: Codable {
+                let methods: [SavedCard]
+            }
+
+            let response: ListResponse = try await TRPCClient.shared.call(
+                router: "paymentMethods",
+                procedure: "list",
+                type: .query,
+                input: EmptyInput()
+            )
+            paymentMethods = response.methods
+        } catch {
+            // Non-fatal — just show empty state
+            HXLogger.error("PaymentMethods: \(error.localizedDescription)", category: "Payment")
+        }
+
+        isLoading = false
+    }
+
+    private func addPaymentMethod() {
+        isAdding = true
+        errorMessage = nil
+
+        Task {
+            do {
+                struct EmptyInput: Codable {}
+                struct SetupResponse: Codable {
+                    let clientSecret: String
+                    let customerId: String
+                }
+
+                let response: SetupResponse = try await TRPCClient.shared.call(
+                    router: "paymentMethods",
+                    procedure: "createSetupIntent",
+                    input: EmptyInput()
+                )
+
+                // Present Stripe PaymentSheet for adding card
+                StripePaymentManager.shared.prepareSetupSheet(
+                    clientSecret: response.clientSecret,
+                    customerId: response.customerId
+                )
+
+                let result = await StripePaymentManager.shared.presentPaymentSheet()
+                StripePaymentManager.shared.reset()
+
+                switch result {
+                case .completed:
+                    // Refresh the list
+                    await fetchPaymentMethods()
+                case .canceled:
+                    break
+                case .failed(let error):
+                    errorMessage = error.localizedDescription
+                }
+
+                isAdding = false
+            } catch {
+                isAdding = false
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func removeCard(_ paymentMethodId: String) {
+        Task {
+            do {
+                struct RemoveInput: Codable { let paymentMethodId: String }
+                struct RemoveResponse: Codable { let success: Bool }
+
+                let _: RemoveResponse = try await TRPCClient.shared.call(
+                    router: "paymentMethods",
+                    procedure: "remove",
+                    input: RemoveInput(paymentMethodId: paymentMethodId)
+                )
+
+                paymentMethods.removeAll { $0.id == paymentMethodId }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func setDefault(_ paymentMethodId: String) {
+        Task {
+            do {
+                struct DefaultInput: Codable { let paymentMethodId: String }
+                struct DefaultResponse: Codable { let success: Bool }
+
+                let _: DefaultResponse = try await TRPCClient.shared.call(
+                    router: "paymentMethods",
+                    procedure: "setDefault",
+                    input: DefaultInput(paymentMethodId: paymentMethodId)
+                )
+
+                // Update local state
+                for i in paymentMethods.indices {
+                    paymentMethods[i].isDefault = paymentMethods[i].id == paymentMethodId
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+}
+
+// MARK: - Saved Card Model
+
+struct SavedCard: Codable, Identifiable {
+    let id: String
+    let brand: String
+    let last4: String
+    let expMonth: Int
+    let expYear: Int
+    var isDefault: Bool
+
+    var brandIcon: String {
+        switch brand.lowercased() {
+        case "visa": return "creditcard.fill"
+        case "mastercard": return "creditcard.fill"
+        case "amex": return "creditcard.fill"
+        default: return "creditcard.fill"
+        }
+    }
+
+    var displayBrand: String {
+        switch brand.lowercased() {
+        case "visa": return "Visa"
+        case "mastercard": return "Mastercard"
+        case "amex": return "Amex"
+        case "discover": return "Discover"
+        default: return brand.capitalized
+        }
+    }
+}
+
+// MARK: - Saved Card Row
+
+private struct SavedCardRow: View {
+    let card: SavedCard
+    let onRemove: () -> Void
+    let onSetDefault: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.brandPurple.opacity(0.15))
+                    .frame(width: 44, height: 30)
+
+                Image(systemName: card.brandIcon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.brandPurple)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    HXText("\(card.displayBrand) ···· \(card.last4)", style: .body)
+                    if card.isDefault {
+                        Text("Default")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color.brandPurple)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.brandPurple.opacity(0.15))
+                            .cornerRadius(4)
+                    }
+                }
+                HXText("Expires \(String(format: "%02d", card.expMonth))/\(String(card.expYear).suffix(2))", style: .caption, color: .textSecondary)
+            }
+
+            Spacer()
+
+            Menu {
+                if !card.isDefault {
+                    Button { onSetDefault() } label: {
+                        Label("Set as Default", systemImage: "star")
+                    }
+                }
+                Button(role: .destructive) { onRemove() } label: {
+                    Label("Remove", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.textTertiary)
+                    .frame(width: 32, height: 32)
+            }
+        }
+        .padding(16)
     }
 }
 
 // MARK: - Balance Card
 private struct BalanceCard: View {
+    let user: HXUser
+
     var body: some View {
         VStack(spacing: 20) {
             VStack(spacing: 4) {
-                HXText("Available Balance", style: .caption, color: .textSecondary)
-                HXText("$325.00", style: .largeTitle, color: .moneyGreen)
+                HXText("Total Earnings", style: .caption, color: .textSecondary)
+                HXText(String(format: "$%.2f", user.totalEarnings), style: .largeTitle, color: .moneyGreen)
             }
-            
+
             HXDivider()
-            
+
             HStack(spacing: 24) {
                 VStack(spacing: 4) {
-                    HXText("Pending", style: .caption, color: .textTertiary)
-                    HXText("$50.00", style: .headline)
+                    HXText("Tasks Done", style: .caption, color: .textTertiary)
+                    HXText("\(user.tasksCompleted)", style: .headline)
                 }
-                
+
                 VStack(spacing: 4) {
-                    HXText("This Month", style: .caption, color: .textTertiary)
-                    HXText("$475.00", style: .headline)
+                    HXText("XP", style: .caption, color: .textTertiary)
+                    HXText("\(user.xp)", style: .headline)
                 }
             }
-            
-            HXButton("Cash Out", variant: .primary) {
-                // Handle cash out
-            }
-            .accessibilityLabel("Cash out balance")
         }
         .padding(24)
         .background(
@@ -150,7 +436,7 @@ private struct EmptyPaymentMethodRow: View {
     let title: String
     let subtitle: String
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
@@ -158,19 +444,19 @@ private struct EmptyPaymentMethodRow: View {
                     Circle()
                         .fill(Color.brandPurple.opacity(0.15))
                         .frame(width: 44, height: 44)
-                    
+
                     Image(systemName: icon)
                         .font(.system(size: 18))
                         .foregroundStyle(Color.brandPurple)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     HXText(title, style: .body)
                     HXText(subtitle, style: .caption, color: .textSecondary)
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(Color.brandPurple)
@@ -229,7 +515,7 @@ private struct TransactionHistoryView: View {
         ZStack {
             Color.brandBlack
                 .ignoresSafeArea()
-            
+
             VStack {
                 EmptyState(
                     icon: "clock.arrow.circlepath",
@@ -246,113 +532,9 @@ private struct TransactionHistoryView: View {
     }
 }
 
-// MARK: - Add Payment Method Sheet
-private struct AddPaymentMethodSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.brandBlack
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 24) {
-                    HXText("Add a payment method to pay for tasks you post.", style: .body, color: .textSecondary)
-                        .multilineTextAlignment(.center)
-                    
-                    VStack(spacing: 16) {
-                        PaymentOptionRow(icon: "creditcard.fill", title: "Credit or Debit Card")
-                        PaymentOptionRow(icon: "apple.logo", title: "Apple Pay")
-                    }
-                    
-                    Spacer()
-                }
-                .padding(24)
-            }
-            .navigationTitle("Add Payment Method")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.brandBlack, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.textSecondary)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Add Bank Account Sheet
-private struct AddBankAccountSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.brandBlack
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 24) {
-                    HXText("Connect a bank account to receive payouts from completed tasks.", style: .body, color: .textSecondary)
-                        .multilineTextAlignment(.center)
-                    
-                    VStack(spacing: 16) {
-                        PaymentOptionRow(icon: "building.columns.fill", title: "Connect Bank Account")
-                        PaymentOptionRow(icon: "link", title: "Link with Plaid")
-                    }
-                    
-                    Spacer()
-                }
-                .padding(24)
-            }
-            .navigationTitle("Add Bank Account")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.brandBlack, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.textSecondary)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Payment Option Row
-private struct PaymentOptionRow: View {
-    let icon: String
-    let title: String
-    
-    var body: some View {
-        Button(action: {}) {
-            HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundStyle(Color.brandPurple)
-                    .frame(width: 32)
-                
-                HXText(title, style: .body)
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.textTertiary)
-            }
-            .padding(16)
-            .background(Color.surfaceElevated)
-            .cornerRadius(12)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 #Preview {
     NavigationStack {
         PaymentSettingsScreen()
     }
+    .environment(LiveDataService.shared)
 }
