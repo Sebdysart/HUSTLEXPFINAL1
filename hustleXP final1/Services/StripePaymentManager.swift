@@ -81,12 +81,12 @@ final class StripePaymentManager {
     // MARK: - Setup Sheet (for saving cards without charging)
 
     /// Prepare a setup sheet for saving a payment method
-    func prepareSetupSheet(clientSecret: String, customerId: String, merchantDisplayName: String = "HustleXP") {
+    func prepareSetupSheet(clientSecret: String, customerId: String, ephemeralKeySecret: String, merchantDisplayName: String = "HustleXP") {
         var configuration = PaymentSheet.Configuration()
         configuration.merchantDisplayName = merchantDisplayName
         configuration.allowsDelayedPaymentMethods = false
         configuration.style = .alwaysDark
-        configuration.customer = .init(id: customerId, ephemeralKeySecret: "")
+        configuration.customer = .init(id: customerId, ephemeralKeySecret: ephemeralKeySecret)
 
         paymentSheet = PaymentSheet(
             setupIntentClientSecret: clientSecret,
