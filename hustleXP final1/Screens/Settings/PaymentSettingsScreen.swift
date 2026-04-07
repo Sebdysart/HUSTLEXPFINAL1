@@ -230,32 +230,44 @@ struct PaymentSettingsScreen: View {
                     let clientSecret: String
                 }
 
+                print("🔵 [Payment] Calling createSetupIntent...")
                 let response: SetupResponse = try await TRPCClient.shared.call(
                     router: "paymentMethods",
                     procedure: "createSetupIntent",
                     input: EmptyInput()
                 )
 
+                // Log the client secret prefix to verify it matches the publishable key's account
+                let secretPrefix = String(response.clientSecret.prefix(25))
+                let pubKeyPrefix = String((StripeAPI.defaultPublishableKey ?? "NOT SET").prefix(20))
+                print("🔵 [Payment] SetupIntent clientSecret prefix: \(secretPrefix)...")
+                print("🔵 [Payment] Publishable key prefix: \(pubKeyPrefix)...")
+                print("🔵 [Payment] Preparing PaymentSheet...")
+
                 // Present Stripe PaymentSheet for adding card
                 StripePaymentManager.shared.prepareSetupSheet(
                     clientSecret: response.clientSecret
                 )
 
+                print("🔵 [Payment] Presenting PaymentSheet...")
                 let result = await StripePaymentManager.shared.presentPaymentSheet()
                 StripePaymentManager.shared.reset()
 
                 switch result {
                 case .completed:
-                    // Refresh the list
+                    print("🔵 [Payment] PaymentSheet completed successfully")
                     await fetchPaymentMethods()
                 case .canceled:
-                    break
+                    print("🔵 [Payment] PaymentSheet canceled by user")
                 case .failed(let error):
+                    print("🔵 [Payment] PaymentSheet FAILED: \(error.localizedDescription)")
+                    print("🔵 [Payment] Full error: \(error)")
                     errorMessage = error.localizedDescription
                 }
 
                 isAdding = false
             } catch {
+                print("🔵 [Payment] createSetupIntent call FAILED: \(error)")
                 isAdding = false
                 errorMessage = error.localizedDescription
             }

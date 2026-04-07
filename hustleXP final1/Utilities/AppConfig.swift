@@ -35,12 +35,13 @@ enum AppConfig {
     /// Test key for debug builds, live key for release.
     static var stripePublishableKey: String {
         #if DEBUG
-        return "pk_test_51SCTxI9oJYlVip5Z931pD73nICDzzkhjFrKZ1pED20fJWRgwLDrVqEhkfYuosQXrt8S56WIdnjBT9Nv5oJ4SXyvB009Ajm9uRv"
+        // TODO: Replace with your valid Stripe test publishable key from https://dashboard.stripe.com/test/apikeys
+        return "pk_test_51TJalM9SBxHIlhrch4h3vPxThf0ziWoOrWzLz2vW3xZx3pID7Ba90C59AgoBB3CecmbyMRefHw4OgS4zd6an6sxb00LnrNR8MR"
         #else
         // IMPORTANT: Replace with your live publishable key before App Store submission.
         // This is safe to embed — publishable keys are public by design.
         // Get it from: https://dashboard.stripe.com/apikeys
-        return "pk_live_REPLACE_WITH_LIVE_PUBLISHABLE_KEY"
+        return "pk_test_51TJalM9SBxHIlhrch4h3vPxThf0ziWoOrWzLz2vW3xZx3pID7Ba90C59AgoBB3CecmbyMRefHw4OgS4zd6an6sxb00LnrNR8MR"
         #endif
     }
 
