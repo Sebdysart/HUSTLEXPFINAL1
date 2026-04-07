@@ -17,6 +17,14 @@ struct PaymentSettingsScreen: View {
     @State private var errorMessage: String?
     @State private var showAddSheet = false
 
+    // Balance & cash out
+    @State private var availableCents: Int = 0
+    @State private var pendingCents: Int = 0
+    @State private var isCashingOut = false
+    @State private var showCashOutConfirm = false
+    @State private var cashOutSuccess = false
+    @State private var connectSetup = false
+
     var body: some View {
         ZStack {
             Color.brandBlack
@@ -25,7 +33,7 @@ struct PaymentSettingsScreen: View {
             ScrollView {
                 VStack(spacing: 24) {
                     // Balance card
-                    BalanceCard(user: dataService.currentUser)
+                    balanceCard
 
                     // Saved payment methods
                     paymentMethodsSection
@@ -50,7 +58,21 @@ struct PaymentSettingsScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .task { await fetchPaymentMethods() }
+        .task {
+            await fetchPaymentMethods()
+            await fetchBalance()
+        }
+        .alert("Cash Out", isPresented: $showCashOutConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Cash Out \(formatCents(availableCents))") { cashOut() }
+        } message: {
+            Text("Transfer \(formatCents(availableCents)) to your bank account? Standard payouts arrive in 1-2 business days.")
+        }
+        .alert("Cash Out Successful", isPresented: $cashOutSuccess) {
+            Button("OK") {}
+        } message: {
+            Text("Your payout has been submitted. Funds will arrive in 1-2 business days.")
+        }
     }
 
     // MARK: - Payment Methods Section
@@ -142,6 +164,75 @@ struct PaymentSettingsScreen: View {
         .disabled(isAdding)
     }
 
+    // MARK: - Balance Card
+
+    private var balanceCard: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 4) {
+                HXText("Available Balance", style: .caption, color: .textSecondary)
+                HXText(formatCents(availableCents), style: .largeTitle, color: .moneyGreen)
+            }
+
+            HXDivider()
+
+            HStack(spacing: 24) {
+                VStack(spacing: 4) {
+                    HXText("Pending", style: .caption, color: .textTertiary)
+                    HXText(formatCents(pendingCents), style: .headline)
+                }
+
+                VStack(spacing: 4) {
+                    HXText("Lifetime", style: .caption, color: .textTertiary)
+                    HXText(String(format: "$%.2f", dataService.currentUser.totalEarnings), style: .headline)
+                }
+            }
+
+            if connectSetup && availableCents > 0 {
+                Button {
+                    showCashOutConfirm = true
+                } label: {
+                    HStack(spacing: 8) {
+                        if isCashingOut {
+                            ProgressView().tint(.white)
+                        } else {
+                            Image(systemName: "arrow.down.to.line")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Cash Out \(formatCents(availableCents))")
+                                .font(.body.weight(.semibold))
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.moneyGreen, in: RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(isCashingOut)
+            } else if !connectSetup {
+                Button { openStripeDashboard() } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "building.columns.fill")
+                            .font(.system(size: 14))
+                        Text("Set Up Payouts")
+                            .font(.body.weight(.semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.brandPurple, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            LinearGradient(
+                colors: [Color.surfaceElevated, Color.moneyGreen.opacity(0.1)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(20)
+    }
+
     // MARK: - Payout Section
 
     private var payoutSection: some View {
@@ -149,11 +240,32 @@ struct PaymentSettingsScreen: View {
             HXText("Payout", style: .caption, color: .textSecondary)
                 .padding(.leading, 4)
 
-            EmptyPaymentMethodRow(
-                icon: "building.columns.fill",
-                title: "Add Bank Account",
-                subtitle: "Connect a bank to receive payouts"
-            ) {}
+            Button { openStripeDashboard() } label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.brandPurple.opacity(0.15))
+                            .frame(width: 44, height: 44)
+
+                        Image(systemName: "building.columns.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Color.brandPurple)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        HXText(connectSetup ? "Manage Payout Settings" : "Set Up Bank Account", style: .body)
+                        HXText(connectSetup ? "Change payout schedule or method" : "Connect a bank to receive payouts", style: .caption, color: .textSecondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.textTertiary)
+                }
+                .padding(16)
+            }
+            .buttonStyle(.plain)
             .background(Color.surfaceElevated)
             .cornerRadius(16)
         }
@@ -293,6 +405,93 @@ struct PaymentSettingsScreen: View {
         }
     }
 
+    private func fetchBalance() async {
+        struct EmptyInput: Codable {}
+        struct BalanceResponse: Codable {
+            let availableCents: Int
+            let pendingCents: Int
+        }
+
+        do {
+            let balance: BalanceResponse = try await TRPCClient.shared.call(
+                router: "stripeConnect",
+                procedure: "getBalance",
+                type: .query,
+                input: EmptyInput()
+            )
+            availableCents = balance.availableCents
+            pendingCents = balance.pendingCents
+            connectSetup = true
+        } catch {
+            // Connect not set up or error — show 0 balance
+            connectSetup = false
+        }
+    }
+
+    private func cashOut() {
+        guard availableCents > 0 else { return }
+        isCashingOut = true
+        errorMessage = nil
+
+        Task {
+            do {
+                struct PayoutInput: Codable {
+                    let amountCents: Int
+                    let method: String
+                }
+                struct PayoutResponse: Codable {
+                    let payoutId: String
+                    let status: String
+                }
+
+                let _: PayoutResponse = try await TRPCClient.shared.call(
+                    router: "stripeConnect",
+                    procedure: "requestPayout",
+                    input: PayoutInput(amountCents: availableCents, method: "standard")
+                )
+
+                isCashingOut = false
+                cashOutSuccess = true
+                // Refresh balance
+                await fetchBalance()
+            } catch {
+                isCashingOut = false
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func openStripeDashboard() {
+        Task {
+            do {
+                struct EmptyInput: Codable {}
+                struct DashboardResponse: Codable {
+                    let url: String
+                }
+
+                let response: DashboardResponse = try await TRPCClient.shared.call(
+                    router: "stripeConnect",
+                    procedure: "getDashboardLink",
+                    type: .query,
+                    input: EmptyInput()
+                )
+
+                if let url = URL(string: response.url) {
+                    await MainActor.run {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } catch {
+                errorMessage = "Set up payout account first by completing a task."
+            }
+        }
+    }
+
+    private func formatCents(_ cents: Int) -> String {
+        let dollars = Double(cents) / 100.0
+        return String(format: "$%.2f", dollars)
+    }
+
     private func setDefault(_ paymentMethodId: String) {
         Task {
             do {
@@ -403,42 +602,6 @@ private struct SavedCardRow: View {
     }
 }
 
-// MARK: - Balance Card
-private struct BalanceCard: View {
-    let user: HXUser
-
-    var body: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 4) {
-                HXText("Total Earnings", style: .caption, color: .textSecondary)
-                HXText(String(format: "$%.2f", user.totalEarnings), style: .largeTitle, color: .moneyGreen)
-            }
-
-            HXDivider()
-
-            HStack(spacing: 24) {
-                VStack(spacing: 4) {
-                    HXText("Tasks Done", style: .caption, color: .textTertiary)
-                    HXText("\(user.tasksCompleted)", style: .headline)
-                }
-
-                VStack(spacing: 4) {
-                    HXText("XP", style: .caption, color: .textTertiary)
-                    HXText("\(user.xp)", style: .headline)
-                }
-            }
-        }
-        .padding(24)
-        .background(
-            LinearGradient(
-                colors: [Color.surfaceElevated, Color.moneyGreen.opacity(0.1)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(20)
-    }
-}
 
 // MARK: - Empty Payment Method Row
 private struct EmptyPaymentMethodRow: View {
