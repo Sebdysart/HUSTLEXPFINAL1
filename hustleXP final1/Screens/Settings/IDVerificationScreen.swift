@@ -331,8 +331,6 @@ struct SafariView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> SFSafariViewController {
         let vc = SFSafariViewController(url: url)
-        vc.preferredBarTintColor = UIColor(Color.brandBlack)
-        vc.preferredControlTintColor = UIColor(Color.brandPurple)
         return vc
     }
 
