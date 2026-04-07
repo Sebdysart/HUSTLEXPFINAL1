@@ -228,8 +228,6 @@ struct PaymentSettingsScreen: View {
                 struct EmptyInput: Codable {}
                 struct SetupResponse: Codable {
                     let clientSecret: String
-                    let customerId: String
-                    let ephemeralKeySecret: String
                 }
 
                 let response: SetupResponse = try await TRPCClient.shared.call(
@@ -240,9 +238,7 @@ struct PaymentSettingsScreen: View {
 
                 // Present Stripe PaymentSheet for adding card
                 StripePaymentManager.shared.prepareSetupSheet(
-                    clientSecret: response.clientSecret,
-                    customerId: response.customerId,
-                    ephemeralKeySecret: response.ephemeralKeySecret
+                    clientSecret: response.clientSecret
                 )
 
                 let result = await StripePaymentManager.shared.presentPaymentSheet()
