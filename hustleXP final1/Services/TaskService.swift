@@ -330,15 +330,24 @@ final class TaskService: ObservableObject {
     /// Gets tasks created by the current user (poster)
     func listMyPostedTasks(state: TaskState? = nil) async throws -> [HXTask] {
         struct ListByPosterInput: Codable {
-            let state: String?
+            let limit: Int
+        }
+        struct PaginatedResponse: Codable {
+            let tasks: [HXTask]
+            let nextCursor: String?
         }
 
-        let tasks: [HXTask] = try await trpc.call(
+        let response: PaginatedResponse = try await trpc.call(
             router: "task",
             procedure: "listByPoster",
             type: .query,
-            input: ListByPosterInput(state: state?.rawValue)
+            input: ListByPosterInput(limit: 50)
         )
+
+        var tasks = response.tasks
+        if let state {
+            tasks = tasks.filter { $0.state == state }
+        }
 
         HXLogger.info("TaskService: Fetched \(tasks.count) posted tasks", category: "Task")
         return tasks
@@ -347,15 +356,24 @@ final class TaskService: ObservableObject {
     /// Gets tasks claimed by the current user (worker)
     func listMyClaimedTasks(state: TaskState? = nil) async throws -> [HXTask] {
         struct ListByWorkerInput: Codable {
-            let state: String?
+            let limit: Int
+        }
+        struct PaginatedResponse: Codable {
+            let tasks: [HXTask]
+            let nextCursor: String?
         }
 
-        let tasks: [HXTask] = try await trpc.call(
+        let response: PaginatedResponse = try await trpc.call(
             router: "task",
             procedure: "listByWorker",
             type: .query,
-            input: ListByWorkerInput(state: state?.rawValue)
+            input: ListByWorkerInput(limit: 50)
         )
+
+        var tasks = response.tasks
+        if let state {
+            tasks = tasks.filter { $0.state == state }
+        }
 
         HXLogger.info("TaskService: Fetched \(tasks.count) claimed tasks", category: "Task")
         return tasks

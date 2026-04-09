@@ -36,31 +36,27 @@ struct AITaskCreationScreen: View {
             let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
             let isCompact = safeHeight < 600
             
-            ZStack {
-                // Neon nexus background
-                neonBackground
-                
-                VStack(spacing: 0) {
-                    // Minimal header
-                    header(isCompact: isCompact)
-                    
-                    if showInitialPrompt && messages.count <= 1 {
-                        // Centered initial prompt view
-                        initialPromptView(isCompact: isCompact)
-                    } else {
-                        // Conversation view
-                        conversationView(isCompact: isCompact)
-                    }
-                    
-                    // Post button (when ready)
-                    if taskDraft.isReadyToPost {
-                        postButton(isCompact: isCompact)
-                    }
-                    
-                    // Glowing input bar
-                    neonInputBar(isCompact: isCompact)
+            VStack(spacing: 0) {
+                // Minimal header
+                header(isCompact: isCompact)
+
+                if showInitialPrompt && messages.count <= 1 {
+                    // Centered initial prompt view
+                    initialPromptView(isCompact: isCompact)
+                } else {
+                    // Conversation view
+                    conversationView(isCompact: isCompact)
                 }
+
+                // Post button (when ready)
+                if taskDraft.isReadyToPost {
+                    postButton(isCompact: isCompact)
+                }
+
+                // Glowing input bar
+                neonInputBar(isCompact: isCompact)
             }
+            .background(neonBackground.ignoresSafeArea())
         }
         .navigationBarHidden(true)
         .onAppear {
@@ -218,24 +214,24 @@ struct AITaskCreationScreen: View {
             
             // Main prompt text - BOLD and CENTERED
             Text("What do you need done?")
-                .font(.system(size: isCompact ? 26 : 32, weight: .bold))
-                .minimumScaleFactor(0.7)
+                .font(.system(size: isCompact ? 24 : 30, weight: .bold))
                 .foregroundStyle(.white)
                 .shadow(color: Color.aiPurple.opacity(0.5), radius: 20)
                 .multilineTextAlignment(.center)
-                .scaleEffect(promptScale)
                 .opacity(promptOpacity)
-            
+
             // Subtitle
             Text("Describe your task and I'll create it for you")
                 .font(isCompact ? .footnote : .subheadline)
                 .foregroundStyle(Color.textMuted)
+                .multilineTextAlignment(.center)
                 .padding(.top, isCompact ? 8 : 12)
                 .opacity(promptOpacity * 0.8)
-            
+
             Spacer()
             Spacer()
         }
+        .scaleEffect(promptScale)
         .padding(.horizontal, isCompact ? 24 : 32)
     }
     
@@ -465,33 +461,20 @@ struct AITaskCreationScreen: View {
         
         // Show typing indicator
         isTyping = true
-        
-        // Simulate AI thinking delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            processAIResponse(for: inputText)
-        }
-    }
-    
-    private func processAIResponse(for input: String) {
-        let (updatedDraft, response) = aiService.processUserInput(input, currentDraft: taskDraft)
-        
-        taskDraft = updatedDraft
-        isTyping = false
 
-        // Template badge: show detected template inline if non-generic
-        // e.g. "✦ Content & Creator template detected" shown below the AI message
-        if let detectedCategory = taskDraft.category, detectedCategory != .other {
-            // Badge displayed in message list — handled by TemplateDetectedBadge view
-            _ = detectedCategory.templateSlug  // access templateSlug for future tRPC call
-        }
+        // Every message goes to backend AI — fully AI-powered
+        Task {
+            let (updatedDraft, response) = await aiService.processMessage(inputText, draft: taskDraft)
+            taskDraft = updatedDraft
+            isTyping = false
 
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            messages.append(response)
-        }
-        
-        // Show task preview after first response
-        if !showTaskPreview && taskDraft.hasBasicInfo {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                messages.append(response)
+            }
+
+            // Show task preview after AI sets basic info
+            if !showTaskPreview && taskDraft.hasBasicInfo {
+                try? await Task.sleep(nanoseconds: 500_000_000)
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                     showTaskPreview = true
                 }
@@ -505,10 +488,10 @@ struct AITaskCreationScreen: View {
         let impact = UIImpactFeedbackGenerator(style: .heavy)
         impact.impactOccurred()
 
-        // v2.2.0: Create task via real API with mock fallback
         Task {
             do {
-                _ = try await TaskService.shared.createTask(
+                print("🟢 [PostTask] Creating task: \(taskDraft.title), payment: \(taskDraft.payment ?? 0), location: \(taskDraft.location)")
+                let task = try await TaskService.shared.createTask(
                     title: taskDraft.title,
                     description: taskDraft.description,
                     payment: taskDraft.payment ?? 25.0,
@@ -519,15 +502,12 @@ struct AITaskCreationScreen: View {
                     category: taskDraft.category,
                     requiredTier: taskDraft.requiredTier
                 )
-                HXLogger.info("AITaskCreation: Task posted via API", category: "Task")
+                print("🟢 [PostTask] Task created successfully: id=\(task.id), title=\(task.title)")
+                HXLogger.info("AITaskCreation: Task posted via API - \(task.id)", category: "Task")
             } catch {
-                HXLogger.error("AITaskCreation: API failed, using mock - \(error.localizedDescription)", category: "Task")
-                let newTask = taskDraft.toHXTask(
-                    posterId: "current-user",
-                    posterName: "You",
-                    posterRating: 4.8
-                )
-                LiveDataService.shared.postTask(newTask)
+                print("🔴 [PostTask] API FAILED: \(error)")
+                print("🔴 [PostTask] Full error: \(String(describing: error))")
+                HXLogger.error("AITaskCreation: API failed - \(error.localizedDescription)", category: "Task")
             }
             isPosting = false
             dismiss()

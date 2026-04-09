@@ -130,11 +130,21 @@ struct RoleSelectionScreen: View {
     
     private func handleContinue() {
         guard let role = selectedRole else { return }
-        
+
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
-        
+
         appState.setRole(role)
+
+        // Persist role to backend so it survives app restart
+        Task {
+            do {
+                _ = try await UserProfileService.shared.updateProfile(defaultMode: role.rawValue)
+            } catch {
+                HXLogger.error("RoleSelection: Failed to persist role: \(error.localizedDescription)", category: "Auth")
+            }
+        }
+
         router.navigateToOnboarding(.permissions)
     }
 }
