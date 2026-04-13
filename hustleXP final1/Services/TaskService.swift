@@ -31,6 +31,9 @@ final class TaskService: ObservableObject {
         description: String,
         payment: Double,
         location: String,
+        locationCity: String? = nil,
+        locationState: String? = nil,
+        locationRadiusMiles: Int? = nil,
         latitude: Double?,
         longitude: Double?,
         estimatedDuration: String,
@@ -46,7 +49,11 @@ final class TaskService: ObservableObject {
             let description: String?
             let price: Int
             let location: String?
+            let locationCity: String?
+            let locationState: String?
+            let locationRadiusMiles: Int?
             let category: String?
+            let estimatedDuration: String?
             let mode: String
             let requiresProof: Bool
             let instantMode: Bool
@@ -55,9 +62,13 @@ final class TaskService: ObservableObject {
         let input = CreateTaskInput(
             title: title,
             description: description,
-            price: Int(payment * 100), // Convert to cents
+            price: Int(payment * 100),
             location: location,
+            locationCity: locationCity,
+            locationState: locationState,
+            locationRadiusMiles: locationRadiusMiles,
             category: category?.rawValue,
+            estimatedDuration: estimatedDuration,
             mode: "STANDARD",
             requiresProof: true,
             instantMode: false
@@ -71,6 +82,47 @@ final class TaskService: ObservableObject {
 
         HXLogger.info("TaskService: Created task - \(task.title)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(.taskCreated, taskId: task.id, taskTitle: task.title)
+        return task
+    }
+
+    /// Updates a task (poster only, OPEN state only)
+    func updateTask(
+        taskId: String,
+        title: String? = nil,
+        description: String? = nil,
+        price: Int? = nil,
+        location: String? = nil,
+        category: String? = nil,
+        estimatedDuration: String? = nil,
+        requirements: String? = nil
+    ) async throws -> HXTask {
+        struct UpdateTaskInput: Codable {
+            let taskId: String
+            let title: String?
+            let description: String?
+            let price: Int?
+            let location: String?
+            let category: String?
+            let estimatedDuration: String?
+            let requirements: String?
+        }
+
+        let task: HXTask = try await trpc.call(
+            router: "task",
+            procedure: "update",
+            input: UpdateTaskInput(
+                taskId: taskId,
+                title: title,
+                description: description,
+                price: price,
+                location: location,
+                category: category,
+                estimatedDuration: estimatedDuration,
+                requirements: requirements
+            )
+        )
+
+        HXLogger.info("TaskService: Updated task - \(task.title)", category: "Task")
         return task
     }
 

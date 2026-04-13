@@ -18,6 +18,7 @@ struct AITaskCreationScreen: View {
     @State private var isTyping: Bool = false
     @State private var showTaskPreview: Bool = false
     @State private var isPosting: Bool = false
+    @State private var showReviewSheet: Bool = false
     
     // Animation states
     @State private var showInitialPrompt: Bool = true
@@ -62,6 +63,9 @@ struct AITaskCreationScreen: View {
         .onAppear {
             startConversation()
             startAnimations()
+        }
+        .sheet(isPresented: $showReviewSheet) {
+            ReviewTaskSheet(draft: taskDraft, onPost: { postTask() })
         }
     }
     
@@ -266,7 +270,7 @@ struct AITaskCreationScreen: View {
                         NeonTaskCardPreview(
                             title: taskDraft.title,
                             payment: taskDraft.payment,
-                            location: taskDraft.location,
+                            location: taskDraft.locationDisplay,
                             duration: taskDraft.duration,
                             category: taskDraft.category,
                             isComplete: taskDraft.isReadyToPost,
@@ -298,7 +302,7 @@ struct AITaskCreationScreen: View {
     
     private func postButton(isCompact: Bool) -> some View {
         Button {
-            postTask()
+            showReviewSheet = true
         } label: {
             HStack(spacing: isCompact ? 10 : 12) {
                 if isPosting {
@@ -490,12 +494,15 @@ struct AITaskCreationScreen: View {
 
         Task {
             do {
-                print("🟢 [PostTask] Creating task: \(taskDraft.title), payment: \(taskDraft.payment ?? 0), location: \(taskDraft.location)")
+                print("🟢 [PostTask] Creating task: \(taskDraft.title), payment: \(taskDraft.payment ?? 0), location: \(taskDraft.locationDisplay)")
                 let task = try await TaskService.shared.createTask(
                     title: taskDraft.title,
                     description: taskDraft.description,
                     payment: taskDraft.payment ?? 25.0,
-                    location: taskDraft.location,
+                    location: taskDraft.locationDisplay,
+                    locationCity: taskDraft.locationCity,
+                    locationState: taskDraft.locationState,
+                    locationRadiusMiles: taskDraft.locationRadiusMiles,
                     latitude: nil,
                     longitude: nil,
                     estimatedDuration: taskDraft.duration.isEmpty ? "1 hr" : taskDraft.duration,
@@ -504,6 +511,8 @@ struct AITaskCreationScreen: View {
                 )
                 print("🟢 [PostTask] Task created successfully: id=\(task.id), title=\(task.title)")
                 HXLogger.info("AITaskCreation: Task posted via API - \(task.id)", category: "Task")
+                // Refresh poster's task list so it appears immediately
+                await LiveDataService.shared.refreshAll()
             } catch {
                 print("🔴 [PostTask] API FAILED: \(error)")
                 print("🔴 [PostTask] Full error: \(String(describing: error))")

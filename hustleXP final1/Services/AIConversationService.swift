@@ -33,7 +33,9 @@ class AITaskDraft {
     var title: String = ""
     var description: String = ""
     var payment: Double?
-    var location: String = ""
+    var locationCity: String = ""
+    var locationState: String = ""
+    var locationRadiusMiles: Int = 25
     var duration: String = ""
     var category: TaskCategory?
     var requiredTier: TrustTier = .rookie
@@ -43,8 +45,19 @@ class AITaskDraft {
     var flags: [String] = []
     var isReadyToPost: Bool = false
 
+    /// Display-friendly location string
+    var locationDisplay: String {
+        if locationCity == "Anywhere" || locationCity.isEmpty { return "Anywhere" }
+        if locationState.isEmpty { return locationCity }
+        return "\(locationCity), \(locationState) (\(locationRadiusMiles) mi)"
+    }
+
     var hasBasicInfo: Bool {
         !title.isEmpty && !description.isEmpty
+    }
+
+    var hasLocation: Bool {
+        locationCity == "Anywhere" || (!locationCity.isEmpty && !locationState.isEmpty)
     }
 
     var completionPercentage: Double {
@@ -52,7 +65,7 @@ class AITaskDraft {
         if !title.isEmpty { completed += 0.2 }
         if !description.isEmpty { completed += 0.2 }
         if payment != nil { completed += 0.2 }
-        if !location.isEmpty { completed += 0.2 }
+        if hasLocation { completed += 0.2 }
         if !duration.isEmpty { completed += 0.2 }
         return completed
     }
@@ -63,7 +76,7 @@ class AITaskDraft {
             title: title,
             description: description,
             payment: payment ?? 0,
-            location: location,
+            location: locationDisplay,
             latitude: nil,
             longitude: nil,
             estimatedDuration: duration.isEmpty ? "1 hr" : duration,
@@ -87,7 +100,9 @@ class AITaskDraft {
             "title": title.isEmpty ? nil : title,
             "description": description.isEmpty ? nil : description,
             "suggestedPriceCents": payment.map { Int($0 * 100) },
-            "location": location.isEmpty ? nil : location,
+            "locationCity": locationCity.isEmpty ? nil : locationCity,
+            "locationState": locationState.isEmpty ? nil : locationState,
+            "locationRadiusMiles": locationRadiusMiles,
             "estimatedDurationMinutes": durationToMinutes(),
             "difficulty": difficulty.isEmpty ? nil : difficulty,
             "category": category?.rawValue,
@@ -114,13 +129,26 @@ class AITaskDraft {
         if let t = draft.title { title = t }
         if let d = draft.description { description = d }
         if let p = draft.suggestedPriceCents { payment = Double(p) / 100.0 }
-        if let l = draft.location { location = l }
-        if let dur = draft.estimatedDurationMinutes {
+        if let city = draft.locationCity { locationCity = city }
+        if let state = draft.locationState { locationState = state }
+        if let radius = draft.locationRadiusMiles { locationRadiusMiles = radius }
+        if let dur = draft.estimatedDurationMinutes, dur > 0 {
             if dur < 60 {
                 duration = "\(dur) min"
-            } else {
+            } else if dur < 1440 { // less than 24 hours
                 let hrs = dur / 60
-                duration = "\(hrs) hr\(hrs > 1 ? "s" : "")"
+                let mins = dur % 60
+                if mins > 0 {
+                    duration = "\(hrs) hr\(hrs > 1 ? "s" : "") \(mins) min"
+                } else {
+                    duration = "\(hrs) hr\(hrs > 1 ? "s" : "")"
+                }
+            } else if dur < 10080 { // less than 7 days
+                let days = dur / 1440
+                duration = "\(days) day\(days > 1 ? "s" : "")"
+            } else {
+                let weeks = dur / 10080
+                duration = "\(weeks) week\(weeks > 1 ? "s" : "")"
             }
         }
         if let diff = draft.difficulty { difficulty = diff }
@@ -151,7 +179,9 @@ struct CurrentDraftInput: Codable {
     let title: String?
     let description: String?
     let suggestedPriceCents: Int?
-    let location: String?
+    let locationCity: String?
+    let locationState: String?
+    let locationRadiusMiles: Int?
     let estimatedDurationMinutes: Int?
     let difficulty: String?
     let category: String?
@@ -170,7 +200,9 @@ struct AIConverseResponseDraft: Codable {
     let title: String?
     let description: String?
     let suggestedPriceCents: Int?
-    let location: String?
+    let locationCity: String?
+    let locationState: String?
+    let locationRadiusMiles: Int?
     let estimatedDurationMinutes: Int?
     let difficulty: String?
     let category: String?
@@ -209,7 +241,9 @@ final class AIConversationService {
             title: draft.title.isEmpty ? nil : draft.title,
             description: draft.description.isEmpty ? nil : draft.description,
             suggestedPriceCents: draft.payment.map { Int($0 * 100) },
-            location: draft.location.isEmpty ? nil : draft.location,
+            locationCity: draft.locationCity.isEmpty ? nil : draft.locationCity,
+            locationState: draft.locationState.isEmpty ? nil : draft.locationState,
+            locationRadiusMiles: draft.locationRadiusMiles,
             estimatedDurationMinutes: draft.durationToMinutes(),
             difficulty: draft.difficulty.isEmpty ? nil : draft.difficulty,
             category: draft.category?.rawValue,

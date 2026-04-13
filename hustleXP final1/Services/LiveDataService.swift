@@ -96,26 +96,40 @@ final class LiveDataService {
         lastError = nil
 
         // Fetch tasks in parallel based on user role
-        await withTaskGroup(of: Void.self) { group in
-            // Always fetch available tasks
-            group.addTask { await self.refreshAvailableTasks() }
+        let role = self.authService.currentUser?.role
+        let userId = self.authService.currentUser?.id ?? "nil"
+        print("🔵 [LiveData] refreshAll called. userId=\(userId), role=\(role?.rawValue ?? "nil"), currentUser=\(self.authService.currentUser != nil)")
 
-            // Fetch based on role
-            let role = self.authService.currentUser?.role
+        await withTaskGroup(of: Void.self) { group in
+            // Always refresh user profile (updates tasksPosted, tasksCompleted counts)
+            group.addTask { await self.refreshCurrentUser() }
+
             if role == .hustler {
+                group.addTask { await self.refreshAvailableTasks() }
                 group.addTask { await self.refreshMyClaimedTasks() }
+                group.addTask { await self.refreshTaxStatus() }
+                group.addTask { await self.refreshInsuranceStatus() }
             } else {
                 group.addTask { await self.refreshMyPostedTasks() }
             }
-
-            // Fetch tax status
-            group.addTask { await self.refreshTaxStatus() }
-
-            // Fetch insurance status
-            group.addTask { await self.refreshInsuranceStatus() }
         }
 
         isLoading = false
+    }
+
+    private func refreshCurrentUser() async {
+        do {
+            struct EmptyInput: Codable {}
+            let user: HXUser = try await trpc.call(
+                router: "user",
+                procedure: "me",
+                type: .query,
+                input: EmptyInput()
+            )
+            authService.currentUser = user
+        } catch {
+            HXLogger.error("LiveData: Failed to refresh user - \(error.localizedDescription)", category: "General")
+        }
     }
 
     private func refreshAvailableTasks() async {

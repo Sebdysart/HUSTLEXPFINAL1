@@ -17,6 +17,7 @@ struct PosterTaskDetailScreen: View {
     @State private var task: HXTask?
     @State private var isLoading = true
     @State private var showCancelConfirmation = false
+    @State private var showEditSheet = false
     @State private var showTipSheet = false
     @State private var tipSent = false
     @State private var loadError: Error?
@@ -78,28 +79,24 @@ struct PosterTaskDetailScreen: View {
                         // Location section
                         VStack(alignment: .leading, spacing: 12) {
                             HXText("Location", style: .headline)
-                            
+
                             HStack(spacing: 12) {
                                 ZStack {
                                     Circle()
                                         .fill(Color.brandPurple.opacity(0.15))
                                         .frame(width: 44, height: 44)
-                                    
-                                    Image(systemName: "mappin.circle.fill")
+
+                                    Image(systemName: task.location == "Anywhere" ? "globe" : "mappin.circle.fill")
                                         .font(.system(size: 20))
                                         .foregroundStyle(Color.brandPurple)
                                 }
-                                
+
                                 VStack(alignment: .leading, spacing: 2) {
                                     HXText(task.location, style: .body)
-                                    HXText("0.5 miles away", style: .caption, color: .textSecondary)
+                                    HXText(task.location == "Anywhere" ? "No location restriction" : "In-person task", style: .caption, color: .textSecondary)
                                 }
-                                
+
                                 Spacer()
-                                
-                                Button(action: {}) {
-                                    HXText("View Map", style: .subheadline, color: .brandPurple)
-                                }
                             }
                         }
                         .padding(20)
@@ -170,7 +167,9 @@ struct PosterTaskDetailScreen: View {
                 VStack(spacing: 0) {
                     Spacer()
                     
-                    TaskActionBar(task: task, router: router, onCancel: {
+                    TaskActionBar(task: task, router: router, onEdit: {
+                        showEditSheet = true
+                    }, onCancel: {
                         showCancelConfirmation = true
                     })
                 }
@@ -190,8 +189,10 @@ struct PosterTaskDetailScreen: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    Button(action: {}) {
-                        Label("Edit Task", systemImage: "pencil")
+                    if task?.state == .posted {
+                        Button { showEditSheet = true } label: {
+                            Label("Edit Task", systemImage: "pencil")
+                        }
                     }
                     Button(action: {}) {
                         Label("Share Task", systemImage: "square.and.arrow.up")
@@ -230,6 +231,14 @@ struct PosterTaskDetailScreen: View {
                 )
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            if let task = task {
+                EditTaskSheet(task: task) { updatedTask in
+                    self.task = updatedTask
+                    showEditSheet = false
+                }
             }
         }
         .onAppear {
@@ -561,6 +570,7 @@ private struct TimelineRow: View {
 private struct TaskActionBar: View {
     let task: HXTask
     let router: Router
+    let onEdit: () -> Void
     let onCancel: () -> Void
     
     var body: some View {
@@ -575,13 +585,20 @@ private struct TaskActionBar: View {
                     }
                 } else if task.state == .posted {
                     HXButton("Edit Task", variant: .secondary) {
-                        // Edit task
+                        onEdit()
                     }
-                    
-                    HXButton("Cancel", variant: .ghost) {
+
+                    Button {
                         onCancel()
+                    } label: {
+                        Text("Cancel")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.errorRed)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color.errorRed.opacity(0.15))
+                            .cornerRadius(12)
                     }
-                    .frame(width: 100)
                 } else if task.state == .inProgress {
                     HXButton("Message Hustler", variant: .primary) {
                         router.navigateToPoster(.conversation(taskId: task.id))
