@@ -33,9 +33,43 @@ final class CreateTaskViewModel {
     var title: String = ""
     var description: String = ""
     var payment: String = ""
-    var location: String = ""
-    var duration: String = ""
+    var locationCity: String = ""
+    var locationState: String = ""
+    var locationRadiusMiles: Int = 25
+    var durationValue: String = ""
+    var durationUnit: DurationUnit = .hours
     var requiredTier: TrustTier = .rookie
+    var templateSlug: String = "standard_physical"
+    var riskLevel: String = "LOW"
+
+    var locationDisplay: String {
+        if locationCity == "Anywhere" || locationCity.isEmpty { return "Anywhere" }
+        if locationState.isEmpty { return locationCity }
+        return "\(locationCity), \(locationState) (\(locationRadiusMiles) mi)"
+    }
+
+    var hasLocation: Bool {
+        locationCity == "Anywhere" || (!locationCity.isEmpty && !locationState.isEmpty)
+    }
+
+    var formattedDuration: String {
+        durationValue.isEmpty ? "" : durationUnit.format(value: durationValue)
+    }
+
+    // Keep legacy accessors for compatibility
+    var location: String {
+        get { locationDisplay }
+        set { locationCity = newValue }
+    }
+
+    var duration: String {
+        get { formattedDuration }
+        set {
+            let parsed = DurationUnit.parse(newValue)
+            durationValue = parsed.value
+            durationUnit = parsed.unit
+        }
+    }
     var isSubmitting: Bool = false
     var errors: [String: String] = [:]
     var showContent = false
@@ -54,7 +88,7 @@ final class CreateTaskViewModel {
     var isValid: Bool {
         let baseValid = !title.isEmpty &&
             !description.isEmpty &&
-            !location.isEmpty &&
+            hasLocation &&
             errors.isEmpty
 
         if useAIPricing {
@@ -131,6 +165,28 @@ final class CreateTaskViewModel {
         return .other
     }
 
+    /// Auto-assign template and risk based on category
+    func updateTemplateFromCategory() {
+        let cat = determineCategory()
+        templateSlug = cat.templateSlug
+        switch cat {
+        case .cleaning, .handyman:
+            riskLevel = "MEDIUM"
+        case .childcare, .elderCare:
+            riskLevel = "HIGH"
+        case .petCare:
+            riskLevel = "MEDIUM"
+        case .contentCreator, .creativeProduction, .eventAppearance:
+            riskLevel = "MEDIUM"
+        case .specializedLicensed:
+            riskLevel = "MEDIUM"
+        case .wildcardBizarre:
+            riskLevel = "MEDIUM"
+        default:
+            riskLevel = "LOW"
+        }
+    }
+
     // MARK: - Actions
 
     func postTask() {
@@ -150,26 +206,81 @@ final class CreateTaskViewModel {
     }
 
     func requestAIPricing() {
-        guard let dataService else { return }
-
         isSubmitting = true
 
-        let category = determineCategory()
+        Task {
+            do {
+                struct EvalInput: Codable {
+                    let description: String
+                }
+                struct ScopeProposal: Codable {
+                    let suggested_price_cents: Int?
+                    let price_reasoning: String?
+                    let suggested_xp: Int?
+                    let difficulty: String?
+                    let estimated_duration_minutes: Int?
+                    let confidence_score: Double?
+                }
+                struct EvalResponse: Codable {
+                    let scopeProposal: ScopeProposal?
+                }
 
-        let request = AIPricingRequest(
-            title: title,
-            description: description,
-            category: category,
-            estimatedDuration: duration.isEmpty ? nil : duration,
-            location: location.isEmpty ? nil : location
-        )
+                let response: EvalResponse = try await TRPCClient.shared.call(
+                    router: "task",
+                    procedure: "evaluateDraft",
+                    input: EvalInput(description: description)
+                )
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-            guard let self else { return }
-            let suggestion = dataService.getAIPriceSuggestion(for: request)
-            self.aiSuggestion = suggestion
-            self.isSubmitting = false
-            self.showAIPricingModal = true
+                if let proposal = response.scopeProposal,
+                   let priceCents = proposal.suggested_price_cents {
+                    let category = determineCategory()
+                    let range = category.basePriceRange
+
+                    aiSuggestion = AIPriceSuggestion(
+                        suggestedPriceCents: priceCents,
+                        xpReward: proposal.suggested_xp ?? (priceCents / 10),
+                        rationale: proposal.price_reasoning ?? "AI-suggested price based on task analysis",
+                        priceRangeLowCents: range.lowerBound,
+                        priceRangeHighCents: range.upperBound,
+                        confidence: (proposal.confidence_score ?? 0.5) > 0.7 ? .high : .medium,
+                        factors: [
+                            PricingFactor(name: "Difficulty", impact: proposal.difficulty == "hard" ? .positive : .neutral, description: (proposal.difficulty ?? "medium").capitalized),
+                            PricingFactor(name: "AI Analysis", impact: .neutral, description: proposal.price_reasoning ?? "Based on similar tasks"),
+                        ]
+                    )
+
+                    // Also update duration if AI provided it
+                    if let durMins = proposal.estimated_duration_minutes, durationValue.isEmpty {
+                        if durMins < 60 {
+                            durationValue = "\(durMins)"
+                            durationUnit = .hours
+                        } else if durMins < 1440 {
+                            durationValue = "\(durMins / 60)"
+                            durationUnit = .hours
+                        } else {
+                            durationValue = "\(durMins / 1440)"
+                            durationUnit = .days
+                        }
+                    }
+
+                    isSubmitting = false
+                    showAIPricingModal = true
+                } else {
+                    // Fallback to local heuristic
+                    let category = determineCategory()
+                    let request = AIPricingRequest(title: title, description: description, category: category, estimatedDuration: formattedDuration, location: locationDisplay)
+                    aiSuggestion = request.generateMockSuggestion()
+                    isSubmitting = false
+                    showAIPricingModal = true
+                }
+            } catch {
+                HXLogger.error("AI Pricing failed: \(error.localizedDescription) — using local fallback", category: "AI")
+                let category = determineCategory()
+                let request = AIPricingRequest(title: title, description: description, category: category, estimatedDuration: formattedDuration, location: locationDisplay)
+                aiSuggestion = request.generateMockSuggestion()
+                isSubmitting = false
+                showAIPricingModal = true
+            }
         }
     }
 
@@ -198,11 +309,15 @@ final class CreateTaskViewModel {
                     title: title,
                     description: description,
                     payment: paymentAmount,
-                    location: location,
+                    location: locationDisplay,
+                    locationCity: locationCity,
+                    locationState: locationState,
+                    locationRadiusMiles: locationRadiusMiles,
                     latitude: nil,
                     longitude: nil,
-                    estimatedDuration: duration.isEmpty ? "1 hr" : duration,
+                    estimatedDuration: formattedDuration.isEmpty ? "1 hr" : formattedDuration,
                     category: determineCategory(),
+                    templateSlug: templateSlug,
                     requiredTier: requiredTier,
                     requiredSkills: nil
                 )

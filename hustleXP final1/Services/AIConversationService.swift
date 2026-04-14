@@ -40,6 +40,8 @@ class AITaskDraft {
     var category: TaskCategory?
     var requiredTier: TrustTier = .rookie
     var difficulty: String = ""
+    var templateSlug: String = "standard_physical"
+    var riskLevel: String = "LOW"
     var requirements: String = ""
     var deadline: String = ""
     var flags: [String] = []
@@ -106,6 +108,8 @@ class AITaskDraft {
             "estimatedDurationMinutes": durationToMinutes(),
             "difficulty": difficulty.isEmpty ? nil : difficulty,
             "category": category?.rawValue,
+            "templateSlug": templateSlug,
+            "riskLevel": riskLevel,
             "requirements": requirements.isEmpty ? nil : requirements,
             "deadline": deadline.isEmpty ? nil : deadline,
             "flags": flags.isEmpty ? nil : flags,
@@ -152,6 +156,8 @@ class AITaskDraft {
             }
         }
         if let diff = draft.difficulty { difficulty = diff }
+        if let tmpl = draft.templateSlug { templateSlug = tmpl }
+        if let risk = draft.riskLevel { riskLevel = risk }
         if let cat = draft.category {
             category = TaskCategory(rawValue: cat)
         }
@@ -185,6 +191,8 @@ struct CurrentDraftInput: Codable {
     let estimatedDurationMinutes: Int?
     let difficulty: String?
     let category: String?
+    let templateSlug: String?
+    let riskLevel: String?
     let requirements: String?
     let deadline: String?
     let flags: [String]?
@@ -206,6 +214,8 @@ struct AIConverseResponseDraft: Codable {
     let estimatedDurationMinutes: Int?
     let difficulty: String?
     let category: String?
+    let templateSlug: String?
+    let riskLevel: String?
     let requirements: String?
     let deadline: String?
     let flags: [String]?
@@ -247,6 +257,8 @@ final class AIConversationService {
             estimatedDurationMinutes: draft.durationToMinutes(),
             difficulty: draft.difficulty.isEmpty ? nil : draft.difficulty,
             category: draft.category?.rawValue,
+            templateSlug: draft.templateSlug,
+            riskLevel: draft.riskLevel,
             requirements: draft.requirements.isEmpty ? nil : draft.requirements,
             deadline: draft.deadline.isEmpty ? nil : draft.deadline,
             flags: draft.flags.isEmpty ? nil : draft.flags,

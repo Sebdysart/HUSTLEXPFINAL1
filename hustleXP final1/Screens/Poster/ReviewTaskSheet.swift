@@ -4,18 +4,24 @@
 //
 //  Review and edit task details before posting.
 //  Shown after AI conversation fills the draft.
-//  Matches EditTaskSheet fields: title, description, payment, location (city/state/radius), duration (value + unit).
 //
 
 import SwiftUI
 
 struct ReviewTaskSheet: View {
-    @ObservedObject private var draft: AITaskDraftWrapper
+    let draft: AITaskDraft
     let onPost: () -> Void
     @Environment(\.dismiss) private var dismiss
 
+    @State private var title: String
+    @State private var description: String
+    @State private var payment: String
+    @State private var locationCity: String
+    @State private var locationState: String
+    @State private var locationRadiusMiles: Int
     @State private var durationValue: String
     @State private var durationUnit: DurationUnit
+    @State private var requirements: String
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable { case title, description, payment, city, durationVal, requirements }
@@ -39,78 +45,74 @@ struct ReviewTaskSheet: View {
     ]
 
     init(draft: AITaskDraft, onPost: @escaping () -> Void) {
-        self.draft = AITaskDraftWrapper(draft: draft)
+        self.draft = draft
         self.onPost = onPost
+        _title = State(initialValue: draft.title)
+        _description = State(initialValue: draft.description)
+        _payment = State(initialValue: draft.payment.map { String(Int($0)) } ?? "")
+        _locationCity = State(initialValue: draft.locationCity)
+        _locationState = State(initialValue: draft.locationState)
+        _locationRadiusMiles = State(initialValue: draft.locationRadiusMiles)
+        _requirements = State(initialValue: draft.requirements)
         let parsed = DurationUnit.parse(draft.duration)
         _durationValue = State(initialValue: parsed.value)
         _durationUnit = State(initialValue: parsed.unit)
     }
 
+    private var hasLocation: Bool {
+        locationCity == "Anywhere" || (!locationCity.isEmpty && !locationState.isEmpty)
+    }
+
     private var isValid: Bool {
-        !draft.inner.title.isEmpty
-        && !draft.inner.description.isEmpty
-        && (draft.inner.payment ?? 0) >= 5
-        && draft.inner.hasLocation
+        !title.trimmingCharacters(in: .whitespaces).isEmpty
+        && !description.trimmingCharacters(in: .whitespaces).isEmpty
+        && (Double(payment) ?? 0) >= 5
+        && hasLocation
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Title
                     fieldSection(label: "Title", field: .title) {
-                        TextField("Task title", text: Binding(
-                            get: { draft.inner.title },
-                            set: { draft.inner.title = $0 }
-                        ))
-                        .focused($focusedField, equals: .title)
+                        TextField("Task title", text: $title)
+                            .focused($focusedField, equals: .title)
                     }
 
-                    // Description
                     fieldSection(label: "Description", field: .description) {
-                        TextField("Describe the task", text: Binding(
-                            get: { draft.inner.description },
-                            set: { draft.inner.description = $0 }
-                        ), axis: .vertical)
-                        .lineLimit(3...6)
-                        .focused($focusedField, equals: .description)
+                        TextField("Describe the task", text: $description, axis: .vertical)
+                            .lineLimit(3...6)
+                            .focused($focusedField, equals: .description)
                     }
 
-                    // Payment
                     fieldSection(label: "Payment ($)", field: .payment) {
-                        TextField("Amount", text: Binding(
-                            get: { draft.inner.payment.map { String(Int($0)) } ?? "" },
-                            set: { draft.inner.payment = Double($0) }
-                        ))
-                        .keyboardType(.numberPad)
-                        .focused($focusedField, equals: .payment)
+                        TextField("Amount", text: $payment)
+                            .keyboardType(.numberPad)
+                            .focused($focusedField, equals: .payment)
                     }
 
-                    // Location: City
+                    // City
                     VStack(alignment: .leading, spacing: 6) {
                         Text("City")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(Color.textSecondary)
 
                         HStack {
-                            TextField("City name", text: Binding(
-                                get: { draft.inner.locationCity },
-                                set: { draft.inner.locationCity = $0 }
-                            ))
-                            .font(.body)
-                            .foregroundStyle(Color.textPrimary)
-                            .focused($focusedField, equals: .city)
+                            TextField("City name", text: $locationCity)
+                                .font(.body)
+                                .foregroundStyle(Color.textPrimary)
+                                .focused($focusedField, equals: .city)
 
                             Button {
-                                draft.inner.locationCity = "Anywhere"
-                                draft.inner.locationState = ""
+                                locationCity = "Anywhere"
+                                locationState = ""
                             } label: {
                                 Text("Anywhere")
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(draft.inner.locationCity == "Anywhere" ? .white : Color.brandPurple)
+                                    .foregroundStyle(locationCity == "Anywhere" ? .white : Color.brandPurple)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 6)
-                                    .background(draft.inner.locationCity == "Anywhere" ? Color.brandPurple : Color.brandPurple.opacity(0.15))
+                                    .background(locationCity == "Anywhere" ? Color.brandPurple : Color.brandPurple.opacity(0.15))
                                     .cornerRadius(8)
                             }
                         }
@@ -122,8 +124,8 @@ struct ReviewTaskSheet: View {
                         )
                     }
 
-                    // State picker
-                    if draft.inner.locationCity != "Anywhere" {
+                    if locationCity != "Anywhere" {
+                        // State
                         VStack(alignment: .leading, spacing: 6) {
                             Text("State")
                                 .font(.subheadline.weight(.medium))
@@ -131,13 +133,13 @@ struct ReviewTaskSheet: View {
 
                             Menu {
                                 ForEach(Self.usStates, id: \.code) { state in
-                                    Button(state.name) { draft.inner.locationState = state.code }
+                                    Button(state.name) { locationState = state.code }
                                 }
                             } label: {
                                 HStack {
-                                    Text(Self.usStates.first(where: { $0.code == draft.inner.locationState })?.name ?? "Select state")
+                                    Text(Self.usStates.first(where: { $0.code == locationState })?.name ?? "Select state")
                                         .font(.body)
-                                        .foregroundStyle(draft.inner.locationState.isEmpty ? Color.textMuted : Color.textPrimary)
+                                        .foregroundStyle(locationState.isEmpty ? Color.textMuted : Color.textPrimary)
                                     Spacer()
                                     Image(systemName: "chevron.up.chevron.down")
                                         .font(.system(size: 12))
@@ -161,20 +163,20 @@ struct ReviewTaskSheet: View {
                             HStack(spacing: 8) {
                                 ForEach(Self.radiusOptions, id: \.self) { miles in
                                     Button {
-                                        draft.inner.locationRadiusMiles = miles
+                                        locationRadiusMiles = miles
                                     } label: {
                                         Text("\(miles) mi")
                                             .font(.subheadline.weight(.medium))
-                                            .foregroundStyle(draft.inner.locationRadiusMiles == miles ? .white : Color.textPrimary)
+                                            .foregroundStyle(locationRadiusMiles == miles ? .white : Color.textPrimary)
                                             .frame(maxWidth: .infinity)
                                             .padding(.vertical, 10)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 10)
-                                                    .fill(draft.inner.locationRadiusMiles == miles ? Color.brandPurple : Color.surfaceElevated)
+                                                    .fill(locationRadiusMiles == miles ? Color.brandPurple : Color.surfaceElevated)
                                             )
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 10)
-                                                    .stroke(draft.inner.locationRadiusMiles == miles ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
+                                                    .stroke(locationRadiusMiles == miles ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
                                             )
                                     }
                                     .buttonStyle(.plain)
@@ -183,7 +185,7 @@ struct ReviewTaskSheet: View {
                         }
                     }
 
-                    // Duration with unit picker
+                    // Duration
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Estimated Duration")
                             .font(.subheadline.weight(.medium))
@@ -228,32 +230,99 @@ struct ReviewTaskSheet: View {
 
                     // Requirements
                     fieldSection(label: "Requirements (optional)", field: .requirements) {
-                        TextField("Skills or tools needed", text: Binding(
-                            get: { draft.inner.requirements },
-                            set: { draft.inner.requirements = $0 }
-                        ), axis: .vertical)
-                        .lineLimit(2...4)
-                        .focused($focusedField, equals: .requirements)
+                        TextField("Skills or tools needed", text: $requirements, axis: .vertical)
+                            .lineLimit(2...4)
+                            .focused($focusedField, equals: .requirements)
                     }
 
-                    // Difficulty badge
-                    if !draft.inner.difficulty.isEmpty {
-                        HStack {
-                            let color: Color = draft.inner.difficulty == "easy" ? .successGreen : draft.inner.difficulty == "medium" ? .warningOrange : .errorRed
-                            Image(systemName: "circle.fill")
-                                .font(.system(size: 8))
-                                .foregroundStyle(color)
-                            Text("Difficulty: \(draft.inner.difficulty.capitalized)")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.textSecondary)
+                    // AI Classification Card
+                    VStack(spacing: 12) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "cpu")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.brandPurple)
+                            Text("AI CLASSIFICATION")
+                                .font(.system(size: 10, weight: .heavy))
+                                .tracking(1.5)
+                                .foregroundStyle(Color.textMuted)
                             Spacer()
                         }
+
+                        HStack(spacing: 16) {
+                            // Template
+                            VStack(spacing: 4) {
+                                Image(systemName: templateIcon(draft.templateSlug))
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(Color.brandPurple)
+                                Text(templateDisplayName(draft.templateSlug))
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(Color.textPrimary)
+                                    .multilineTextAlignment(.center)
+                                Text("Template")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(Color.textMuted)
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            // Difficulty
+                            if !draft.difficulty.isEmpty {
+                                VStack(spacing: 4) {
+                                    let diffColor: Color = draft.difficulty == "easy" ? .successGreen : draft.difficulty == "medium" ? .warningOrange : .errorRed
+                                    Image(systemName: draft.difficulty == "easy" ? "gauge.with.dots.needle.0percent" : draft.difficulty == "medium" ? "gauge.with.dots.needle.50percent" : "gauge.with.dots.needle.100percent")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(diffColor)
+                                    Text(draft.difficulty.capitalized)
+                                        .font(.caption.weight(.medium))
+                                        .foregroundStyle(diffColor)
+                                    Text("Difficulty")
+                                        .font(.system(size: 9))
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+
+                            // Risk
+                            VStack(spacing: 4) {
+                                let riskColor: Color = draft.riskLevel == "LOW" ? .successGreen : draft.riskLevel == "MEDIUM" ? .warningOrange : .errorRed
+                                Image(systemName: draft.riskLevel == "LOW" ? "shield.checkered" : draft.riskLevel == "MEDIUM" ? "shield.lefthalf.filled" : "exclamationmark.shield.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(riskColor)
+                                Text(draft.riskLevel)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(riskColor)
+                                Text("Risk")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(Color.textMuted)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+
+                        // Template implications
+                        if let note = templateNote(draft.templateSlug) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.infoBlue)
+                                Text(note)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+                            .padding(10)
+                            .background(Color.infoBlue.opacity(0.1))
+                            .cornerRadius(8)
+                        }
                     }
+                    .padding(16)
+                    .background(Color.surfaceElevated)
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.brandPurple.opacity(0.2), lineWidth: 1)
+                    )
 
                     // Post button
                     Button {
-                        // Apply duration back to draft
-                        draft.inner.duration = durationUnit.format(value: durationValue)
+                        applyToDraft()
                         dismiss()
                         onPost()
                     } label: {
@@ -313,10 +382,57 @@ struct ReviewTaskSheet: View {
                 )
         }
     }
-}
 
-/// Wrapper to use @Observable AITaskDraft with @ObservedObject pattern in sheet
-class AITaskDraftWrapper: ObservableObject {
-    let inner: AITaskDraft
-    init(draft: AITaskDraft) { self.inner = draft }
+    /// Apply edited values back to the draft before posting
+    private func applyToDraft() {
+        draft.title = title.trimmingCharacters(in: .whitespaces)
+        draft.description = description.trimmingCharacters(in: .whitespaces)
+        draft.payment = Double(payment)
+        draft.locationCity = locationCity
+        draft.locationState = locationState
+        draft.locationRadiusMiles = locationRadiusMiles
+        draft.duration = durationUnit.format(value: durationValue)
+        draft.requirements = requirements.trimmingCharacters(in: .whitespaces)
+    }
+
+    // MARK: - Template Helpers
+
+    private func templateDisplayName(_ slug: String) -> String {
+        switch slug {
+        case "standard_physical": return "Standard"
+        case "in_home": return "In-Home"
+        case "care": return "Care"
+        case "content_creator": return "Content"
+        case "event_appearance": return "Event"
+        case "creative_production": return "Creative"
+        case "specialized_licensed": return "Licensed"
+        case "wildcard_bizarre": return "Custom"
+        default: return "Standard"
+        }
+    }
+
+    private func templateIcon(_ slug: String) -> String {
+        switch slug {
+        case "standard_physical": return "shippingbox.fill"
+        case "in_home": return "house.fill"
+        case "care": return "heart.fill"
+        case "content_creator": return "camera.fill"
+        case "event_appearance": return "person.2.fill"
+        case "creative_production": return "film"
+        case "specialized_licensed": return "checkmark.seal.fill"
+        case "wildcard_bizarre": return "sparkles"
+        default: return "briefcase.fill"
+        }
+    }
+
+    private func templateNote(_ slug: String) -> String? {
+        switch slug {
+        case "care": return "Requires background-checked hustler (Trusted tier+). Manual payment release only."
+        case "in_home": return "48-hour review period before payment auto-releases."
+        case "content_creator": return "Content release agreement will be required."
+        case "specialized_licensed": return "Hustler must verify their professional license."
+        case "wildcard_bizarre": return "Mutual consent checklist required for both parties."
+        default: return nil
+        }
+    }
 }

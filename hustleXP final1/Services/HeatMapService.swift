@@ -11,8 +11,16 @@ import Combine
 
 // MARK: - Heat Map Types
 
+struct HeatMapBounds: Codable {
+    let min_lat: Double
+    let max_lat: Double
+    let min_lng: Double
+    let max_lng: Double
+}
+
 struct HeatMapResponse: Codable {
     let zones: [HeatMapZone]
+    let bounds: HeatMapBounds?
     let generatedAt: Date?
 }
 

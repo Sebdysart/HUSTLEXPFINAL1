@@ -11,18 +11,39 @@ struct HeatMapView: View {
     let heatZones: [HeatZone]
     let tasks: [HXTask]
     let userLocation: GPSCoordinates?
+    var mapBounds: (minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)? = nil
     var onZoneTapped: ((HeatZone) -> Void)? = nil
     var onTaskTapped: ((HXTask) -> Void)? = nil
     var isCompact: Bool = false
-    
+
     @State private var selectedZone: HeatZone?
     @State private var pulseAnimation: Bool = false
-    
-    // SF map bounds (approximate)
-    private let minLat = 37.70
-    private let maxLat = 37.82
-    private let minLon = -122.52
-    private let maxLon = -122.35
+
+    // Dynamic bounds from API or computed from zones/user location
+    private var minLat: Double {
+        if let b = mapBounds { return b.minLat }
+        let userLat = userLocation?.latitude ?? 37.7749
+        if heatZones.isEmpty { return userLat - 0.06 }
+        return min(heatZones.map(\.centerLatitude).min()!, userLat) - 0.01
+    }
+    private var maxLat: Double {
+        if let b = mapBounds { return b.maxLat }
+        let userLat = userLocation?.latitude ?? 37.7749
+        if heatZones.isEmpty { return userLat + 0.06 }
+        return max(heatZones.map(\.centerLatitude).max()!, userLat) + 0.01
+    }
+    private var minLon: Double {
+        if let b = mapBounds { return b.minLon }
+        let userLng = userLocation?.longitude ?? -122.4194
+        if heatZones.isEmpty { return userLng - 0.08 }
+        return min(heatZones.map(\.centerLongitude).min()!, userLng) - 0.01
+    }
+    private var maxLon: Double {
+        if let b = mapBounds { return b.maxLon }
+        let userLng = userLocation?.longitude ?? -122.4194
+        if heatZones.isEmpty { return userLng + 0.08 }
+        return max(heatZones.map(\.centerLongitude).max()!, userLng) + 0.01
+    }
     
     var body: some View {
         GeometryReader { geometry in

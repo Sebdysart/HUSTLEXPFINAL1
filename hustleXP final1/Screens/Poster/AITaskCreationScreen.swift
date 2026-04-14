@@ -274,6 +274,8 @@ struct AITaskCreationScreen: View {
                             duration: taskDraft.duration,
                             category: taskDraft.category,
                             isComplete: taskDraft.isReadyToPost,
+                            templateSlug: taskDraft.templateSlug,
+                            riskLevel: taskDraft.riskLevel,
                             isCompact: isCompact
                         )
                         .padding(.horizontal, isCompact ? 12 : 16)
@@ -507,6 +509,7 @@ struct AITaskCreationScreen: View {
                     longitude: nil,
                     estimatedDuration: taskDraft.duration.isEmpty ? "1 hr" : taskDraft.duration,
                     category: taskDraft.category,
+                    templateSlug: taskDraft.templateSlug,
                     requiredTier: taskDraft.requiredTier
                 )
                 print("🟢 [PostTask] Task created successfully: id=\(task.id), title=\(task.title)")
@@ -675,11 +678,19 @@ struct NeonTaskCardPreview: View {
     let duration: String
     let category: TaskCategory?
     let isComplete: Bool
+    var templateSlug: String = "standard_physical"
+    var riskLevel: String = "LOW"
     var isCompact: Bool = false
-    
+
     @State private var hasAppeared = false
     @State private var glowPulse: CGFloat = 0.3
-    
+    @State private var showHeader = false
+    @State private var showTitle = false
+    @State private var showPrice = false
+    @State private var showDetails = false
+    @State private var shimmerOffset: CGFloat = -200
+    @State private var completionBounce = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
@@ -688,53 +699,74 @@ struct NeonTaskCardPreview: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: isCompact ? 10 : 12, weight: .bold))
                         .foregroundStyle(Color.aiPurple)
-                    
+                        .rotationEffect(.degrees(hasAppeared ? 0 : -90))
+
                     Text("YOUR TASK")
                         .font(.system(size: isCompact ? 9 : 10, weight: .heavy))
                         .tracking(2)
                         .foregroundStyle(Color.aiPurple)
                 }
-                
+                .opacity(showHeader ? 1 : 0)
+                .offset(y: showHeader ? 0 : -10)
+
                 Spacer()
-                
-                // Status
+
+                // Status with bounce on complete
                 HStack(spacing: isCompact ? 5 : 6) {
                     Circle()
                         .fill(isComplete ? Color.successGreen : Color.warningOrange)
                         .frame(width: isCompact ? 6 : 8, height: isCompact ? 6 : 8)
                         .shadow(color: isComplete ? Color.successGreen : Color.warningOrange, radius: 4)
-                    
+                        .scaleEffect(completionBounce ? 1.5 : 1.0)
+
                     Text(isComplete ? "Ready" : "Building...")
                         .font(isCompact ? .system(size: 10, weight: .semibold) : .caption2.weight(.semibold))
                         .foregroundStyle(isComplete ? Color.successGreen : Color.warningOrange)
                 }
+                .opacity(showHeader ? 1 : 0)
             }
             .padding(.bottom, isCompact ? 12 : 16)
             
-            // Category
-            if let category = category {
-                Text(category.displayName.uppercased())
-                    .font(.system(size: isCompact ? 9 : 10, weight: .bold))
-                    .tracking(1)
-                    .foregroundStyle(Color.brandPurple)
-                    .padding(.horizontal, isCompact ? 8 : 10)
-                    .padding(.vertical, isCompact ? 3 : 4)
-                    .background(
-                        Capsule()
-                            .fill(Color.brandPurple.opacity(0.15))
-                    )
-                    .padding(.bottom, isCompact ? 10 : 12)
+            // Category + Template badge
+            HStack(spacing: 8) {
+                if let category = category {
+                    Text(category.displayName.uppercased())
+                        .font(.system(size: isCompact ? 9 : 10, weight: .bold))
+                        .tracking(1)
+                        .foregroundStyle(Color.brandPurple)
+                        .padding(.horizontal, isCompact ? 8 : 10)
+                        .padding(.vertical, isCompact ? 3 : 4)
+                        .background(Capsule().fill(Color.brandPurple.opacity(0.15)))
+                }
+
+                // Risk badge
+                let riskColor: Color = riskLevel == "LOW" ? .successGreen : riskLevel == "MEDIUM" ? .warningOrange : .errorRed
+                HStack(spacing: 3) {
+                    Image(systemName: "shield.fill")
+                        .font(.system(size: isCompact ? 8 : 9))
+                    Text(riskLevel)
+                        .font(.system(size: isCompact ? 8 : 9, weight: .bold))
+                }
+                .foregroundStyle(riskColor)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(riskColor.opacity(0.15)))
             }
-            
+            .opacity(showTitle ? 1 : 0)
+            .offset(x: showTitle ? 0 : -20)
+            .padding(.bottom, isCompact ? 10 : 12)
+
             // Title
             Text(title.isEmpty ? "Untitled Task" : title)
                 .font(.system(size: isCompact ? 17 : 20, weight: .bold))
                 .foregroundStyle(title.isEmpty ? Color.textMuted : Color.textPrimary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
-            
+                .opacity(showTitle ? 1 : 0)
+                .offset(y: showTitle ? 0 : 15)
+
             Spacer().frame(height: isCompact ? 12 : 16)
-            
+
             // Payment
             HStack(spacing: isCompact ? 6 : 8) {
                 ZStack {
@@ -827,15 +859,70 @@ struct NeonTaskCardPreview: View {
             }
         )
         .shadow(color: Color.aiPurple.opacity(glowPulse * 0.5), radius: isCompact ? 15 : 20)
+        // Shimmer overlay
+        .overlay(
+            LinearGradient(
+                colors: [Color.clear, Color.white.opacity(0.08), Color.clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .offset(x: shimmerOffset)
+            .clipped()
+            .cornerRadius(isCompact ? 20 : 24)
+            .allowsHitTesting(false)
+        )
         .scaleEffect(hasAppeared ? 1.0 : 0.85)
         .opacity(hasAppeared ? 1.0 : 0)
+        .scaleEffect(completionBounce ? 1.02 : 1.0)
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+            // Stage 1: Card scales in
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 hasAppeared = true
             }
-            
+
+            // Stage 2: Header fades in
+            withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
+                showHeader = true
+            }
+
+            // Stage 3: Title slides up
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.75).delay(0.35)) {
+                showTitle = true
+            }
+
+            // Stage 4: Price appears
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.5)) {
+                showPrice = true
+            }
+
+            // Stage 5: Details slide in
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.65)) {
+                showDetails = true
+            }
+
+            // Shimmer sweep
+            withAnimation(.easeInOut(duration: 1.0).delay(0.3)) {
+                shimmerOffset = 400
+            }
+
+            // Continuous glow
             withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                 glowPulse = 0.8
+            }
+        }
+        .onChange(of: isComplete) { _, complete in
+            if complete {
+                // Celebration bounce when task becomes ready
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.4)) {
+                    completionBounce = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                        completionBounce = false
+                    }
+                }
+                let impact = UIImpactFeedbackGenerator(style: .medium)
+                impact.impactOccurred()
             }
         }
     }

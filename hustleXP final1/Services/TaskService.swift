@@ -38,6 +38,7 @@ final class TaskService: ObservableObject {
         longitude: Double?,
         estimatedDuration: String,
         category: TaskCategory?,
+        templateSlug: String? = nil,
         requiredTier: TrustTier = .rookie,
         requiredSkills: [String]? = nil
     ) async throws -> HXTask {
@@ -54,6 +55,7 @@ final class TaskService: ObservableObject {
             let locationRadiusMiles: Int?
             let category: String?
             let estimatedDuration: String?
+            let templateSlug: String?
             let mode: String
             let requiresProof: Bool
             let instantMode: Bool
@@ -69,6 +71,7 @@ final class TaskService: ObservableObject {
             locationRadiusMiles: locationRadiusMiles,
             category: category?.rawValue,
             estimatedDuration: estimatedDuration,
+            templateSlug: templateSlug,
             mode: "STANDARD",
             requiresProof: true,
             instantMode: false

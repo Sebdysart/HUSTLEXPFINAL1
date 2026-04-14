@@ -16,6 +16,7 @@ struct HeatMapFullscreenScreen: View {
     @State private var userLocation: GPSCoordinates?
     @State private var minPaymentFilter: Double = 0
     @State private var apiZones: [HeatZone]?
+    @State private var apiBounds: (minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)?
     
     var body: some View {
         ZStack {
@@ -24,6 +25,7 @@ struct HeatMapFullscreenScreen: View {
                 heatZones: filteredZones,
                 tasks: dataService.availableTasks,
                 userLocation: userLocation,
+                mapBounds: apiBounds,
                 onZoneTapped: { zone in
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         selectedZone = zone
@@ -127,6 +129,9 @@ struct HeatMapFullscreenScreen: View {
                         averagePayment: Double(z.averagePaymentCents ?? 0) / 100.0,
                         lastUpdated: Date()
                     )
+                }
+                if let b = response.bounds {
+                    apiBounds = (minLat: b.min_lat, maxLat: b.max_lat, minLon: b.min_lng, maxLon: b.max_lng)
                 }
                 HXLogger.info("HeatMapFullscreen: Loaded \(response.zones.count) zones from API", category: "General")
             } catch {
