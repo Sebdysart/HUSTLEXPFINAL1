@@ -223,7 +223,7 @@ private struct StatRow: View {
 
 // MARK: - Enhanced Confetti View
 private struct ConfettiView: View {
-    @State private var particles: [ConfettiParticle] = []
+    @State private var particles: [OnboardingConfettiParticle] = []
     @State private var hasCreatedParticles = false
     
     var body: some View {
@@ -265,11 +265,11 @@ private struct ConfettiView: View {
             .brandPurple, .brandPurpleLight, .accentPurple, .accentViolet,
             .successGreen, .moneyGreen, .warningOrange, .instantYellow, .infoBlue
         ]
-        let shapes: [ConfettiShape] = [.circle, .circle, .rectangle, .rectangle, .star]
+        let shapes: [OnboardingConfettiShape] = [.circle, .circle, .rectangle, .rectangle, .star]
         
         // Create more particles for a richer effect
         for i in 0..<50 {
-            let particle = ConfettiParticle(
+            let particle = OnboardingConfettiParticle(
                 id: i,
                 color: colors.randomElement() ?? .brandPurple,
                 size: CGFloat.random(in: 5...14),
@@ -298,17 +298,17 @@ private struct ConfettiView: View {
     }
 }
 
-private enum ConfettiShape {
+private enum OnboardingConfettiShape {
     case circle, rectangle, star
 }
 
-private struct ConfettiParticle: Identifiable {
+private struct OnboardingConfettiParticle: Identifiable {
     let id: Int
     let color: Color
     let size: CGFloat
     var position: CGPoint
     var opacity: Double
-    var shape: ConfettiShape
+    var shape: OnboardingConfettiShape
     var rotation: Double
 }
 

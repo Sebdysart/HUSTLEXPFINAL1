@@ -3,9 +3,9 @@
 //  hustleXP final1
 //
 //  Archetype: C (Task Lifecycle)
-//  Premium task creation with elegant form and animations
+//  Premium glassmorphism task creation — fintech + AI dashboard aesthetic
 //
-//  v3.0.0: Refactored — logic extracted to CreateTaskViewModel
+//  v4.0.0: Full redesign — frosted glass cards, gradient depth, micro-interactions
 //
 
 import SwiftUI
@@ -18,77 +18,79 @@ struct CreateTaskScreen: View {
     @State private var viewModel = CreateTaskViewModel()
     @FocusState private var focusedField: Field?
 
-    private enum Field {
+    private enum Field: Hashable {
         case title, description, payment, city, durationVal
     }
 
     private static let radiusOptions = [25, 50, 75, 100]
-
     private static let usStates: [(code: String, name: String)] = [
-        ("AL", "Alabama"), ("AK", "Alaska"), ("AZ", "Arizona"), ("AR", "Arkansas"),
-        ("CA", "California"), ("CO", "Colorado"), ("CT", "Connecticut"), ("DE", "Delaware"),
-        ("FL", "Florida"), ("GA", "Georgia"), ("HI", "Hawaii"), ("ID", "Idaho"),
-        ("IL", "Illinois"), ("IN", "Indiana"), ("IA", "Iowa"), ("KS", "Kansas"),
-        ("KY", "Kentucky"), ("LA", "Louisiana"), ("ME", "Maine"), ("MD", "Maryland"),
-        ("MA", "Massachusetts"), ("MI", "Michigan"), ("MN", "Minnesota"), ("MS", "Mississippi"),
-        ("MO", "Missouri"), ("MT", "Montana"), ("NE", "Nebraska"), ("NV", "Nevada"),
-        ("NH", "New Hampshire"), ("NJ", "New Jersey"), ("NM", "New Mexico"), ("NY", "New York"),
-        ("NC", "North Carolina"), ("ND", "North Dakota"), ("OH", "Ohio"), ("OK", "Oklahoma"),
-        ("OR", "Oregon"), ("PA", "Pennsylvania"), ("RI", "Rhode Island"), ("SC", "South Carolina"),
-        ("SD", "South Dakota"), ("TN", "Tennessee"), ("TX", "Texas"), ("UT", "Utah"),
-        ("VT", "Vermont"), ("VA", "Virginia"), ("WA", "Washington"), ("WV", "West Virginia"),
-        ("WI", "Wisconsin"), ("WY", "Wyoming"), ("DC", "Washington D.C."),
+        ("AL","Alabama"),("AK","Alaska"),("AZ","Arizona"),("AR","Arkansas"),
+        ("CA","California"),("CO","Colorado"),("CT","Connecticut"),("DE","Delaware"),
+        ("FL","Florida"),("GA","Georgia"),("HI","Hawaii"),("ID","Idaho"),
+        ("IL","Illinois"),("IN","Indiana"),("IA","Iowa"),("KS","Kansas"),
+        ("KY","Kentucky"),("LA","Louisiana"),("ME","Maine"),("MD","Maryland"),
+        ("MA","Massachusetts"),("MI","Michigan"),("MN","Minnesota"),("MS","Mississippi"),
+        ("MO","Missouri"),("MT","Montana"),("NE","Nebraska"),("NV","Nevada"),
+        ("NH","New Hampshire"),("NJ","New Jersey"),("NM","New Mexico"),("NY","New York"),
+        ("NC","North Carolina"),("ND","North Dakota"),("OH","Ohio"),("OK","Oklahoma"),
+        ("OR","Oregon"),("PA","Pennsylvania"),("RI","Rhode Island"),("SC","South Carolina"),
+        ("SD","South Dakota"),("TN","Tennessee"),("TX","Texas"),("UT","Utah"),
+        ("VT","Vermont"),("VA","Virginia"),("WA","Washington"),("WV","West Virginia"),
+        ("WI","Wisconsin"),("WY","Wyoming"),("DC","Washington D.C."),
     ]
 
     var body: some View {
-        GeometryReader { geometry in
-            let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
-            let isCompact = safeHeight < 600
+        ZStack {
+            // Deep gradient mesh background
+            meshBackground
 
-            ZStack {
-                backgroundLayer
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    // 1. Title & Description — Primary Focus
+                    taskInfoCard
 
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: isCompact ? 18 : 24) {
-                        titleField(isCompact: isCompact)
-                        descriptionField(isCompact: isCompact)
-                        aiPricingSection(isCompact: isCompact)
-
-                        if !viewModel.useAIPricing {
-                            paymentSection(isCompact: isCompact)
-                        }
-
-                        locationField(isCompact: isCompact)
-                        durationSection(isCompact: isCompact)
-                        tierSection(isCompact: isCompact)
-
-                        if viewModel.isValid {
-                            classificationCard(isCompact: isCompact)
-                            summarySection(isCompact: isCompact)
-                        }
-
-                        Spacer(minLength: isCompact ? 100 : 120)
+                    // 2. Budget — Highlighted
+                    if !viewModel.useAIPricing {
+                        budgetCard
                     }
-                    .padding(.horizontal, isCompact ? 16 : 20)
-                    .padding(.top, isCompact ? 4 : 8)
+
+                    // AI Pricing toggle
+                    aiPricingToggle
+
+                    // 3. Location + Duration — Inline
+                    locationDurationCard
+
+                    // 4. Tier Selection — Interactive pills
+                    tierCard
+
+                    // 5. Classification — Status dashboard
+                    if viewModel.isValid {
+                        classificationDashboard
+                        summaryCard
+                    }
+
+                    Spacer(minLength: 110)
                 }
-                .scrollDismissesKeyboard(.interactively)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+            }
+            .scrollDismissesKeyboard(.interactively)
+
+            // Floating CTA
+            VStack {
+                Spacer()
+                floatingCTA
             }
         }
-        .navigationTitle("Post a Task")
+        .navigationTitle("Create Task")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.brandBlack, for: .navigationBar)
+        .toolbarBackground(Color.clear, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .safeAreaInset(edge: .bottom) {
-            bottomActionBar
-        }
         .onAppear {
             viewModel.router = router
             viewModel.dataService = dataService
-            withAnimation(.easeOut(duration: 0.5)) {
-                viewModel.showContent = true
-            }
+            withAnimation(.easeOut(duration: 0.5)) { viewModel.showContent = true }
         }
         .sheet(isPresented: Binding(
             get: { viewModel.showAIPricingModal },
@@ -106,950 +108,732 @@ struct CreateTaskScreen: View {
         }
     }
 
-    // MARK: - Background
+    // =========================================================================
+    // MARK: - Mesh Background
+    // =========================================================================
 
-    private var backgroundLayer: some View {
-        ZStack {
-            Color(red: 0.06, green: 0.06, blue: 0.10)
+    private var meshBackground: some View {
+        Color(red: 0.04, green: 0.04, blue: 0.08)
+            .ignoresSafeArea()
+            .overlay(
+                ZStack {
+                    Circle()
+                        .fill(RadialGradient(colors: [Color.brandPurple.opacity(0.15), .clear], center: .center, startRadius: 0, endRadius: 300))
+                        .frame(width: 600, height: 600)
+                        .offset(x: -100, y: -250)
+                        .blur(radius: 80)
+
+                    Circle()
+                        .fill(RadialGradient(colors: [Color.pink.opacity(0.08), .clear], center: .center, startRadius: 0, endRadius: 250))
+                        .frame(width: 500, height: 500)
+                        .offset(x: 180, y: 350)
+                        .blur(radius: 100)
+
+                    Circle()
+                        .fill(RadialGradient(colors: [Color.blue.opacity(0.06), .clear], center: .center, startRadius: 0, endRadius: 200))
+                        .frame(width: 400, height: 400)
+                        .offset(x: -150, y: 500)
+                        .blur(radius: 90)
+                }
                 .ignoresSafeArea()
-
-            // Subtle gradient orbs
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.brandPurple.opacity(0.12), Color.clear],
-                        center: .center, startRadius: 0, endRadius: 250
-                    )
-                )
-                .frame(width: 500, height: 500)
-                .offset(x: -120, y: -200)
-                .blur(radius: 60)
-
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.pink.opacity(0.08), Color.clear],
-                        center: .center, startRadius: 0, endRadius: 200
-                    )
-                )
-                .frame(width: 400, height: 400)
-                .offset(x: 150, y: 400)
-                .blur(radius: 80)
-        }
-        .ignoresSafeArea()
+            )
     }
 
-    // MARK: - Modern Glass Input Helper
+    // =========================================================================
+    // MARK: - Glass Card Helper
+    // =========================================================================
 
-    private func glassInput<Content: View>(
-        label: String,
-        required: Bool = true,
-        icon: String,
-        isFocused: Bool,
-        error: String? = nil,
-        delay: Double = 0,
+    private func glassCard<Content: View>(
+        glowColor: Color = .brandPurple,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 4) {
-                Text(label)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.6))
-                if required {
-                    Circle()
-                        .fill(Color.brandPurple)
-                        .frame(width: 5, height: 5)
-                }
-            }
-
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 15))
-                    .foregroundStyle(
-                        isFocused
-                            ? AnyShapeStyle(LinearGradient(colors: [.brandPurple, .pink], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            : AnyShapeStyle(Color.white.opacity(0.3))
-                    )
-                    .frame(width: 20)
-
-                content()
-            }
-            .padding(14)
+        content()
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color.white.opacity(isFocused ? 0.08 : 0.05))
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white.opacity(0.06))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 20)
                     .stroke(
-                        isFocused
-                            ? LinearGradient(colors: [.brandPurple, .pink.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [Color.white.opacity(0.08), Color.white.opacity(0.04)], startPoint: .top, endPoint: .bottom),
-                        lineWidth: isFocused ? 1.5 : 0.5
+                        LinearGradient(
+                            colors: [glowColor.opacity(0.25), Color.white.opacity(0.06), glowColor.opacity(0.1)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.5
                     )
             )
+            .shadow(color: glowColor.opacity(0.08), radius: 20, y: 8)
+    }
 
-            if let error {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.circle.fill")
-                        .font(.system(size: 11))
-                    Text(error)
-                        .font(.system(size: 11))
+    // =========================================================================
+    // MARK: - 1. Task Info Card (Title + Description)
+    // =========================================================================
+
+    private var taskInfoCard: some View {
+        glassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                // Section header
+                sectionHeader(icon: "sparkles", title: "TASK DETAILS", color: .brandPurple)
+
+                // Title
+                VStack(alignment: .leading, spacing: 6) {
+                    fieldLabel("Task Title", required: true)
+
+                    TextField("What needs to be done?", text: Binding(get: { viewModel.title }, set: { viewModel.title = $0 }))
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white)
+                        .padding(14)
+                        .background(fieldBg(focused: focusedField == .title))
+                        .overlay(fieldBorder(focused: focusedField == .title))
+                        .focused($focusedField, equals: .title)
+                        .onChange(of: viewModel.title) { _, v in viewModel.validateTitle(v) }
+
+                    if let err = viewModel.errors["title"] {
+                        errorLabel(err)
+                    }
                 }
-                .foregroundStyle(Color.errorRed)
+
+                // Description
+                VStack(alignment: .leading, spacing: 6) {
+                    fieldLabel("Description", required: true)
+
+                    TextField("Describe the task in detail...", text: Binding(get: { viewModel.description }, set: { viewModel.description = $0 }), axis: .vertical)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white)
+                        .lineLimit(3...8)
+                        .padding(14)
+                        .background(fieldBg(focused: focusedField == .description))
+                        .overlay(fieldBorder(focused: focusedField == .description))
+                        .focused($focusedField, equals: .description)
+
+                    if !viewModel.description.isEmpty && viewModel.description.count < 10 {
+                        Text("\(10 - viewModel.description.count) more characters needed")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.warningOrange.opacity(0.7))
+                    }
+                }
+                .onChange(of: viewModel.description) { _, _ in viewModel.updateTemplateFromCategory() }
             }
         }
-        .opacity(viewModel.showContent ? 1 : 0)
-        .offset(y: viewModel.showContent ? 0 : 15)
-        .animation(.easeOut(duration: 0.4).delay(delay), value: viewModel.showContent)
+        .staggerIn(show: viewModel.showContent, delay: 0)
     }
 
-    // MARK: - Title Field
+    // =========================================================================
+    // MARK: - 2. Budget Card (BIG, highlighted)
+    // =========================================================================
 
-    private func titleField(isCompact: Bool) -> some View {
-        glassInput(label: "Task Title", icon: "pencil.line", isFocused: focusedField == .title, error: viewModel.errors["title"], delay: 0) {
-            TextField("What needs to be done?", text: Binding(
-                get: { viewModel.title },
-                set: { viewModel.title = $0 }
-            ))
-            .font(.system(size: 15))
-            .foregroundStyle(Color.white)
-            .focused($focusedField, equals: .title)
-            .onChange(of: viewModel.title) { _, newValue in
-                viewModel.validateTitle(newValue)
-            }
-        }
-    }
+    private var budgetCard: some View {
+        glassCard(glowColor: .moneyGreen) {
+            VStack(spacing: 16) {
+                sectionHeader(icon: "dollarsign.circle.fill", title: "BUDGET", color: .moneyGreen)
 
-    // MARK: - Description Field
-
-    private func descriptionField(isCompact: Bool) -> some View {
-        glassInput(label: "Description", icon: "text.alignleft", isFocused: focusedField == .description, delay: 0.05) {
-            TextField("Describe the task in detail", text: Binding(
-                get: { viewModel.description },
-                set: { viewModel.description = $0 }
-            ), axis: .vertical)
-            .font(.system(size: 15))
-            .foregroundStyle(Color.white)
-            .lineLimit(3...6)
-            .focused($focusedField, equals: .description)
-        }
-        .onChange(of: viewModel.description) { _, _ in
-            viewModel.updateTemplateFromCategory()
-        }
-    }
-
-    // MARK: - Payment Section
-
-    private func paymentSection(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 4) {
-                Text("Payment")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.6))
-                Circle().fill(Color.brandPurple).frame(width: 5, height: 5)
-            }
-
-            VStack(spacing: 12) {
-                HStack(spacing: 12) {
+                // Large price display
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("$")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(
-                            LinearGradient(colors: [.moneyGreen, .green.opacity(0.7)], startPoint: .top, endPoint: .bottom)
-                        )
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundStyle(LinearGradient(colors: [.moneyGreen, .green.opacity(0.6)], startPoint: .top, endPoint: .bottom))
 
-                    TextField("0", text: Binding(
-                        get: { viewModel.payment },
-                        set: { viewModel.payment = $0 }
-                    ))
-                    .keyboardType(.decimalPad)
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(Color.white)
-                    .frame(maxWidth: 120)
-                    .focused($focusedField, equals: .payment)
+                    TextField("0", text: Binding(get: { viewModel.payment }, set: { viewModel.payment = $0 }))
+                        .font(.system(size: 44, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 160)
+                        .focused($focusedField, equals: .payment)
 
                     Spacer()
+
+                    // AI price badge
+                    if viewModel.taskWasAIPriced {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 10))
+                            Text("AI")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(LinearGradient(colors: [.brandPurple, .pink], startPoint: .leading, endPoint: .trailing)))
+                    }
                 }
 
-                // Quick amounts — pill style
+                // Quick amount pills
                 HStack(spacing: 8) {
-                    ForEach([25, 50, 100, 200], id: \.self) { amount in
-                        let isSelected = viewModel.payment == "\(amount)"
+                    ForEach([25, 50, 100, 200, 500], id: \.self) { amount in
+                        quickAmountPill(amount)
+                    }
+                }
+            }
+        }
+        .staggerIn(show: viewModel.showContent, delay: 0.08)
+    }
+
+    private func quickAmountPill(_ amount: Int) -> some View {
+        let isSelected = viewModel.payment == "\(amount)"
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { viewModel.payment = "\(amount)" }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            Text("$\(amount)")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.white.opacity(isSelected ? 1 : 0.5))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule().fill(
+                        isSelected
+                            ? AnyShapeStyle(LinearGradient(colors: [.moneyGreen, .green.opacity(0.6)], startPoint: .leading, endPoint: .trailing))
+                            : AnyShapeStyle(Color.white.opacity(0.06))
+                    )
+                )
+                .overlay(Capsule().stroke(isSelected ? Color.clear : Color.white.opacity(0.06), lineWidth: 0.5))
+                .scaleEffect(isSelected ? 1.05 : 1.0)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // =========================================================================
+    // MARK: - AI Pricing Toggle
+    // =========================================================================
+
+    private var aiPricingToggle: some View {
+        glassCard(glowColor: .pink) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: [.brandPurple, .pink], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("AI Price Suggestion")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text("Let AI analyze and suggest the best price")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+
+                Spacer()
+
+                Toggle("", isOn: Binding(get: { viewModel.useAIPricing }, set: { viewModel.useAIPricing = $0 }))
+                    .tint(Color.brandPurple)
+                    .labelsHidden()
+                    .onChange(of: viewModel.useAIPricing) { _, v in viewModel.handleAIPricingToggle(v) }
+            }
+        }
+        .staggerIn(show: viewModel.showContent, delay: 0.05)
+    }
+
+    // =========================================================================
+    // MARK: - 3. Location + Duration Card
+    // =========================================================================
+
+    private var locationDurationCard: some View {
+        glassCard(glowColor: .pink) {
+            VStack(alignment: .leading, spacing: 16) {
+                sectionHeader(icon: "mappin.and.ellipse", title: "LOCATION & DURATION", color: .pink)
+
+                // City
+                VStack(alignment: .leading, spacing: 6) {
+                    fieldLabel("City", required: true)
+
+                    HStack(spacing: 10) {
+                        TextField("Enter city", text: Binding(get: { viewModel.locationCity }, set: { viewModel.locationCity = $0 }))
+                            .font(.system(size: 15))
+                            .foregroundStyle(.white)
+                            .focused($focusedField, equals: .city)
+
                         Button {
-                            viewModel.payment = "\(amount)"
+                            viewModel.locationCity = "Anywhere"; viewModel.locationState = ""
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         } label: {
-                            Text("$\(amount)")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(isSelected ? .white : Color.white.opacity(0.7))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
+                            Text("Anywhere")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
                                 .background(
-                                    Capsule()
-                                        .fill(isSelected
-                                              ? AnyShapeStyle(LinearGradient(colors: [.brandPurple, .pink.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
-                                              : AnyShapeStyle(Color.white.opacity(0.06)))
-                                )
-                                .overlay(
-                                    Capsule()
-                                        .stroke(isSelected ? Color.clear : Color.white.opacity(0.08), lineWidth: 0.5)
+                                    Capsule().fill(
+                                        viewModel.locationCity == "Anywhere"
+                                            ? AnyShapeStyle(LinearGradient(colors: [.brandPurple, .pink], startPoint: .leading, endPoint: .trailing))
+                                            : AnyShapeStyle(Color.white.opacity(0.08))
+                                    )
                                 )
                         }
                     }
+                    .padding(12)
+                    .background(fieldBg(focused: focusedField == .city))
+                    .overlay(fieldBorder(focused: focusedField == .city))
                 }
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white.opacity(focusedField == .payment ? 0.08 : 0.05))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        focusedField == .payment
-                            ? LinearGradient(colors: [.brandPurple, .pink.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [Color.white.opacity(0.08), Color.white.opacity(0.04)], startPoint: .top, endPoint: .bottom),
-                        lineWidth: focusedField == .payment ? 1.5 : 0.5
-                    )
-            )
 
-            if let error = viewModel.errors["payment"] {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.circle.fill").font(.system(size: 11))
-                    Text(error).font(.system(size: 11))
-                }
-                .foregroundStyle(Color.errorRed)
-            }
-        }
-        .opacity(viewModel.showContent ? 1 : 0)
-        .offset(y: viewModel.showContent ? 0 : 15)
-        .animation(.easeOut(duration: 0.4).delay(0.1), value: viewModel.showContent)
-    }
-
-    // MARK: - Location Field
-
-    private func locationField(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 4) {
-                Text("Location")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.6))
-                Circle().fill(Color.brandPurple).frame(width: 5, height: 5)
-            }
-
-            // City input with Anywhere pill
-            HStack(spacing: 12) {
-                Image(systemName: "mappin.circle.fill")
-                    .font(.system(size: 15))
-                    .foregroundStyle(
-                        focusedField == .city
-                            ? AnyShapeStyle(LinearGradient(colors: [.brandPurple, .pink], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            : AnyShapeStyle(Color.white.opacity(0.3))
-                    )
-
-                TextField("City name", text: Binding(
-                    get: { viewModel.locationCity },
-                    set: { viewModel.locationCity = $0 }
-                ))
-                .font(.system(size: 15))
-                .foregroundStyle(Color.white)
-                .focused($focusedField, equals: .city)
-
-                Button {
-                    viewModel.locationCity = "Anywhere"
-                    viewModel.locationState = ""
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                } label: {
-                    Text("Anywhere")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule().fill(
-                                viewModel.locationCity == "Anywhere"
-                                    ? AnyShapeStyle(LinearGradient(colors: [.brandPurple, .pink.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
-                                    : AnyShapeStyle(Color.white.opacity(0.1))
-                            )
-                        )
-                }
-            }
-            .padding(14)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(focusedField == .city ? 0.08 : 0.05)))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(
-                        focusedField == .city
-                            ? LinearGradient(colors: [.brandPurple, .pink.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [Color.white.opacity(0.08), Color.white.opacity(0.04)], startPoint: .top, endPoint: .bottom),
-                        lineWidth: focusedField == .city ? 1.5 : 0.5
-                    )
-            )
-
-            if viewModel.locationCity != "Anywhere" && !viewModel.locationCity.isEmpty {
-                // State picker
-                Menu {
-                    ForEach(Self.usStates, id: \.code) { state in
-                        Button(state.name) { viewModel.locationState = state.code }
+                // State + Radius (conditional)
+                if viewModel.locationCity != "Anywhere" && !viewModel.locationCity.isEmpty {
+                    // State
+                    Menu {
+                        ForEach(Self.usStates, id: \.code) { s in
+                            Button(s.name) { viewModel.locationState = s.code }
+                        }
+                    } label: {
+                        HStack {
+                            Text(Self.usStates.first { $0.code == viewModel.locationState }?.name ?? "Select state")
+                                .font(.system(size: 14))
+                                .foregroundStyle(viewModel.locationState.isEmpty ? .white.opacity(0.3) : .white)
+                            Spacer()
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.3))
+                        }
+                        .padding(12)
+                        .background(fieldBg(focused: false))
+                        .overlay(fieldBorder(focused: false))
                     }
-                } label: {
-                    HStack {
-                        Text(Self.usStates.first(where: { $0.code == viewModel.locationState })?.name ?? "Select state")
-                            .font(.system(size: 15))
-                            .foregroundStyle(viewModel.locationState.isEmpty ? Color.white.opacity(0.3) : Color.white)
-                        Spacer()
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.white.opacity(0.3))
-                    }
-                    .padding(14)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.05)))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.06), lineWidth: 0.5))
-                }
 
-                // Radius — gradient pills
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Service Radius")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.4))
-
+                    // Radius pills
                     HStack(spacing: 8) {
-                        ForEach(Self.radiusOptions, id: \.self) { miles in
-                            let isSelected = viewModel.locationRadiusMiles == miles
+                        ForEach(Self.radiusOptions, id: \.self) { mi in
+                            let sel = viewModel.locationRadiusMiles == mi
                             Button {
-                                viewModel.locationRadiusMiles = miles
+                                viewModel.locationRadiusMiles = mi
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             } label: {
-                                Text("\(miles) mi")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(isSelected ? 1 : 0.5))
+                                Text("\(mi) mi")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(sel ? 1 : 0.4))
                                     .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
+                                    .padding(.vertical, 9)
                                     .background(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .fill(isSelected
+                                            .fill(sel
                                                   ? AnyShapeStyle(LinearGradient(colors: [.brandPurple, .pink.opacity(0.6)], startPoint: .top, endPoint: .bottom))
-                                                  : AnyShapeStyle(Color.white.opacity(0.05)))
+                                                  : AnyShapeStyle(Color.white.opacity(0.04)))
                                     )
                             }
                             .buttonStyle(.plain)
                         }
                     }
                 }
-            }
-        }
-        .opacity(viewModel.showContent ? 1 : 0)
-        .offset(y: viewModel.showContent ? 0 : 15)
-        .animation(.easeOut(duration: 0.4).delay(0.15), value: viewModel.showContent)
-    }
 
-    // MARK: - Duration Section
+                // Duration
+                VStack(alignment: .leading, spacing: 6) {
+                    fieldLabel("Duration")
 
-    private func durationSection(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Estimated Duration")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.6))
+                    HStack(spacing: 10) {
+                        TextField("1", text: Binding(get: { viewModel.durationValue }, set: { viewModel.durationValue = $0 }))
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.center)
+                            .frame(width: 60, height: 44)
+                            .background(fieldBg(focused: focusedField == .durationVal))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(fieldBorder(focused: focusedField == .durationVal))
+                            .focused($focusedField, equals: .durationVal)
 
-            HStack(spacing: 12) {
-                TextField("1", text: Binding(
-                    get: { viewModel.durationValue },
-                    set: { viewModel.durationValue = $0 }
-                ))
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Color.white)
-                .keyboardType(.decimalPad)
-                .frame(width: 60)
-                .multilineTextAlignment(.center)
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(focusedField == .durationVal ? 0.08 : 0.05)))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(
-                            focusedField == .durationVal
-                                ? LinearGradient(colors: [.brandPurple, .pink.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                : LinearGradient(colors: [Color.white.opacity(0.08)], startPoint: .top, endPoint: .bottom),
-                            lineWidth: focusedField == .durationVal ? 1.5 : 0.5
-                        )
-                )
-                .focused($focusedField, equals: .durationVal)
-
-                // Segmented unit picker with gradient
-                HStack(spacing: 0) {
-                    ForEach(DurationUnit.allCases, id: \.self) { unit in
-                        let isSelected = viewModel.durationUnit == unit
-                        Button {
-                            withAnimation(.spring(response: 0.3)) {
-                                viewModel.durationUnit = unit
+                        HStack(spacing: 0) {
+                            ForEach(DurationUnit.allCases, id: \.self) { unit in
+                                let sel = viewModel.durationUnit == unit
+                                Button {
+                                    withAnimation(.spring(response: 0.25)) { viewModel.durationUnit = unit }
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                } label: {
+                                    Text(unit.rawValue)
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(.white.opacity(sel ? 1 : 0.35))
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 44)
+                                        .background(
+                                            sel
+                                                ? AnyShapeStyle(LinearGradient(colors: [.brandPurple, .pink.opacity(0.6)], startPoint: .top, endPoint: .bottom))
+                                                : AnyShapeStyle(Color.clear)
+                                        )
+                                }
+                                .buttonStyle(.plain)
                             }
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        } label: {
-                            Text(unit.rawValue)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.white.opacity(isSelected ? 1 : 0.4))
+                        }
+                        .frame(height: 44)
+                        .background(Color.white.opacity(0.04))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 0.5))
+                    }
+                }
+
+                // Deadline
+                VStack(alignment: .leading, spacing: 6) {
+                    fieldLabel("Deadline (optional)")
+
+                    HStack {
+                        if let deadline = viewModel.deadline {
+                            DatePicker(
+                                "",
+                                selection: Binding(
+                                    get: { deadline },
+                                    set: { viewModel.deadline = $0 }
+                                ),
+                                in: Date()...,
+                                displayedComponents: .date
+                            )
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .colorScheme(.dark)
+                            .tint(.brandPurple)
+
+                            Spacer()
+
+                            Button {
+                                viewModel.deadline = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(Color.textMuted)
+                            }
+                        } else {
+                            Button {
+                                viewModel.deadline = Calendar.current.date(byAdding: .day, value: 7, to: Date())
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "calendar.badge.plus")
+                                        .font(.system(size: 14))
+                                    Text("Set deadline")
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .foregroundStyle(Color.brandPurple)
                                 .padding(.vertical, 12)
                                 .frame(maxWidth: .infinity)
-                                .background(
-                                    isSelected
-                                        ? AnyShapeStyle(LinearGradient(colors: [.brandPurple, .pink.opacity(0.6)], startPoint: .top, endPoint: .bottom))
-                                        : AnyShapeStyle(Color.clear)
+                                .background(Color.brandPurple.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.brandPurple.opacity(0.3), lineWidth: 1)
                                 )
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
                 }
-                .background(Color.white.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 0.5))
             }
         }
-        .opacity(viewModel.showContent ? 1 : 0)
-        .offset(y: viewModel.showContent ? 0 : 15)
-        .animation(.easeOut(duration: 0.4).delay(0.2), value: viewModel.showContent)
+        .staggerIn(show: viewModel.showContent, delay: 0.12)
     }
 
-    // MARK: - Tier Section
+    // =========================================================================
+    // MARK: - 4. Tier Selection
+    // =========================================================================
 
-    private func tierSection(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Minimum Hustler Tier")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.6))
-                Text("Higher tiers = more verified hustlers")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.white.opacity(0.3))
-            }
+    private var tierCard: some View {
+        glassCard(glowColor: .infoBlue) {
+            VStack(alignment: .leading, spacing: 12) {
+                sectionHeader(icon: "shield.checkered", title: "HUSTLER TIER", color: .infoBlue)
 
-            HStack(spacing: 8) {
-                ForEach([TrustTier.rookie, .verified, .trusted], id: \.self) { tier in
-                    let isSelected = viewModel.requiredTier == tier
-                    let tierColor: Color = tier == .rookie ? .white.opacity(0.5) : tier == .verified ? .brandPurple : .infoBlue
-
-                    Button {
-                        viewModel.selectTier(tier)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 13))
-                                .foregroundStyle(isSelected ? tierColor : Color.white.opacity(0.2))
-
-                            Text(tier.name)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(isSelected ? .white : Color.white.opacity(0.4))
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(isSelected ? tierColor.opacity(0.15) : Color.white.opacity(0.04))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(isSelected ? tierColor.opacity(0.4) : Color.white.opacity(0.06), lineWidth: isSelected ? 1 : 0.5)
-                        )
+                HStack(spacing: 10) {
+                    ForEach([TrustTier.rookie, .verified, .trusted], id: \.self) { tier in
+                        tierPill(tier)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
-        .opacity(viewModel.showContent ? 1 : 0)
-        .offset(y: viewModel.showContent ? 0 : 15)
-        .animation(.easeOut(duration: 0.4).delay(0.25), value: viewModel.showContent)
+        .staggerIn(show: viewModel.showContent, delay: 0.18)
     }
 
-    // MARK: - AI Pricing Section (v1.8.0)
+    private func tierPill(_ tier: TrustTier) -> some View {
+        let sel = viewModel.requiredTier == tier
 
-    private func aiPricingSection(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: isCompact ? 10 : 12) {
-            AIPricingToggle(isEnabled: Binding(
-                get: { viewModel.useAIPricing },
-                set: { viewModel.useAIPricing = $0 }
-            ), isCompact: isCompact)
-                .onChange(of: viewModel.useAIPricing) { _, newValue in
-                    viewModel.handleAIPricingToggle(newValue)
-                }
-
-            if viewModel.useAIPricing {
-                HStack(spacing: isCompact ? 6 : 8) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.system(size: isCompact ? 12 : 14))
-                        .foregroundStyle(Color.aiPurple)
-
-                    Text("Scoper AI will suggest an optimal price based on your task details")
-                        .font(.caption)
-                        .foregroundStyle(Color.textSecondary)
-                }
-                .padding(isCompact ? 10 : 12)
-                .background(Color.aiPurple.opacity(0.1))
-                .cornerRadius(isCompact ? 8 : 10)
-            }
-        }
-        .opacity(viewModel.showContent ? 1 : 0)
-        .offset(y: viewModel.showContent ? 0 : 20)
-        .animation(.easeOut(duration: 0.4).delay(0.08), value: viewModel.showContent)
-    }
-
-    // MARK: - AI Classification Card
-
-    private func classificationCard(isCompact: Bool) -> some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "cpu")
-                    .font(.system(size: 11))
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { viewModel.selectTier(tier) }
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: tier.icon)
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(
-                        LinearGradient(colors: [.brandPurple, .pink], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        sel
+                            ? AnyShapeStyle(LinearGradient(colors: tier.gradientColors, startPoint: .top, endPoint: .bottom))
+                            : AnyShapeStyle(Color.white.opacity(0.25))
                     )
-                Text("CLASSIFICATION")
-                    .font(.system(size: 10, weight: .heavy))
-                    .tracking(2)
-                    .foregroundStyle(Color.white.opacity(0.4))
-                Spacer()
+
+                Text(tier.name)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(sel ? 1 : 0.4))
             }
-
-            HStack(spacing: 16) {
-                // Template
-                VStack(spacing: 4) {
-                    Image(systemName: templateIcon(viewModel.templateSlug))
-                        .font(.system(size: isCompact ? 16 : 18))
-                        .foregroundStyle(Color.brandPurple)
-                    Text(templateDisplayName(viewModel.templateSlug))
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.textPrimary)
-                    Text("Template")
-                        .font(.system(size: 9))
-                        .foregroundStyle(Color.textMuted)
-                }
-                .frame(maxWidth: .infinity)
-
-                // Risk
-                let riskColor: Color = viewModel.riskLevel == "LOW" ? .successGreen : viewModel.riskLevel == "MEDIUM" ? .warningOrange : .errorRed
-                VStack(spacing: 4) {
-                    Image(systemName: viewModel.riskLevel == "LOW" ? "shield.checkered" : viewModel.riskLevel == "MEDIUM" ? "shield.lefthalf.filled" : "exclamationmark.shield.fill")
-                        .font(.system(size: isCompact ? 16 : 18))
-                        .foregroundStyle(riskColor)
-                    Text(viewModel.riskLevel)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(riskColor)
-                    Text("Risk")
-                        .font(.system(size: 9))
-                        .foregroundStyle(Color.textMuted)
-                }
-                .frame(maxWidth: .infinity)
-
-                // Category
-                let cat = viewModel.determineCategory()
-                VStack(spacing: 4) {
-                    Image(systemName: cat.icon)
-                        .font(.system(size: isCompact ? 16 : 18))
-                        .foregroundStyle(Color.infoBlue)
-                    Text(cat.displayName)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Text("Category")
-                        .font(.system(size: 9))
-                        .foregroundStyle(Color.textMuted)
-                }
-                .frame(maxWidth: .infinity)
-            }
-
-            // Template note
-            if let note = templateNote(viewModel.templateSlug) {
-                HStack(spacing: 8) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.infoBlue)
-                    Text(note)
-                        .font(.caption)
-                        .foregroundStyle(Color.textSecondary)
-                }
-                .padding(isCompact ? 8 : 10)
-                .background(Color.infoBlue.opacity(0.1))
-                .cornerRadius(8)
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.04))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(
-                    LinearGradient(colors: [.brandPurple.opacity(0.3), .pink.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    lineWidth: 0.5
-                )
-        )
-        .opacity(viewModel.showContent ? 1 : 0)
-        .animation(.easeOut(duration: 0.4).delay(0.28), value: viewModel.showContent)
-    }
-
-    private func templateDisplayName(_ slug: String) -> String {
-        switch slug {
-        case "standard_physical": return "Standard"
-        case "in_home": return "In-Home"
-        case "care": return "Care"
-        case "content_creator": return "Content"
-        case "event_appearance": return "Event"
-        case "creative_production": return "Creative"
-        case "specialized_licensed": return "Licensed"
-        case "wildcard_bizarre": return "Custom"
-        default: return "Standard"
-        }
-    }
-
-    private func templateIcon(_ slug: String) -> String {
-        switch slug {
-        case "standard_physical": return "shippingbox.fill"
-        case "in_home": return "house.fill"
-        case "care": return "heart.fill"
-        case "content_creator": return "camera.fill"
-        case "event_appearance": return "person.2.fill"
-        case "creative_production": return "film"
-        case "specialized_licensed": return "checkmark.seal.fill"
-        case "wildcard_bizarre": return "sparkles"
-        default: return "briefcase.fill"
-        }
-    }
-
-    private func templateNote(_ slug: String) -> String? {
-        switch slug {
-        case "care": return "Requires background-checked hustler (Trusted tier+). Manual payment release."
-        case "in_home": return "48-hour review period before payment auto-releases."
-        case "content_creator": return "Content release agreement required."
-        case "specialized_licensed": return "Hustler must verify professional license."
-        case "wildcard_bizarre": return "Mutual consent checklist required."
-        default: return nil
-        }
-    }
-
-    // MARK: - Summary Section
-
-    private func summarySection(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(
-                        LinearGradient(colors: [.successGreen, .green.opacity(0.7)], startPoint: .top, endPoint: .bottom)
-                    )
-                Text("Task Summary")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.white)
-            }
-
-            VStack(spacing: 10) {
-                modernSummaryRow(icon: "briefcase.fill", label: "Task", value: viewModel.title, color: .brandPurple)
-
-                HStack {
-                    modernSummaryRow(
-                        icon: "dollarsign.circle.fill",
-                        label: "Payment",
-                        value: viewModel.useAIPricing ? "AI will suggest" : "$\(viewModel.payment)",
-                        color: viewModel.useAIPricing ? .pink : .moneyGreen
-                    )
-                    if viewModel.taskWasAIPriced {
-                        AIPricedBadge()
-                    }
-                }
-
-                modernSummaryRow(icon: "mappin.circle.fill", label: "Location", value: viewModel.locationDisplay, color: .pink)
-                modernSummaryRow(icon: "clock.fill", label: "Duration", value: viewModel.formattedDuration.isEmpty ? "Not set" : viewModel.formattedDuration, color: .brandPurple)
-                modernSummaryRow(icon: "shield.checkered", label: "Min. Tier", value: viewModel.requiredTier.name, color: .infoBlue)
-            }
-            .padding(14)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color.white.opacity(0.04))
+                RoundedRectangle(cornerRadius: 14).fill(sel
+                    ? AnyShapeStyle(LinearGradient(colors: [tier.gradientColors[0].opacity(0.25), tier.gradientColors[1].opacity(0.1)], startPoint: .top, endPoint: .bottom))
+                    : AnyShapeStyle(Color.white.opacity(0.04)))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(
-                        LinearGradient(colors: [.successGreen.opacity(0.3), .brandPurple.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                        lineWidth: 0.5
-                    )
+                RoundedRectangle(cornerRadius: 14).stroke(
+                    sel
+                        ? LinearGradient(colors: tier.gradientColors.map { $0.opacity(0.5) }, startPoint: .top, endPoint: .bottom)
+                        : LinearGradient(colors: [Color.white.opacity(0.06)], startPoint: .top, endPoint: .bottom),
+                    lineWidth: sel ? 1 : 0.5
+                )
             )
+            .shadow(color: sel ? tier.color.opacity(0.3) : .clear, radius: 8, y: 2)
+            .scaleEffect(sel ? 1.03 : 1.0)
         }
-        .opacity(viewModel.showContent ? 1 : 0)
-        .animation(.easeOut(duration: 0.4).delay(0.3), value: viewModel.showContent)
+        .buttonStyle(.plain)
     }
 
-    private func modernSummaryRow(icon: String, label: String, value: String, color: Color) -> some View {
+    // =========================================================================
+    // MARK: - 5. Classification Dashboard
+    // =========================================================================
+
+    private var classificationDashboard: some View {
+        glassCard(glowColor: .brandPurple) {
+            VStack(spacing: 14) {
+                sectionHeader(icon: "cpu", title: "CLASSIFICATION", color: .brandPurple)
+
+                HStack(spacing: 0) {
+                    classChip(icon: templateIcon(viewModel.templateSlug), label: templateDisplayName(viewModel.templateSlug), sub: "Template", color: .brandPurple)
+                    classChip(icon: riskIcon(viewModel.riskLevel), label: viewModel.riskLevel, sub: "Risk", color: riskColor(viewModel.riskLevel))
+                    classChip(icon: viewModel.determineCategory().icon, label: viewModel.determineCategory().displayName, sub: "Category", color: .infoBlue)
+                }
+
+                if let note = templateNote(viewModel.templateSlug) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle.fill").font(.system(size: 11)).foregroundStyle(Color.infoBlue)
+                        Text(note).font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.infoBlue.opacity(0.08)))
+                }
+            }
+        }
+        .staggerIn(show: viewModel.showContent, delay: 0.22)
+    }
+
+    private func classChip(icon: String, label: String, sub: String, color: Color) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundStyle(LinearGradient(colors: [color, color.opacity(0.5)], startPoint: .top, endPoint: .bottom))
+            Text(label)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+                .lineLimit(1).minimumScaleFactor(0.7)
+            Text(sub)
+                .font(.system(size: 9))
+                .foregroundStyle(.white.opacity(0.3))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // =========================================================================
+    // MARK: - 6. Summary Card
+    // =========================================================================
+
+    private var summaryCard: some View {
+        glassCard(glowColor: .successGreen) {
+            VStack(alignment: .leading, spacing: 12) {
+                sectionHeader(icon: "checkmark.seal.fill", title: "SUMMARY", color: .successGreen)
+
+                VStack(spacing: 8) {
+                    summaryRow(icon: "briefcase.fill", label: "Task", value: viewModel.title, color: .brandPurple)
+                    Divider().background(Color.white.opacity(0.06))
+                    summaryRow(icon: "dollarsign.circle.fill", label: "Payment", value: viewModel.useAIPricing ? "AI Suggested" : "$\(viewModel.payment)", color: .moneyGreen)
+                    Divider().background(Color.white.opacity(0.06))
+                    summaryRow(icon: "mappin.circle.fill", label: "Location", value: viewModel.locationDisplay, color: .pink)
+                    Divider().background(Color.white.opacity(0.06))
+                    summaryRow(icon: "clock.fill", label: "Duration", value: viewModel.formattedDuration.isEmpty ? "—" : viewModel.formattedDuration, color: .brandPurple)
+                    Divider().background(Color.white.opacity(0.06))
+                    summaryRow(icon: "shield.fill", label: "Tier", value: viewModel.requiredTier.name, color: .infoBlue)
+                }
+            }
+        }
+        .staggerIn(show: viewModel.showContent, delay: 0.26)
+    }
+
+    private func summaryRow(icon: String, label: String, value: String, color: Color) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 13))
-                .foregroundStyle(color)
+                .foregroundStyle(LinearGradient(colors: [color, color.opacity(0.5)], startPoint: .top, endPoint: .bottom))
                 .frame(width: 18)
-
             Text(label)
                 .font(.system(size: 13))
-                .foregroundStyle(Color.white.opacity(0.5))
-
+                .foregroundStyle(.white.opacity(0.45))
             Spacer()
-
             Text(value)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.9))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.9))
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .padding(.vertical, 2)
+    }
+
+    // =========================================================================
+    // MARK: - 7. Floating CTA
+    // =========================================================================
+
+    private var floatingCTA: some View {
+        Button {
+            focusedField = nil
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            viewModel.postTask()
+        } label: {
+            HStack(spacing: 10) {
+                if viewModel.isSubmitting {
+                    ProgressView().tint(.white)
+                } else {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 15, weight: .bold))
+                    Text("Post Task")
+                        .font(.system(size: 17, weight: .bold))
+                }
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(
+                Capsule().fill(
+                    viewModel.isValid
+                        ? LinearGradient(colors: [.brandPurple, .pink.opacity(0.8)], startPoint: .leading, endPoint: .trailing)
+                        : LinearGradient(colors: [Color.white.opacity(0.08), Color.white.opacity(0.04)], startPoint: .leading, endPoint: .trailing)
+                )
+            )
+            .shadow(color: viewModel.isValid ? .brandPurple.opacity(0.5) : .clear, radius: 20, y: 8)
+            .scaleEffect(viewModel.isSubmitting ? 0.97 : 1.0)
+        }
+        .disabled(!viewModel.isValid || viewModel.isSubmitting)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 16)
+        .animation(.spring(response: 0.3), value: viewModel.isValid)
+    }
+
+    // =========================================================================
+    // MARK: - Shared Components
+    // =========================================================================
+
+    private func sectionHeader(icon: String, title: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(LinearGradient(colors: [color, color.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            Text(title)
+                .font(.system(size: 13, weight: .heavy))
+                .tracking(2)
+                .foregroundStyle(.white.opacity(0.45))
+            Spacer()
         }
     }
 
-    // MARK: - Bottom Action Bar
-
-    private var bottomActionBar: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(
-                    LinearGradient(colors: [Color.clear, Color.white.opacity(0.06)], startPoint: .top, endPoint: .bottom)
-                )
-                .frame(height: 1)
-
-            Button(action: {
-                focusedField = nil
-                viewModel.postTask()
-            }) {
-                HStack(spacing: 10) {
-                    if viewModel.isSubmitting {
-                        ProgressView().tint(.white)
-                    } else {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                        Text("Post Task")
-                            .font(.system(size: 17, weight: .bold))
-                    }
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 54)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            viewModel.isValid
-                                ? LinearGradient(colors: [.brandPurple, .pink.opacity(0.7)], startPoint: .leading, endPoint: .trailing)
-                                : LinearGradient(colors: [Color.white.opacity(0.1), Color.white.opacity(0.05)], startPoint: .leading, endPoint: .trailing)
-                        )
-                )
-                .shadow(color: viewModel.isValid ? Color.brandPurple.opacity(0.4) : .clear, radius: 16, y: 6)
+    private func fieldLabel(_ text: String, required: Bool = false) -> some View {
+        HStack(spacing: 4) {
+            Text(text)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.5))
+            if required {
+                Circle().fill(Color.brandPurple).frame(width: 4, height: 4)
             }
-            .accessibilityLabel("Post task")
-            .disabled(!viewModel.isValid || viewModel.isSubmitting)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(Color(red: 0.06, green: 0.06, blue: 0.10).opacity(0.95))
         }
+    }
+
+    private func fieldBg(focused: Bool) -> some ShapeStyle {
+        Color.white.opacity(focused ? 0.07 : 0.04)
+    }
+
+    private func fieldBorder(focused: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 12)
+            .stroke(
+                focused
+                    ? LinearGradient(colors: [.brandPurple, .pink.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    : LinearGradient(colors: [Color.white.opacity(0.06)], startPoint: .top, endPoint: .bottom),
+                lineWidth: focused ? 1 : 0.5
+            )
+    }
+
+    private func errorLabel(_ text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "exclamationmark.circle.fill").font(.system(size: 10))
+            Text(text).font(.system(size: 10))
+        }
+        .foregroundStyle(.red.opacity(0.8))
+    }
+
+    // =========================================================================
+    // MARK: - Template Helpers
+    // =========================================================================
+
+    private func templateDisplayName(_ s: String) -> String {
+        ["standard_physical":"Standard","in_home":"In-Home","care":"Care","content_creator":"Content",
+         "event_appearance":"Event","creative_production":"Creative","specialized_licensed":"Licensed","wildcard_bizarre":"Custom"][s] ?? "Standard"
+    }
+
+    private func templateIcon(_ s: String) -> String {
+        ["standard_physical":"shippingbox.fill","in_home":"house.fill","care":"heart.fill","content_creator":"camera.fill",
+         "event_appearance":"person.2.fill","creative_production":"film","specialized_licensed":"checkmark.seal.fill","wildcard_bizarre":"sparkles"][s] ?? "briefcase.fill"
+    }
+
+    private func templateNote(_ s: String) -> String? {
+        ["care":"Background-checked hustler required (Trusted+). Manual release.",
+         "in_home":"48-hour review before auto-release.",
+         "content_creator":"Content release agreement required.",
+         "specialized_licensed":"Professional license verification needed.",
+         "wildcard_bizarre":"Mutual consent checklist required."][s]
+    }
+
+    private func riskIcon(_ r: String) -> String {
+        r == "LOW" ? "shield.checkered" : r == "MEDIUM" ? "shield.lefthalf.filled" : "exclamationmark.shield.fill"
+    }
+
+    private func riskColor(_ r: String) -> Color {
+        r == "LOW" ? .successGreen : r == "MEDIUM" ? .warningOrange : .errorRed
     }
 }
 
-// MARK: - Premium Supporting Views
+// MARK: - Stagger Animation Modifier
+
+private extension View {
+    func staggerIn(show: Bool, delay: Double) -> some View {
+        self
+            .opacity(show ? 1 : 0)
+            .offset(y: show ? 0 : 20)
+            .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(delay), value: show)
+    }
+}
+
+// MARK: - Legacy Views (kept for AI pricing modal compatibility)
 
 struct PremiumQuickAmountButton: View {
-    let amount: Int
-    @Binding var currentAmount: String
-    var isCompact: Bool = false
-
-    private var isSelected: Bool {
-        currentAmount == "\(amount)"
-    }
-
+    let amount: Int; @Binding var currentAmount: String; var isCompact: Bool = false
     var body: some View {
-        Button(action: {
-            let impact = UIImpactFeedbackGenerator(style: .light)
-            impact.impactOccurred()
-            currentAmount = "\(amount)"
-        }) {
-            Text("$\(amount)")
-                .font(isCompact ? .caption2.weight(.semibold) : .caption.weight(.semibold))
-                .foregroundStyle(isSelected ? .white : Color.textPrimary)
-                .padding(.horizontal, isCompact ? 10 : 14)
-                .padding(.vertical, isCompact ? 6 : 8)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? Color.brandPurple : Color.surfaceSecondary)
-                )
+        Button { currentAmount = "\(amount)" } label: {
+            Text("$\(amount)").font(.caption.weight(.semibold)).foregroundStyle(.white)
+                .padding(.horizontal, 12).padding(.vertical, 6).background(Capsule().fill(Color.brandPurple))
         }
-    }
-}
-
-struct PremiumDurationChip: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    var isCompact: Bool = false
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(isCompact ? .footnote.weight(.medium) : .subheadline.weight(.medium))
-                .foregroundStyle(isSelected ? .white : Color.textPrimary)
-                .padding(.horizontal, isCompact ? 10 : 14)
-                .padding(.vertical, isCompact ? 8 : 10)
-                .background(
-                    RoundedRectangle(cornerRadius: isCompact ? 10 : 12)
-                        .fill(isSelected ? Color.brandPurple : Color.surfaceElevated)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: isCompact ? 10 : 12)
-                        .stroke(isSelected ? Color.clear : Color.white.opacity(0.08), lineWidth: 1)
-                )
-        }
-        .scaleEffect(isSelected ? 1.02 : 1.0)
-    }
-}
-
-struct PremiumTierChip: View {
-    let tier: TrustTier
-    let isSelected: Bool
-    var isCompact: Bool = false
-    let action: () -> Void
-
-    private var tierColor: Color {
-        switch tier {
-        case .unranked, .rookie: return Color.textSecondary
-        case .verified: return Color.brandPurple
-        case .trusted: return Color.infoBlue
-        case .elite: return Color.moneyGreen
-        case .master: return Color.yellow
-        }
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: isCompact ? 4 : 6) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: isCompact ? 12 : 14))
-                    .foregroundStyle(isSelected ? tierColor : Color.textMuted)
-
-                Text(tier.name)
-                    .font(isCompact ? .footnote.weight(.medium) : .subheadline.weight(.medium))
-                    .foregroundStyle(isSelected ? Color.textPrimary : Color.textSecondary)
-            }
-            .padding(.horizontal, isCompact ? 10 : 14)
-            .padding(.vertical, isCompact ? 8 : 10)
-            .background(
-                RoundedRectangle(cornerRadius: isCompact ? 10 : 12)
-                    .fill(isSelected ? tierColor.opacity(0.15) : Color.surfaceElevated)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: isCompact ? 10 : 12)
-                    .stroke(isSelected ? tierColor.opacity(0.5) : Color.white.opacity(0.08), lineWidth: 1)
-            )
-        }
-        .scaleEffect(isSelected ? 1.02 : 1.0)
     }
 }
 
 struct PremiumSummaryRow: View {
-    let icon: String
-    let label: String
-    let value: String
-    let color: Color
-    var isCompact: Bool = false
-
+    let icon: String; let label: String; let value: String; let color: Color; var isCompact: Bool = false
     var body: some View {
-        HStack(spacing: isCompact ? 10 : 12) {
-            Image(systemName: icon)
-                .font(.system(size: isCompact ? 12 : 14))
-                .foregroundStyle(color)
-                .frame(width: 20)
-
-            Text(label)
-                .font(isCompact ? .footnote : .subheadline)
-                .foregroundStyle(Color.textSecondary)
-
-            Spacer()
-
-            Text(value)
-                .font(isCompact ? .footnote.weight(.medium) : .subheadline.weight(.medium))
-                .foregroundStyle(Color.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
+        HStack { Image(systemName: icon).foregroundStyle(color).frame(width: 18); Text(label).font(.caption).foregroundStyle(.white.opacity(0.5)); Spacer(); Text(value).font(.caption.weight(.medium)).foregroundStyle(.white) }
     }
 }
 
-// MARK: - Legacy Supporting Views (kept for compatibility)
-
-struct QuickAmountButton: View {
-    let amount: Int
-    @Binding var currentAmount: String
-
-    var body: some View {
-        Button(action: { currentAmount = "\(amount)" }) {
-            Text("$\(amount)")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(currentAmount == "\(amount)" ? Color.brandPurple : Color.surfaceSecondary)
-                .foregroundStyle(currentAmount == "\(amount)" ? .white : Color.textPrimary)
-                .cornerRadius(16)
-        }
-    }
+struct PremiumDurationChip: View {
+    let title: String; let icon: String; let isSelected: Bool; var isCompact: Bool = false; let action: () -> Void
+    var body: some View { Button(action: action) { Text(title).font(.caption.weight(.medium)).foregroundStyle(.white).padding(.horizontal, 12).padding(.vertical, 8).background(Capsule().fill(isSelected ? Color.brandPurple : Color.white.opacity(0.06))) } }
 }
 
-struct DurationChip: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HXText(title, style: .subheadline, color: isSelected ? .white : .textPrimary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(isSelected ? Color.brandPurple : Color.surfaceElevated)
-                .cornerRadius(20)
-        }
-    }
+struct PremiumTierChip: View {
+    let tier: TrustTier; let isSelected: Bool; var isCompact: Bool = false; let action: () -> Void
+    var body: some View { Button(action: action) { Text(tier.name).font(.caption.weight(.medium)).foregroundStyle(.white).padding(.horizontal, 12).padding(.vertical, 8).background(Capsule().fill(isSelected ? Color.brandPurple : Color.white.opacity(0.06))) } }
 }
 
-struct TierChip: View {
-    let tier: TrustTier
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.caption)
-                Text(tier.name)
-                    .font(.subheadline)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(isSelected ? Color.brandPurple.opacity(0.1) : Color.surfaceElevated)
-            .foregroundStyle(isSelected ? Color.brandPurple : Color.textPrimary)
-            .cornerRadius(20)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(isSelected ? Color.brandPurple : Color.clear, lineWidth: 1)
-            )
-        }
-    }
-}
-
-struct SummaryRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            HXText(label, style: .subheadline, color: .textSecondary)
-            Spacer()
-            HXText(value, style: .subheadline)
-        }
-    }
-}
+struct QuickAmountButton: View { let amount: Int; @Binding var currentAmount: String; var body: some View { PremiumQuickAmountButton(amount: amount, currentAmount: $currentAmount) } }
+struct DurationChip: View { let title: String; let isSelected: Bool; let action: () -> Void; var body: some View { PremiumDurationChip(title: title, icon: "", isSelected: isSelected, action: action) } }
+struct TierChip: View { let tier: TrustTier; let isSelected: Bool; let action: () -> Void; var body: some View { PremiumTierChip(tier: tier, isSelected: isSelected, action: action) } }
+struct SummaryRow: View { let label: String; let value: String; var body: some View { HStack { Text(label).font(.caption).foregroundStyle(.white.opacity(0.5)); Spacer(); Text(value).font(.caption.weight(.medium)).foregroundStyle(.white) } } }
 
 #Preview {
-    NavigationStack {
-        CreateTaskScreen()
-    }
-    .environment(Router())
-    .environment(LiveDataService.shared)
+    NavigationStack { CreateTaskScreen() }
+        .environment(Router())
+        .environment(LiveDataService.shared)
 }

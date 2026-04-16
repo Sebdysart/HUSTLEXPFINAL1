@@ -150,11 +150,11 @@ struct LiveTaskCardPreview: View {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(Color.textMuted)
-                    
+
                     Text(duration.isEmpty ? "Duration TBD" : duration)
                         .font(.subheadline)
                         .foregroundStyle(duration.isEmpty ? Color.textMuted : Color.textSecondary)
-                    
+
                     CompletionCheckmark(isComplete: !duration.isEmpty, size: 12)
                 }
             }

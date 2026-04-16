@@ -21,6 +21,7 @@ struct ReviewTaskSheet: View {
     @State private var locationRadiusMiles: Int
     @State private var durationValue: String
     @State private var durationUnit: DurationUnit
+    @State private var deadline: Date?
     @State private var requirements: String
     @FocusState private var focusedField: Field?
 
@@ -57,6 +58,13 @@ struct ReviewTaskSheet: View {
         let parsed = DurationUnit.parse(draft.duration)
         _durationValue = State(initialValue: parsed.value)
         _durationUnit = State(initialValue: parsed.unit)
+        if !draft.deadline.isEmpty {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            _deadline = State(initialValue: formatter.date(from: draft.deadline) ?? ISO8601DateFormatter().date(from: draft.deadline))
+        } else {
+            _deadline = State(initialValue: nil)
+        }
     }
 
     private var hasLocation: Bool {
@@ -228,6 +236,61 @@ struct ReviewTaskSheet: View {
                         }
                     }
 
+                    // Deadline
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Deadline (optional)")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color.textSecondary)
+
+                        HStack {
+                            if let dl = deadline {
+                                DatePicker(
+                                    "",
+                                    selection: Binding(
+                                        get: { dl },
+                                        set: { deadline = $0 }
+                                    ),
+                                    in: Date()...,
+                                    displayedComponents: .date
+                                )
+                                .labelsHidden()
+                                .datePickerStyle(.compact)
+                                .colorScheme(.dark)
+                                .tint(.brandPurple)
+
+                                Spacer()
+
+                                Button {
+                                    deadline = nil
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                            } else {
+                                Button {
+                                    deadline = Calendar.current.date(byAdding: .day, value: 7, to: Date())
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "calendar.badge.plus")
+                                            .font(.system(size: 14))
+                                        Text("Set deadline")
+                                            .font(.subheadline.weight(.medium))
+                                    }
+                                    .foregroundStyle(Color.brandPurple)
+                                    .padding(.vertical, 12)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.brandPurple.opacity(0.15))
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.brandPurple.opacity(0.3), lineWidth: 1)
+                                        )
+                                }
+                            }
+                        }
+                    }
+
                     // Requirements
                     fieldSection(label: "Requirements (optional)", field: .requirements) {
                         TextField("Skills or tools needed", text: $requirements, axis: .vertical)
@@ -393,6 +456,11 @@ struct ReviewTaskSheet: View {
         draft.locationRadiusMiles = locationRadiusMiles
         draft.duration = durationUnit.format(value: durationValue)
         draft.requirements = requirements.trimmingCharacters(in: .whitespaces)
+        if let dl = deadline {
+            draft.deadline = ISO8601DateFormatter().string(from: dl)
+        } else {
+            draft.deadline = ""
+        }
     }
 
     // MARK: - Template Helpers

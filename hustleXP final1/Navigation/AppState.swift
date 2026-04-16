@@ -63,11 +63,35 @@ enum TrustTier: Int, CaseIterable, Codable {
     var color: Color {
         switch self {
         case .unranked: return .textTertiary
-        case .rookie: return .textSecondary
-        case .verified: return .infoBlue
-        case .trusted: return .successGreen
+        case .rookie: return Color(red: 0.4, green: 0.8, blue: 0.4)
+        case .verified: return Color(red: 0.3, green: 0.5, blue: 1.0)
+        case .trusted: return Color(red: 0.0, green: 0.85, blue: 0.6)
         case .elite: return .brandPurple
-        case .master: return .warningOrange
+        case .master: return Color(red: 1.0, green: 0.75, blue: 0.0)
+        }
+    }
+
+    /// SF Symbol icon for each tier
+    var icon: String {
+        switch self {
+        case .unranked: return "person.crop.circle"
+        case .rookie: return "shield.fill"
+        case .verified: return "checkmark.seal.fill"
+        case .trusted: return "star.circle.fill"
+        case .elite: return "crown.fill"
+        case .master: return "trophy.fill"
+        }
+    }
+
+    /// Gradient colors for premium rendering
+    var gradientColors: [Color] {
+        switch self {
+        case .unranked: return [.gray, .gray.opacity(0.5)]
+        case .rookie: return [Color(red: 0.4, green: 0.8, blue: 0.4), Color(red: 0.2, green: 0.6, blue: 0.3)]
+        case .verified: return [Color(red: 0.3, green: 0.5, blue: 1.0), Color(red: 0.2, green: 0.3, blue: 0.9)]
+        case .trusted: return [Color(red: 0.0, green: 0.85, blue: 0.6), Color(red: 0.0, green: 0.6, blue: 0.8)]
+        case .elite: return [Color(red: 0.65, green: 0.3, blue: 1.0), Color(red: 0.9, green: 0.3, blue: 0.8)]
+        case .master: return [Color(red: 1.0, green: 0.75, blue: 0.0), Color(red: 1.0, green: 0.5, blue: 0.0)]
         }
     }
 

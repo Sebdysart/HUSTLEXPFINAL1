@@ -58,7 +58,10 @@ struct EditTaskSheet: View {
     @State private var locationRadiusMiles: Int
     @State private var durationValue: String
     @State private var durationUnit: DurationUnit
+    @State private var deadline: Date?
     @State private var requirements: String
+    @State private var templateSlug: String
+    @State private var riskLevel: String
     @State private var isSaving = false
     @State private var errorMessage: String?
     @FocusState private var focusedField: Field?
@@ -92,7 +95,10 @@ struct EditTaskSheet: View {
         let parsed = DurationUnit.parse(task.estimatedDuration)
         _durationValue = State(initialValue: parsed.value)
         _durationUnit = State(initialValue: parsed.unit)
+        _deadline = State(initialValue: task.deadline)
         _requirements = State(initialValue: "")
+        _templateSlug = State(initialValue: task.templateSlug ?? "standard_physical")
+        _riskLevel = State(initialValue: task.riskLevel ?? "LOW")
 
         // Parse location - try "City, ST" format
         let parts = task.location.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
@@ -285,6 +291,146 @@ struct EditTaskSheet: View {
                         }
                     }
 
+                    // Deadline
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Deadline (optional)")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color.textSecondary)
+
+                        HStack {
+                            if let dl = deadline {
+                                DatePicker(
+                                    "",
+                                    selection: Binding(
+                                        get: { dl },
+                                        set: { deadline = $0 }
+                                    ),
+                                    in: Date()...,
+                                    displayedComponents: .date
+                                )
+                                .labelsHidden()
+                                .datePickerStyle(.compact)
+                                .colorScheme(.dark)
+                                .tint(.brandPurple)
+
+                                Spacer()
+
+                                Button {
+                                    deadline = nil
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                            } else {
+                                Button {
+                                    deadline = Calendar.current.date(byAdding: .day, value: 7, to: Date())
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "calendar.badge.plus")
+                                            .font(.system(size: 14))
+                                        Text("Set deadline")
+                                            .font(.subheadline.weight(.medium))
+                                    }
+                                    .foregroundStyle(Color.brandPurple)
+                                    .padding(.vertical, 12)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.brandPurple.opacity(0.15))
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.brandPurple.opacity(0.3), lineWidth: 1)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Classification
+                    VStack(spacing: 12) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "cpu")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.brandPurple)
+                            Text("CLASSIFICATION")
+                                .font(.system(size: 10, weight: .heavy))
+                                .tracking(1.5)
+                                .foregroundStyle(Color.textMuted)
+                            Spacer()
+                        }
+
+                        // Template picker
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Template")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Color.textSecondary)
+
+                            Menu {
+                                ForEach(Self.templateOptions, id: \.slug) { opt in
+                                    Button {
+                                        templateSlug = opt.slug
+                                    } label: {
+                                        Label(opt.name, systemImage: opt.icon)
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: templateIcon(templateSlug))
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(Color.brandPurple)
+                                    Text(templateDisplayName(templateSlug))
+                                        .font(.body)
+                                        .foregroundStyle(Color.textPrimary)
+                                    Spacer()
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(Color.textTertiary)
+                                }
+                                .padding(14)
+                                .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.borderSubtle, lineWidth: 1)
+                                )
+                            }
+                        }
+
+                        // Risk level display
+                        HStack(spacing: 12) {
+                            Image(systemName: riskIcon(riskLevel))
+                                .font(.system(size: 16))
+                                .foregroundStyle(riskColor(riskLevel))
+                            Text("Risk: \(riskLevel)")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(riskColor(riskLevel))
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(riskColor(riskLevel).opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+
+                        // Template implications
+                        if let note = templateNote(templateSlug) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.infoBlue)
+                                Text(note)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+                            .padding(10)
+                            .background(Color.infoBlue.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                    }
+                    .padding(16)
+                    .background(Color.surfaceElevated)
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.brandPurple.opacity(0.2), lineWidth: 1)
+                    )
+
                     fieldSection(label: "Requirements (optional)", field: .requirements) {
                         TextField("Skills or tools needed", text: $requirements, axis: .vertical)
                             .lineLimit(2...4)
@@ -352,6 +498,43 @@ struct EditTaskSheet: View {
         }
     }
 
+    // MARK: - Template Data
+
+    private static let templateOptions: [(slug: String, name: String, icon: String, defaultRisk: String)] = [
+        ("standard_physical", "Standard", "shippingbox.fill", "LOW"),
+        ("in_home", "In-Home", "house.fill", "MEDIUM"),
+        ("care", "Care", "heart.fill", "HIGH"),
+        ("content_creator", "Content", "camera.fill", "MEDIUM"),
+        ("event_appearance", "Event", "person.2.fill", "MEDIUM"),
+        ("creative_production", "Creative", "film", "MEDIUM"),
+        ("specialized_licensed", "Licensed", "checkmark.seal.fill", "MEDIUM"),
+        ("wildcard_bizarre", "Custom", "sparkles", "MEDIUM"),
+    ]
+
+    private func templateDisplayName(_ s: String) -> String {
+        Self.templateOptions.first(where: { $0.slug == s })?.name ?? "Standard"
+    }
+
+    private func templateIcon(_ s: String) -> String {
+        Self.templateOptions.first(where: { $0.slug == s })?.icon ?? "briefcase.fill"
+    }
+
+    private func templateNote(_ s: String) -> String? {
+        ["care": "Requires background-checked hustler (Trusted+). Manual payment release.",
+         "in_home": "48-hour review period before payment auto-releases.",
+         "content_creator": "Content release agreement will be required.",
+         "specialized_licensed": "Hustler must verify their professional license.",
+         "wildcard_bizarre": "Mutual consent checklist required for both parties."][s]
+    }
+
+    private func riskIcon(_ r: String) -> String {
+        r == "LOW" ? "shield.checkered" : r == "MEDIUM" ? "shield.lefthalf.filled" : "exclamationmark.shield.fill"
+    }
+
+    private func riskColor(_ r: String) -> Color {
+        r == "LOW" ? .successGreen : r == "MEDIUM" ? .warningOrange : .errorRed
+    }
+
     private func save() {
         guard isValid else { return }
         focusedField = nil
@@ -369,7 +552,9 @@ struct EditTaskSheet: View {
                     price: priceCents,
                     location: locationDisplay,
                     estimatedDuration: formattedDuration,
-                    requirements: requirements.trimmingCharacters(in: .whitespaces).isEmpty ? nil : requirements
+                    requirements: requirements.trimmingCharacters(in: .whitespaces).isEmpty ? nil : requirements,
+                    deadline: deadline,
+                    templateSlug: templateSlug
                 )
                 isSaving = false
                 onSave(updatedTask)

@@ -73,6 +73,9 @@ struct HXTask: Identifiable, Codable {
     var paymentMethod: PaymentMethod? = nil
     var category: TaskCategory? = nil
     var hasActiveClaim: Bool = false
+    var deadline: Date? = nil
+    var templateSlug: String? = nil
+    var riskLevel: String? = nil
 
     var badgeStatus: HXBadgeVariant.StatusType {
         switch state {
@@ -91,7 +94,8 @@ struct HXTask: Identifiable, Codable {
         case estimatedDuration, posterId, posterName, posterRating
         case hustlerId, hustlerName, state, requiredTier, createdAt
         case claimedAt, completedAt, aiSuggestedPrice, paymentMethod
-        case category, hasActiveClaim
+        case category, hasActiveClaim, deadline, templateSlug, riskLevel
+        case template_slug, risk_level
         // Backend snake_case aliases (decode-only)
         case poster_id, worker_id, worker_name, poster_name, poster_rating
         case created_at, accepted_at, completed_at, estimated_duration
@@ -122,6 +126,9 @@ struct HXTask: Identifiable, Codable {
         try c.encodeIfPresent(paymentMethod, forKey: .paymentMethod)
         try c.encodeIfPresent(category, forKey: .category)
         try c.encode(hasActiveClaim, forKey: .hasActiveClaim)
+        try c.encodeIfPresent(deadline, forKey: .deadline)
+        try c.encodeIfPresent(templateSlug, forKey: .templateSlug)
+        try c.encodeIfPresent(riskLevel, forKey: .riskLevel)
     }
 
     init(from decoder: Decoder) throws {
@@ -206,6 +213,11 @@ struct HXTask: Identifiable, Codable {
         hasActiveClaim = try c.decodeIfPresent(Bool.self, forKey: .hasActiveClaim)
             ?? c.decodeIfPresent(Bool.self, forKey: .has_active_claim)
             ?? false
+        deadline = try c.decodeIfPresent(Date.self, forKey: .deadline)
+        templateSlug = try c.decodeIfPresent(String.self, forKey: .templateSlug)
+            ?? c.decodeIfPresent(String.self, forKey: .template_slug)
+        riskLevel = try c.decodeIfPresent(String.self, forKey: .riskLevel)
+            ?? c.decodeIfPresent(String.self, forKey: .risk_level)
     }
 
     // Memberwise initializer for previews / mock data
@@ -217,7 +229,8 @@ struct HXTask: Identifiable, Codable {
         state: TaskState, requiredTier: TrustTier = .rookie, createdAt: Date = Date(),
         claimedAt: Date? = nil, completedAt: Date? = nil,
         aiSuggestedPrice: Bool = false, paymentMethod: PaymentMethod? = nil,
-        category: TaskCategory? = nil, hasActiveClaim: Bool = false
+        category: TaskCategory? = nil, hasActiveClaim: Bool = false,
+        deadline: Date? = nil, templateSlug: String? = nil, riskLevel: String? = nil
     ) {
         self.id = id; self.title = title; self.description = description
         self.payment = payment; self.location = location
@@ -229,7 +242,8 @@ struct HXTask: Identifiable, Codable {
         self.createdAt = createdAt; self.claimedAt = claimedAt
         self.completedAt = completedAt; self.aiSuggestedPrice = aiSuggestedPrice
         self.paymentMethod = paymentMethod; self.category = category
-        self.hasActiveClaim = hasActiveClaim
+        self.hasActiveClaim = hasActiveClaim; self.deadline = deadline
+        self.templateSlug = templateSlug; self.riskLevel = riskLevel
     }
 }
 

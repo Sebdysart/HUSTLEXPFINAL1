@@ -40,7 +40,8 @@ final class TaskService: ObservableObject {
         category: TaskCategory?,
         templateSlug: String? = nil,
         requiredTier: TrustTier = .rookie,
-        requiredSkills: [String]? = nil
+        requiredSkills: [String]? = nil,
+        deadline: Date? = nil
     ) async throws -> HXTask {
         isLoading = true
         defer { isLoading = false }
@@ -56,6 +57,7 @@ final class TaskService: ObservableObject {
             let category: String?
             let estimatedDuration: String?
             let templateSlug: String?
+            let deadline: String?
             let mode: String
             let requiresProof: Bool
             let instantMode: Bool
@@ -72,6 +74,7 @@ final class TaskService: ObservableObject {
             category: category?.rawValue,
             estimatedDuration: estimatedDuration,
             templateSlug: templateSlug,
+            deadline: deadline.map { ISO8601DateFormatter().string(from: $0) },
             mode: "STANDARD",
             requiresProof: true,
             instantMode: false
@@ -97,7 +100,9 @@ final class TaskService: ObservableObject {
         location: String? = nil,
         category: String? = nil,
         estimatedDuration: String? = nil,
-        requirements: String? = nil
+        requirements: String? = nil,
+        deadline: Date? = nil,
+        templateSlug: String? = nil
     ) async throws -> HXTask {
         struct UpdateTaskInput: Codable {
             let taskId: String
@@ -108,6 +113,8 @@ final class TaskService: ObservableObject {
             let category: String?
             let estimatedDuration: String?
             let requirements: String?
+            let deadline: String?
+            let templateSlug: String?
         }
 
         let task: HXTask = try await trpc.call(
@@ -121,7 +128,9 @@ final class TaskService: ObservableObject {
                 location: location,
                 category: category,
                 estimatedDuration: estimatedDuration,
-                requirements: requirements
+                requirements: requirements,
+                deadline: deadline.map { ISO8601DateFormatter().string(from: $0) },
+                templateSlug: templateSlug
             )
         )
 

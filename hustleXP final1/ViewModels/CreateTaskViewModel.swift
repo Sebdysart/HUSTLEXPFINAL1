@@ -38,6 +38,7 @@ final class CreateTaskViewModel {
     var locationRadiusMiles: Int = 25
     var durationValue: String = ""
     var durationUnit: DurationUnit = .hours
+    var deadline: Date? = nil
     var requiredTier: TrustTier = .rookie
     var templateSlug: String = "standard_physical"
     var riskLevel: String = "LOW"
@@ -87,7 +88,7 @@ final class CreateTaskViewModel {
 
     var isValid: Bool {
         let baseValid = !title.isEmpty &&
-            !description.isEmpty &&
+            description.count >= 10 &&
             hasLocation &&
             errors.isEmpty
 
@@ -319,7 +320,8 @@ final class CreateTaskViewModel {
                     category: determineCategory(),
                     templateSlug: templateSlug,
                     requiredTier: requiredTier,
-                    requiredSkills: nil
+                    requiredSkills: nil,
+                    deadline: deadline
                 )
 
                 HXLogger.info("CreateTask: Task created via API - \(newTask.id)", category: "Task")
