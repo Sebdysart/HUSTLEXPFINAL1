@@ -139,15 +139,22 @@ final class AppState {
     
     // MARK: - Actions
     
-    func login(userId: String, role: UserRole) {
+    func login(userId: String, role: UserRole, onboardingComplete: Bool = false) {
         self.userId = userId
         self.userRole = role
         self.isLoggedIn = true
-        self.hasCompletedOnboarding = UserDefaults.standard.bool(
+        // Check backend flag first, fall back to local UserDefaults
+        let backendComplete = onboardingComplete
+        let localComplete = UserDefaults.standard.bool(
             forKey: Self.onboardingStorageKey(for: userId)
         )
+        self.hasCompletedOnboarding = backendComplete || localComplete
+        // Sync local storage if backend says complete (e.g. new device)
+        if backendComplete && !localComplete {
+            UserDefaults.standard.set(true, forKey: Self.onboardingStorageKey(for: userId))
+        }
         self.authState = hasCompletedOnboarding ? .authenticated : .onboarding
-        HXLogger.info("[AppState] User logged in: \(userId), role: \(role.rawValue)", category: "Navigation")
+        HXLogger.info("[AppState] User logged in: \(userId), role: \(role.rawValue), onboarding: \(hasCompletedOnboarding)", category: "Navigation")
     }
     
     func logout() {
@@ -167,6 +174,15 @@ final class AppState {
         self.hasCompletedOnboarding = true
         self.authState = .authenticated
         HXLogger.info("[AppState] Onboarding completed", category: "Navigation")
+
+        // Persist to backend so other devices know onboarding is done
+        Task {
+            do {
+                try await UserProfileService.shared.completeOnboarding()
+            } catch {
+                HXLogger.error("[AppState] Failed to persist onboarding to backend: \(error.localizedDescription)", category: "Navigation")
+            }
+        }
     }
     
     func setRole(_ role: UserRole) {

@@ -303,6 +303,26 @@ final class TaskService: ObservableObject {
         return task
     }
 
+    /// Poster marks task as complete (after proof approved)
+    func completeTask(taskId: String) async throws -> HXTask {
+        isLoading = true
+        defer { isLoading = false }
+
+        struct CompleteInput: Codable {
+            let taskId: String
+        }
+
+        let task: HXTask = try await trpc.call(
+            router: "task",
+            procedure: "complete",
+            input: CompleteInput(taskId: taskId)
+        )
+
+        HXLogger.info("TaskService: Completed task - \(task.title)", category: "Task")
+        AnalyticsService.shared.trackTaskEvent(.taskCompleted, taskId: task.id, taskTitle: task.title)
+        return task
+    }
+
     /// Poster cancels their posted task
     func cancelTask(taskId: String, reason: String?) async throws -> HXTask {
         isLoading = true

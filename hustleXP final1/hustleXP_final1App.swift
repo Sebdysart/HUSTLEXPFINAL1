@@ -119,17 +119,33 @@ struct hustleXP_final1App: App {
             .onAppear {
                 // Bridge AuthService to AppState for coordinated auth state
                 authService.appState = appState
-                
-                // Quick initialization - auth state is already checked synchronously
-                // by AuthService on init, so we just need a minimal delay for UI to settle
+
+                // If AuthService already loaded the user during init (before appState was set),
+                // sync the state now so RootNavigator routes correctly.
+                if let user = authService.currentUser {
+                    appState.login(userId: user.id, role: user.role, onboardingComplete: user.onboardingComplete)
+                }
+
                 Task {
-                    // Minimal delay - just enough for the splash to render one frame
-                    try? await Task.sleep(for: .milliseconds(100))
+                    // Wait for AuthService to finish loading if it has a saved session.
+                    // This prevents briefly showing the wrong screen.
+                    let hasToken = KeychainManager.shared.get(forKey: KeychainManager.Key.authToken) != nil
+                    if hasToken && !authService.isAuthenticated {
+                        // Wait up to 5 seconds for auth to resolve
+                        for _ in 0..<50 {
+                            try? await Task.sleep(for: .milliseconds(100))
+                            if authService.isAuthenticated { break }
+                        }
+                        // Sync after async load completes
+                        if let user = authService.currentUser {
+                            appState.login(userId: user.id, role: user.role, onboardingComplete: user.onboardingComplete)
+                        }
+                    }
+
                     await MainActor.run {
                         withAnimation(.easeOut(duration: 0.3)) {
                             isInitialized = true
                         }
-                        // Remove splash after fade completes
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             showSplash = false
                         }

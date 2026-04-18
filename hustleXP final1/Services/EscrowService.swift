@@ -231,20 +231,20 @@ final class EscrowService: ObservableObject {
 
     // MARK: - Payout (Worker receives)
 
-    /// Releases escrow funds to worker after task completion
-    func releaseToWorker(escrowId: String, stripeTransferId: String? = nil) async throws -> Escrow {
+    /// Releases escrow funds to worker after task completion.
+    /// Creates the Stripe transfer and releases escrow in one call.
+    func releaseToWorker(escrowId: String) async throws -> Escrow {
         isLoading = true
         defer { isLoading = false }
 
         struct ReleaseInput: Codable {
             let escrowId: String
-            let stripeTransferId: String?
         }
 
         let escrow: Escrow = try await trpc.call(
             router: "escrow",
-            procedure: "release",
-            input: ReleaseInput(escrowId: escrowId, stripeTransferId: stripeTransferId)
+            procedure: "releaseToWorker",
+            input: ReleaseInput(escrowId: escrowId)
         )
 
         HXLogger.info("EscrowService: Released escrow \(escrow.id) to worker", category: "Payment")

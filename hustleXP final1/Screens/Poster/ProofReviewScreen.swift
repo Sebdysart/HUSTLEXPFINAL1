@@ -105,6 +105,7 @@ struct ProofReviewScreen: View {
 
         Task {
             do {
+                // 1. Approve the proof
                 _ = try await TaskService.shared.reviewProof(
                     taskId: taskId,
                     approved: true,
@@ -112,7 +113,22 @@ struct ProofReviewScreen: View {
                 )
                 HXLogger.info("ProofReview: Approved via API", category: "Task")
 
-                // Submit rating via RatingService if user gave a rating
+                // 2. Complete the task (PROOF_SUBMITTED → COMPLETED)
+                _ = try await TaskService.shared.completeTask(taskId: taskId)
+                HXLogger.info("ProofReview: Task completed via API", category: "Task")
+
+                // 3. Release escrow to worker
+                do {
+                    let escrow = try await EscrowService.shared.getEscrowByTask(taskId: taskId)
+                    _ = try await EscrowService.shared.releaseToWorker(escrowId: escrow.id)
+                    HXLogger.info("ProofReview: Escrow released to worker", category: "Task")
+                } catch {
+                    // Escrow release may fail if worker hasn't set up Stripe Connect yet.
+                    // The funds remain in escrow and can be released later.
+                    HXLogger.error("ProofReview: Escrow release failed - \(error.localizedDescription)", category: "Task")
+                }
+
+                // 4. Submit rating if user gave one
                 if rating > 0 {
                     do {
                         try await RatingService.shared.submitRating(

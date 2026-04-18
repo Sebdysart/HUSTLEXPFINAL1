@@ -26,6 +26,9 @@ struct HXUser: Identifiable, Codable {
     var isVerified: Bool
     let createdAt: Date
 
+    // Onboarding
+    var onboardingComplete: Bool = false
+
     // v1.8.0 additions – backend may not send these yet, so they default to 0
     var unpaidTaxCents: Int = 0
     var xpHeldBack: Int = 0
@@ -46,6 +49,7 @@ struct HXUser: Identifiable, Codable {
         case id, name, email, phone, bio, avatarURL, role, trustTier
         case rating, totalRatings, xp, tasksCompleted, tasksPosted
         case totalEarnings, totalSpent, isVerified, createdAt
+        case onboardingComplete
         case unpaidTaxCents, xpHeldBack, verificationEarnedCents, insuranceContributionsCents
     }
 
@@ -68,6 +72,7 @@ struct HXUser: Identifiable, Codable {
         totalSpent                 = try c.decode(Double.self, forKey: .totalSpent)
         isVerified                 = try c.decode(Bool.self, forKey: .isVerified)
         createdAt                  = try c.decode(Date.self, forKey: .createdAt)
+        onboardingComplete         = try c.decodeIfPresent(Bool.self, forKey: .onboardingComplete) ?? false
         // v1.8.0 fields – default to 0 when absent from backend response
         unpaidTaxCents             = try c.decodeIfPresent(Int.self, forKey: .unpaidTaxCents) ?? 0
         xpHeldBack                 = try c.decodeIfPresent(Int.self, forKey: .xpHeldBack) ?? 0
@@ -94,6 +99,7 @@ struct HXUser: Identifiable, Codable {
         totalSpent: Double,
         isVerified: Bool,
         createdAt: Date,
+        onboardingComplete: Bool = false,
         unpaidTaxCents: Int = 0,
         xpHeldBack: Int = 0,
         verificationEarnedCents: Int = 0,
@@ -116,6 +122,7 @@ struct HXUser: Identifiable, Codable {
         self.totalSpent = totalSpent
         self.isVerified = isVerified
         self.createdAt = createdAt
+        self.onboardingComplete = onboardingComplete
         self.unpaidTaxCents = unpaidTaxCents
         self.xpHeldBack = xpHeldBack
         self.verificationEarnedCents = verificationEarnedCents

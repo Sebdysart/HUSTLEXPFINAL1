@@ -45,6 +45,15 @@ final class AuthService: ObservableObject {
 
         if KeychainManager.shared.get(forKey: KeychainManager.Key.authToken) != nil {
             Task {
+                // Refresh Firebase token before loading user — the saved token may be expired
+                if let firebaseUser = Auth.auth().currentUser {
+                    do {
+                        let freshToken = try await firebaseUser.getIDToken(forcingRefresh: true)
+                        TRPCClient.shared.setAuthToken(freshToken)
+                    } catch {
+                        HXLogger.error("Auth: Token refresh failed on init - \(error.localizedDescription)", category: "Auth")
+                    }
+                }
                 await loadCurrentUser()
             }
         }
@@ -145,7 +154,7 @@ final class AuthService: ObservableObject {
 
             self.currentUser = user
             self.isAuthenticated = true
-            appState?.login(userId: user.id, role: user.role)
+            appState?.login(userId: user.id, role: user.role, onboardingComplete: user.onboardingComplete)
             Task { await PushNotificationManager.shared.flushPendingToken() }
 
             HXLogger.info("Auth: User signed up successfully - \(user.name)", category: "Auth")
@@ -322,7 +331,7 @@ final class AuthService: ObservableObject {
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
             self.currentUser = user
             self.isAuthenticated = true
-            appState?.login(userId: user.id, role: user.role)
+            appState?.login(userId: user.id, role: user.role, onboardingComplete: user.onboardingComplete)
             Task { await PushNotificationManager.shared.flushPendingToken() }
 
             HXLogger.info("Auth: Apple Sign-In successful (new user) - \(user.name)", category: "Auth")
@@ -400,7 +409,7 @@ final class AuthService: ObservableObject {
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
             self.currentUser = user
             self.isAuthenticated = true
-            appState?.login(userId: user.id, role: user.role)
+            appState?.login(userId: user.id, role: user.role, onboardingComplete: user.onboardingComplete)
             Task { await PushNotificationManager.shared.flushPendingToken() }
 
             HXLogger.info("Auth: Google Sign-In successful (new user) - \(user.name)", category: "Auth")
@@ -467,7 +476,7 @@ final class AuthService: ObservableObject {
 
             self.currentUser = user
             self.isAuthenticated = true
-            appState?.login(userId: user.id, role: user.role)
+            appState?.login(userId: user.id, role: user.role, onboardingComplete: user.onboardingComplete)
             Task { await PushNotificationManager.shared.flushPendingToken() }
 
             // Store user ID
