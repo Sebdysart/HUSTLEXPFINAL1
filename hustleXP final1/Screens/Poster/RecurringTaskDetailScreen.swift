@@ -22,6 +22,7 @@ struct RecurringTaskDetailScreen: View {
     @State private var isLoading = true
     @State private var showContent = false
     @State private var showCancelConfirmation = false
+    @State private var showEditSheet = false
 
     var body: some View {
         ZStack {
@@ -92,6 +93,13 @@ struct RecurringTaskDetailScreen: View {
             }
         } message: {
             Text("This will stop all future occurrences. Any active occurrence will still complete. This cannot be undone.")
+        }
+        .sheet(isPresented: $showEditSheet) {
+            if let series {
+                EditRecurringSeriesSheet(series: series) {
+                    Task { await loadFromAPI() }
+                }
+            }
         }
         .task {
             await loadFromAPI()
@@ -527,14 +535,14 @@ struct RecurringTaskDetailScreen: View {
                 }
             }
 
-            // Edit schedule
+            // Edit series
             actionButton(
-                title: "Edit Schedule",
+                title: "Edit Series",
                 icon: "pencil.circle.fill",
                 color: .recurringBlue,
                 variant: .secondary
             ) {
-                HXLogger.info("RecurringTaskDetail: Edit schedule UI pending", category: "Task")
+                showEditSheet = true
             }
 
             // Cancel series
@@ -612,6 +620,272 @@ struct RecurringTaskDetailScreen: View {
 private enum ActionVariant {
     case secondary
     case danger
+}
+
+// MARK: - Edit Recurring Series Sheet
+
+private struct EditRecurringSeriesSheet: View {
+    let series: RecurringTaskSeries
+    let onSave: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var title: String
+    @State private var description: String
+    @State private var payment: String
+    @State private var location: String
+    @State private var estimatedDuration: String
+    @State private var pattern: RecurrencePattern
+    @State private var dayOfWeek: Int
+    @State private var dayOfMonth: Int
+    @State private var endDate: Date?
+    @State private var hasEndDate: Bool
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    init(series: RecurringTaskSeries, onSave: @escaping () -> Void) {
+        self.series = series
+        self.onSave = onSave
+        _title = State(initialValue: series.title)
+        _description = State(initialValue: series.description ?? "")
+        _payment = State(initialValue: String(format: "%.0f", series.payment))
+        _location = State(initialValue: series.location)
+        _estimatedDuration = State(initialValue: series.estimatedDuration)
+        _pattern = State(initialValue: series.pattern)
+        _dayOfWeek = State(initialValue: series.dayOfWeek ?? 1)
+        _dayOfMonth = State(initialValue: series.dayOfMonth ?? 1)
+        _endDate = State(initialValue: series.endDate)
+        _hasEndDate = State(initialValue: series.endDate != nil)
+    }
+
+    private var isValid: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty
+        && (Double(payment) ?? 0) >= 5
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Title
+                    fieldSection(label: "Title") {
+                        TextField("Series title", text: $title)
+                    }
+
+                    // Description
+                    fieldSection(label: "Description") {
+                        TextField("Describe the task", text: $description, axis: .vertical)
+                            .lineLimit(3...6)
+                    }
+
+                    // Payment
+                    fieldSection(label: "Payment ($)") {
+                        TextField("Amount", text: $payment)
+                            .keyboardType(.numberPad)
+                    }
+
+                    // Location
+                    fieldSection(label: "Location") {
+                        TextField("Location", text: $location)
+                    }
+
+                    // Duration
+                    fieldSection(label: "Estimated Duration") {
+                        TextField("e.g. 2 hrs", text: $estimatedDuration)
+                    }
+
+                    // Schedule
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Schedule")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color.textSecondary)
+
+                        // Pattern picker
+                        HStack(spacing: 0) {
+                            ForEach(RecurrencePattern.allCases, id: \.self) { p in
+                                Button {
+                                    pattern = p
+                                } label: {
+                                    Text(p.label)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(pattern == p ? .white : Color.textPrimary)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(pattern == p ? Color.recurringBlue : Color.surfaceElevated)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.borderSubtle, lineWidth: 1))
+
+                        // Day picker for weekly/biweekly
+                        if pattern == .weekly || pattern == .biweekly {
+                            HStack(spacing: 6) {
+                                ForEach(1...7, id: \.self) { day in
+                                    let names = ["M", "T", "W", "T", "F", "S", "S"]
+                                    Button {
+                                        dayOfWeek = day
+                                    } label: {
+                                        Text(names[day - 1])
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundStyle(dayOfWeek == day ? .white : Color.textPrimary)
+                                            .frame(width: 36, height: 36)
+                                            .background(dayOfWeek == day ? Color.recurringBlue : Color.surfaceElevated)
+                                            .clipShape(Circle())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.top, 8)
+                        }
+
+                        // Day of month for monthly
+                        if pattern == .monthly {
+                            HStack {
+                                Text("Day of month:")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.textSecondary)
+                                Picker("", selection: $dayOfMonth) {
+                                    ForEach(1...28, id: \.self) { d in
+                                        Text("\(d)").tag(d)
+                                    }
+                                }
+                                .tint(.recurringBlue)
+                            }
+                            .padding(.top, 4)
+                        }
+                    }
+
+                    // End date
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle("Set end date", isOn: $hasEndDate)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color.textSecondary)
+                            .tint(.recurringBlue)
+
+                        if hasEndDate {
+                            DatePicker(
+                                "",
+                                selection: Binding(
+                                    get: { endDate ?? Calendar.current.date(byAdding: .month, value: 3, to: Date())! },
+                                    set: { endDate = $0 }
+                                ),
+                                in: Date()...,
+                                displayedComponents: .date
+                            )
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .colorScheme(.dark)
+                            .tint(.recurringBlue)
+                        }
+                    }
+
+                    // Propagation info
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.infoBlue)
+                        Text("Budget changes apply to future occurrences only. Schedule changes regenerate upcoming occurrences.")
+                            .font(.caption)
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                    .padding(10)
+                    .background(Color.infoBlue.opacity(0.1))
+                    .cornerRadius(8)
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(Color.errorRed)
+                    }
+
+                    // Save button
+                    Button(action: save) {
+                        HStack(spacing: 8) {
+                            if isSaving {
+                                ProgressView().tint(.white)
+                            } else {
+                                Text("Save Changes")
+                                    .font(.body.weight(.semibold))
+                            }
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(isValid && !isSaving ? Color.recurringBlue : Color.textMuted.opacity(0.5))
+                        )
+                    }
+                    .disabled(!isValid || isSaving)
+                }
+                .padding(20)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background(Color.brandBlack)
+            .navigationTitle("Edit Series")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.brandBlack, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
+        }
+    }
+
+    private func fieldSection<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.textSecondary)
+
+            content()
+                .font(.body)
+                .foregroundStyle(Color.textPrimary)
+                .padding(14)
+                .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.borderSubtle, lineWidth: 1)
+                )
+        }
+    }
+
+    private func save() {
+        guard isValid else { return }
+        isSaving = true
+        errorMessage = nil
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+
+        Task {
+            do {
+                _ = try await RecurringTaskService.shared.updateSeries(
+                    id: series.id,
+                    title: title.trimmingCharacters(in: .whitespaces),
+                    description: description.trimmingCharacters(in: .whitespaces).isEmpty ? nil : description,
+                    payment: Double(payment),
+                    location: location.trimmingCharacters(in: .whitespaces).isEmpty ? nil : location,
+                    estimatedDuration: estimatedDuration.isEmpty ? nil : estimatedDuration,
+                    pattern: pattern != series.pattern ? pattern : nil,
+                    dayOfWeek: (pattern == .weekly || pattern == .biweekly) ? dayOfWeek : nil,
+                    dayOfMonth: pattern == .monthly ? dayOfMonth : nil,
+                    endDate: hasEndDate ? (endDate.map { formatter.string(from: $0) }) : nil
+                )
+                isSaving = false
+                onSave()
+                dismiss()
+            } catch {
+                isSaving = false
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
 }
 
 // MARK: - Preview

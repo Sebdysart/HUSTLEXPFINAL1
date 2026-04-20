@@ -250,6 +250,71 @@ final class RecurringTaskService: ObservableObject {
         return task
     }
 
+    // MARK: - Update Series
+
+    /// Update a recurring series with propagation rules.
+    /// Budget → future tasks inherit new price. Schedule → regenerates occurrences. End date → truncates.
+    func updateSeries(
+        id: String,
+        title: String? = nil,
+        description: String? = nil,
+        payment: Double? = nil,
+        location: String? = nil,
+        category: String? = nil,
+        estimatedDuration: String? = nil,
+        pattern: RecurrencePattern? = nil,
+        dayOfWeek: Int? = nil,
+        dayOfMonth: Int? = nil,
+        timeOfDay: String? = nil,
+        endDate: String? = nil,
+        templateSlug: String? = nil,
+        riskLevel: String? = nil
+    ) async throws -> RecurringTaskSeries {
+        isLoading = true
+        defer { isLoading = false }
+
+        struct UpdateInput: Codable {
+            let id: String
+            let title: String?
+            let description: String?
+            let payment: Double?
+            let location: String?
+            let category: String?
+            let estimatedDuration: String?
+            let pattern: String?
+            let dayOfWeek: Int?
+            let dayOfMonth: Int?
+            let timeOfDay: String?
+            let endDate: String?
+            let templateSlug: String?
+            let riskLevel: String?
+        }
+
+        let series: RecurringTaskSeries = try await TRPCClient.shared.call(
+            router: "recurringTask",
+            procedure: "updateSeries",
+            input: UpdateInput(
+                id: id,
+                title: title,
+                description: description,
+                payment: payment,
+                location: location,
+                category: category,
+                estimatedDuration: estimatedDuration,
+                pattern: pattern?.rawValue,
+                dayOfWeek: dayOfWeek,
+                dayOfMonth: dayOfMonth,
+                timeOfDay: timeOfDay,
+                endDate: endDate,
+                templateSlug: templateSlug,
+                riskLevel: riskLevel
+            )
+        )
+
+        HXLogger.info("RecurringTaskService: Updated series \(id)", category: "Task")
+        return series
+    }
+
     // MARK: - Preferred Worker
 
     func setPreferredWorker(seriesId: String, workerId: String) async throws {

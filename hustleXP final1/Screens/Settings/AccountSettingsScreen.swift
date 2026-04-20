@@ -13,6 +13,9 @@ struct AccountSettingsScreen: View {
     @Environment(LiveDataService.self) private var dataService
 
     @State private var showDeleteConfirmation: Bool = false
+    @State private var isDeleting: Bool = false
+    @State private var showDeleteSuccess: Bool = false
+    @State private var deleteError: String?
     
     var body: some View {
         List {
@@ -95,10 +98,34 @@ struct AccountSettingsScreen: View {
         .alert("Delete Account?", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
-                // Handle deletion
+                deleteAccount()
             }
         } message: {
-            Text("This will permanently delete your account and all associated data.")
+            Text("Your account will be scheduled for deletion. You have 7 days to cancel. After that, all data will be permanently removed.")
+        }
+        .alert("Account Deletion Requested", isPresented: $showDeleteSuccess) {
+            Button("OK") {
+                AuthService.shared.signOut()
+            }
+        } message: {
+            Text("Your account has been scheduled for deletion. You have 7 days to log back in and cancel if you change your mind.")
+        }
+    }
+
+    private func deleteAccount() {
+        isDeleting = true
+        deleteError = nil
+
+        Task {
+            do {
+                _ = try await GDPRService.shared.requestAccountDeletion(reason: "User requested deletion")
+                isDeleting = false
+                showDeleteSuccess = true
+            } catch {
+                isDeleting = false
+                deleteError = error.localizedDescription
+                HXLogger.error("Account deletion failed: \(error.localizedDescription)", category: "Settings")
+            }
         }
     }
 }
