@@ -36,6 +36,12 @@ struct RecurringTaskSeries: Identifiable, Codable {
     let estimatedDuration: String
     let requiredTier: TrustTier
 
+    // Template & Risk
+    var riskLevel: String
+    var templateSlug: String?
+    var requiresProof: Bool
+    var requirements: String?
+
     // Status
     var status: RecurringSeriesStatus
     var occurrenceCount: Int     // How many have been generated
@@ -170,7 +176,7 @@ enum RecurringSeriesStatus: String, Codable {
 struct RecurringOccurrence: Identifiable, Codable {
     let id: String
     let seriesId: String
-    let taskId: String         // The generated HXTask for this occurrence
+    let taskId: String?        // The generated HXTask for this occurrence
     let occurrenceNumber: Int
     let scheduledDate: Date
     var status: OccurrenceStatus
@@ -178,9 +184,12 @@ struct RecurringOccurrence: Identifiable, Codable {
     var workerName: String?
     var completedAt: Date?
     var rating: Int?
+    var escrowId: String?
+    var spawnedAt: Date?
 
     var isUpcoming: Bool { status == .scheduled }
     var wasCompleted: Bool { status == .completed }
+    var hasSpawnedTask: Bool { taskId != nil }
 }
 
 enum OccurrenceStatus: String, Codable {

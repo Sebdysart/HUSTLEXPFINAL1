@@ -436,6 +436,26 @@ struct RecurringTaskDetailScreen: View {
 
             Spacer()
 
+            // View Task button for posted/completed/in-progress occurrences
+            if occurrence.hasSpawnedTask, let taskId = occurrence.taskId {
+                Button {
+                    router.navigateToPoster(.taskDetail(taskId: taskId))
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.system(size: 12))
+                        Text("View Task")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.recurringBlue)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.recurringBlue.opacity(0.12))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
             // Status badge
             occurrenceStatusBadge(occurrence.status)
         }

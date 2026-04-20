@@ -34,7 +34,11 @@ final class RecurringTaskService: ObservableObject {
         dayOfMonth: Int?,
         timeOfDay: String?,
         startDate: Date,
-        endDate: Date?
+        endDate: Date?,
+        templateSlug: String? = nil,
+        riskLevel: String = "LOW",
+        requiresProof: Bool = true,
+        requirements: String? = nil
     ) async throws -> RecurringTaskSeries {
         isLoading = true
         defer { isLoading = false }
@@ -53,6 +57,10 @@ final class RecurringTaskService: ObservableObject {
             let timeOfDay: String?
             let startDate: String
             let endDate: String?
+            let templateSlug: String?
+            let riskLevel: String
+            let requiresProof: Bool
+            let requirements: String?
         }
 
         let formatter = ISO8601DateFormatter()
@@ -71,7 +79,11 @@ final class RecurringTaskService: ObservableObject {
             dayOfMonth: dayOfMonth,
             timeOfDay: timeOfDay,
             startDate: formatter.string(from: startDate),
-            endDate: endDate.map { formatter.string(from: $0) }
+            endDate: endDate.map { formatter.string(from: $0) },
+            templateSlug: templateSlug,
+            riskLevel: riskLevel,
+            requiresProof: requiresProof,
+            requirements: requirements
         )
 
         let series: RecurringTaskSeries = try await TRPCClient.shared.call(
@@ -205,6 +217,39 @@ final class RecurringTaskService: ObservableObject {
         HXLogger.info("RecurringTaskService: Skipped occurrence \(occurrenceId)", category: "Task")
     }
 
+    // MARK: - Spawning & Instance Tasks
+
+    /// Manually spawn a task from a scheduled occurrence
+    func spawnOccurrenceNow(occurrenceId: String) async throws -> SpawnResult {
+        isLoading = true
+        defer { isLoading = false }
+
+        struct SpawnInput: Codable { let occurrenceId: String }
+
+        let result: SpawnResult = try await TRPCClient.shared.call(
+            router: "recurringTask",
+            procedure: "spawnOccurrenceNow",
+            input: SpawnInput(occurrenceId: occurrenceId)
+        )
+
+        HXLogger.info("RecurringTaskService: Spawned occurrence \(occurrenceId) -> task \(result.taskId)", category: "Task")
+        return result
+    }
+
+    /// Get the spawned HXTask for an occurrence
+    func getInstanceTask(occurrenceId: String) async throws -> HXTask {
+        struct InstanceInput: Codable { let occurrenceId: String }
+
+        let task: HXTask = try await TRPCClient.shared.call(
+            router: "recurringTask",
+            procedure: "getInstanceTask",
+            type: .query,
+            input: InstanceInput(occurrenceId: occurrenceId)
+        )
+
+        return task
+    }
+
     // MARK: - Preferred Worker
 
     func setPreferredWorker(seriesId: String, workerId: String) async throws {
@@ -225,6 +270,13 @@ final class RecurringTaskService: ObservableObject {
 
         HXLogger.info("RecurringTaskService: Set preferred worker for series \(seriesId)", category: "Task")
     }
+}
+
+// MARK: - Spawn Result
+
+struct SpawnResult: Codable {
+    let taskId: String
+    let escrowId: String
 }
 
 // MARK: - TrustTier numeric helper

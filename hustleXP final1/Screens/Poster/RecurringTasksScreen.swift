@@ -603,6 +603,10 @@ private struct CreateRecurringTaskSheet: View {
     @State private var selectedDayOfWeek: Int = 2  // Tuesday
     @State private var selectedDayOfMonth: Int = 1
     @State private var selectedCategory: RecurringCategory?
+    @State private var templateSlug: String = "standard_physical"
+    @State private var riskLevel: String = "LOW"
+    @State private var requiresProof: Bool = true
+    @State private var requirements: String = ""
     @State private var isCreating = false
 
     private let dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -719,6 +723,79 @@ private struct CreateRecurringTaskSheet: View {
                                 .tint(Color.brandPurple)
                         }
 
+                        // Template picker
+                        VStack(alignment: .leading, spacing: 8) {
+                            HXText("Template", style: .subheadline, color: .textSecondary)
+
+                            Menu {
+                                ForEach(Self.templateOptions, id: \.slug) { opt in
+                                    Button {
+                                        templateSlug = opt.slug
+                                        riskLevel = opt.defaultRisk
+                                    } label: {
+                                        Label(opt.name, systemImage: opt.icon)
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: templateIcon(templateSlug))
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(Color.brandPurple)
+                                    Text(templateDisplayName(templateSlug))
+                                        .font(.body)
+                                        .foregroundStyle(Color.textPrimary)
+                                    Spacer()
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                                .padding(14)
+                                .background(Color.surfaceElevated)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+
+                        // Risk level display
+                        HStack(spacing: 12) {
+                            Image(systemName: riskIcon(riskLevel))
+                                .font(.system(size: 16))
+                                .foregroundStyle(riskColor(riskLevel))
+                            Text("Risk: \(riskLevel)")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(riskColor(riskLevel))
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(riskColor(riskLevel).opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+
+                        // Template note
+                        if let note = templateNote(templateSlug) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.infoBlue)
+                                Text(note)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+                            .padding(12)
+                            .background(Color.infoBlue.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+
+                        // Requirements
+                        VStack(alignment: .leading, spacing: 8) {
+                            HXText("Requirements (optional)", style: .subheadline, color: .textSecondary)
+
+                            TextField("", text: $requirements, prompt: Text("Any special requirements...").foregroundColor(.textTertiary), axis: .vertical)
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.textPrimary)
+                                .lineLimit(2...4)
+                                .padding(14)
+                                .background(Color.surfaceElevated)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+
                         // Recurrence pattern
                         VStack(alignment: .leading, spacing: 12) {
                             HXText("Repeat Schedule", style: .headline)
@@ -830,7 +907,11 @@ private struct CreateRecurringTaskSheet: View {
                     dayOfMonth: pattern == .monthly ? selectedDayOfMonth : nil,
                     timeOfDay: "09:00",
                     startDate: Date(),
-                    endDate: nil
+                    endDate: nil,
+                    templateSlug: templateSlug,
+                    riskLevel: riskLevel,
+                    requiresProof: requiresProof,
+                    requirements: requirements.trimmingCharacters(in: .whitespaces).isEmpty ? nil : requirements
                 )
                 dismiss()
             } catch {
@@ -838,6 +919,43 @@ private struct CreateRecurringTaskSheet: View {
             }
             isCreating = false
         }
+    }
+
+    // MARK: - Template Data
+
+    private static let templateOptions: [(slug: String, name: String, icon: String, defaultRisk: String)] = [
+        ("standard_physical", "Standard", "shippingbox.fill", "LOW"),
+        ("in_home", "In-Home", "house.fill", "MEDIUM"),
+        ("care", "Care", "heart.fill", "HIGH"),
+        ("content_creator", "Content", "camera.fill", "MEDIUM"),
+        ("event_appearance", "Event", "person.2.fill", "MEDIUM"),
+        ("creative_production", "Creative", "film", "MEDIUM"),
+        ("specialized_licensed", "Licensed", "checkmark.seal.fill", "MEDIUM"),
+        ("wildcard_bizarre", "Custom", "sparkles", "MEDIUM"),
+    ]
+
+    private func templateDisplayName(_ s: String) -> String {
+        Self.templateOptions.first(where: { $0.slug == s })?.name ?? "Standard"
+    }
+
+    private func templateIcon(_ s: String) -> String {
+        Self.templateOptions.first(where: { $0.slug == s })?.icon ?? "briefcase.fill"
+    }
+
+    private func templateNote(_ s: String) -> String? {
+        ["care": "Requires background-checked hustler (Trusted+). Manual payment release.",
+         "in_home": "48-hour review period before payment auto-releases.",
+         "content_creator": "Content release agreement will be required.",
+         "specialized_licensed": "Hustler must verify their professional license.",
+         "wildcard_bizarre": "Mutual consent checklist required for both parties."][s]
+    }
+
+    private func riskIcon(_ r: String) -> String {
+        r == "LOW" ? "shield.checkered" : r == "MEDIUM" ? "shield.lefthalf.filled" : "exclamationmark.shield.fill"
+    }
+
+    private func riskColor(_ r: String) -> Color {
+        r == "LOW" ? .successGreen : r == "MEDIUM" ? .warningOrange : .errorRed
     }
 }
 
