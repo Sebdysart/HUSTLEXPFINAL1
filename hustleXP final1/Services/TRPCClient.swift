@@ -217,13 +217,15 @@ final class TRPCClient: ObservableObject, TRPCClientProtocol {
             // Try to decode tRPC error with HX error code support
             if let errorResponse = try? JSONDecoder().decode(TRPCError.self, from: data) {
                 let message = errorResponse.error.message
+                // Use data.code (string like "BAD_REQUEST") over numeric code
+                let errorCode = errorResponse.error.data?.code ?? errorResponse.error.code
                 // Check for HX-series constitutional error codes (e.g., HX001, HX904)
-                if let hxCode = errorResponse.error.code,
+                if let hxCode = errorCode,
                    hxCode.hasPrefix("HX") || message.contains("HX") {
                     throw APIError.constitutionalViolation(code: hxCode, message: message)
                 }
                 // Map tRPC error codes to APIError types
-                switch errorResponse.error.code {
+                switch errorCode {
                 case "UNAUTHORIZED":
                     throw APIError.unauthorized
                 case "NOT_FOUND":
@@ -231,6 +233,7 @@ final class TRPCClient: ObservableObject, TRPCClientProtocol {
                 case "FORBIDDEN":
                     throw APIError.forbidden(message)
                 default:
+                    // Pass through the actual backend message (e.g. "High-value tasks require a background check")
                     throw APIError.serverError(message)
                 }
             }
@@ -589,5 +592,29 @@ struct TRPCError: Codable {
     struct ErrorDetails: Codable {
         let message: String
         let code: String?
+        let data: ErrorData?
+
+        struct ErrorData: Codable {
+            let code: String?
+        }
+
+        // code can be Int or String from backend — handle both
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            message = try container.decode(String.self, forKey: .message)
+            data = try container.decodeIfPresent(ErrorData.self, forKey: .data)
+            // Try String first, then Int (tRPC sends numeric codes like -32600)
+            if let strCode = try? container.decode(String.self, forKey: .code) {
+                code = strCode
+            } else if let intCode = try? container.decode(Int.self, forKey: .code) {
+                code = String(intCode)
+            } else {
+                code = nil
+            }
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case message, code, data
+        }
     }
 }

@@ -42,6 +42,8 @@ struct SettingsStack: View {
                         SubscriptionScreen()
                     case .betaDashboard:
                         BetaDashboardScreen()
+                    case .disputes:
+                        MyDisputesScreen()
                     }
                 }
         }

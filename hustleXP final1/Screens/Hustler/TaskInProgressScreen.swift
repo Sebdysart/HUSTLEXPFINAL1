@@ -86,6 +86,23 @@ struct TaskInProgressScreen: View {
                 do {
                     apiTask = try await TaskService.shared.getTask(id: taskId)
                     HXLogger.info("TaskInProgress: Loaded task from API", category: "Task")
+
+                    // Sync UI status with actual task state
+                    if let state = apiTask?.state {
+                        switch state {
+                        case .inProgress:
+                            currentStatus = .arrived
+                        case .proofSubmitted:
+                            // Proof already submitted — navigate to home
+                            router.hustlerPath = NavigationPath()
+                            return
+                        case .completed:
+                            router.hustlerPath = NavigationPath()
+                            return
+                        default:
+                            break // .claimed/.posted stay as .enRoute
+                        }
+                    }
                 } catch {
                     HXLogger.error("TaskInProgress: API load failed, using mock - \(error.localizedDescription)", category: "Task")
                 }

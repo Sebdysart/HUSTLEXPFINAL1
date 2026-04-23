@@ -341,7 +341,13 @@ struct ProofSubmissionScreen: View {
                 }
             } else {
                 VStack(spacing: 16) {
-                    Button(action: { viewModel.showCamera = true }) {
+                    Button(action: {
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            viewModel.showCamera = true
+                        } else {
+                            viewModel.cameraUnavailable = true
+                        }
+                    }) {
                         HStack(spacing: 12) {
                             ZStack {
                                 Circle()
@@ -433,6 +439,15 @@ struct ProofSubmissionScreen: View {
             .onDisappear {
                 viewModel.handleCameraDisappeared()
             }
+        }
+        .alert("Camera Unavailable", isPresented: Binding(
+            get: { viewModel.cameraUnavailable },
+            set: { viewModel.cameraUnavailable = $0 }
+        )) {
+            Button("Use Photo Library") { viewModel.showPhotoPicker = true }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Camera is not available on this device. Use the photo library instead.")
         }
     }
 

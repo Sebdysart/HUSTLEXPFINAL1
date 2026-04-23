@@ -646,7 +646,7 @@ private struct EditRecurringSeriesSheet: View {
         self.series = series
         self.onSave = onSave
         _title = State(initialValue: series.title)
-        _description = State(initialValue: series.description ?? "")
+        _description = State(initialValue: series.description)
         _payment = State(initialValue: String(format: "%.0f", series.payment))
         _location = State(initialValue: series.location)
         _estimatedDuration = State(initialValue: series.estimatedDuration)

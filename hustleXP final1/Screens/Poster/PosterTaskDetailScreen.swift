@@ -158,6 +158,29 @@ struct PosterTaskDetailScreen: View {
                             .cornerRadius(12)
                         }
 
+                        // File Dispute (completed or disputed tasks)
+                        if task.state == .completed || task.state == .disputed {
+                            Button {
+                                router.navigateToPoster(.dispute(taskId: task.id))
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 14))
+                                    Text("File a Dispute")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .foregroundStyle(Color.errorRed)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.errorRed.opacity(0.1))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.errorRed.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                        }
+
                         Spacer(minLength: 120)
                     }
                     .padding(24)
@@ -599,7 +622,7 @@ private struct TaskActionBar: View {
                             .background(Color.errorRed.opacity(0.15))
                             .cornerRadius(12)
                     }
-                } else if task.state == .inProgress {
+                } else if task.state == .claimed || task.state == .inProgress {
                     HXButton("Message Hustler", variant: .primary) {
                         router.navigateToPoster(.conversation(taskId: task.id))
                     }

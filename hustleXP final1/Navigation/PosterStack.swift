@@ -56,6 +56,9 @@ struct PosterStack: View {
                         MessagesInboxScreen()
                     case .notificationCenter:
                         NotificationCenterScreen()
+                    // v2.6.0 Dispute
+                    case .dispute(let taskId):
+                        DisputeScreen(taskId: taskId)
                     }
                 }
         }

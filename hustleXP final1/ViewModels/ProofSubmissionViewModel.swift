@@ -42,6 +42,7 @@ final class ProofSubmissionViewModel {
     var capturedImage: UIImage?
     var isSubmitting: Bool = false
     var showCamera: Bool = false
+    var cameraUnavailable: Bool = false
     var showPhotoPicker: Bool = false
     var selectedPhotoItem: PhotosPickerItem?
     var uploadedPhotoUrls: [String] = []
@@ -244,8 +245,8 @@ final class ProofSubmissionViewModel {
                     longitude: coords.longitude
                 )
 
-                // Submit proof via API
-                _ = try await proofService.submitProof(
+                // Submit proof via API — this transitions task to PROOF_SUBMITTED on backend
+                let proofResult = try await proofService.submitProof(
                     taskId: taskId,
                     photoUrls: photoUrls.isEmpty ? [localProofPhotoURL] : photoUrls,
                     notes: notes.isEmpty ? nil : notes,
@@ -254,7 +255,7 @@ final class ProofSubmissionViewModel {
                     biometricHash: biometricHash
                 )
 
-                HXLogger.info("ProofSubmission: Proof submitted via API", category: "Task")
+                HXLogger.info("ProofSubmission: Proof submitted via API - proofId: \(proofResult.id)", category: "Task")
 
                 // Generate biometric hash
 
@@ -365,9 +366,20 @@ final class ProofSubmissionViewModel {
 
     func completeAndGoHome() {
         guard let dataService, let router else { return }
+
+        // Update local state immediately so UI reflects the change
         if let task = task {
-            dataService.updateTaskState(task.id, to: .proofSubmitted)
+            var updated = task
+            updated.state = .proofSubmitted
+            dataService.activeTask = updated
         }
+
+        // Navigate home
         router.hustlerPath = NavigationPath()
+
+        // Refresh from backend so all screens get fresh data
+        Task {
+            await dataService.refreshAll()
+        }
     }
 }

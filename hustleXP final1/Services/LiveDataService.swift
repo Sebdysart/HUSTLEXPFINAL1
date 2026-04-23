@@ -235,10 +235,9 @@ final class LiveDataService {
                         activeTask = nil
                     }
                 default:
-                    // Handle other state transitions
-                    if var task = activeTask, task.id == taskId {
-                        task.state = state
-                        activeTask = task
+                    // Handle other state transitions (proofSubmitted, etc.)
+                    if activeTask?.id == taskId {
+                        activeTask?.state = state
                     }
                 }
                 HXLogger.info("LiveData: Task state updated to \(state.rawValue)", category: "General")

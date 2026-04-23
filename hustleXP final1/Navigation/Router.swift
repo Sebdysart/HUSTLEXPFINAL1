@@ -73,6 +73,8 @@ enum HustlerRoute: Hashable {
     case messagesInbox
     case notificationCenter
     case conversation(taskId: String)
+    // v2.6.0 Dispute
+    case dispute(taskId: String)
 }
 
 enum PosterRoute: Hashable {
@@ -96,6 +98,8 @@ enum PosterRoute: Hashable {
     // v2.5.0 Messaging & Notifications
     case messagesInbox
     case notificationCenter
+    // v2.6.0 Dispute
+    case dispute(taskId: String)
 }
 
 enum SharedRoute: Hashable {
@@ -118,6 +122,7 @@ enum SettingsRoute: Hashable {
     case referrals
     case subscription
     case betaDashboard
+    case disputes
 }
 
 // MARK: - Router

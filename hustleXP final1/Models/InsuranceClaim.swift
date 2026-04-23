@@ -15,19 +15,57 @@ struct InsurancePoolStatus: Codable {
     let totalPaidClaimsCents: Int
     let activeClaimsCount: Int
     let userContributionsCents: Int
-    
+
+    // Backend sends different field names — map them
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        poolBalanceCents = try c.decodeIfPresent(Int.self, forKey: .poolBalanceCents)
+            ?? c.decodeIfPresent(Int.self, forKey: .availableBalanceCents) ?? 0
+        totalContributionsCents = try c.decodeIfPresent(Int.self, forKey: .totalContributionsCents)
+            ?? c.decodeIfPresent(Int.self, forKey: .totalDepositsCents) ?? 0
+        totalPaidClaimsCents = try c.decodeIfPresent(Int.self, forKey: .totalPaidClaimsCents)
+            ?? c.decodeIfPresent(Int.self, forKey: .totalClaimsCents) ?? 0
+        activeClaimsCount = try c.decodeIfPresent(Int.self, forKey: .activeClaimsCount) ?? 0
+        userContributionsCents = try c.decodeIfPresent(Int.self, forKey: .userContributionsCents) ?? 0
+    }
+
+    // Memberwise init for local construction
+    init(poolBalanceCents: Int, totalContributionsCents: Int, totalPaidClaimsCents: Int, activeClaimsCount: Int, userContributionsCents: Int) {
+        self.poolBalanceCents = poolBalanceCents
+        self.totalContributionsCents = totalContributionsCents
+        self.totalPaidClaimsCents = totalPaidClaimsCents
+        self.activeClaimsCount = activeClaimsCount
+        self.userContributionsCents = userContributionsCents
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case poolBalanceCents, totalContributionsCents, totalPaidClaimsCents
+        case activeClaimsCount, userContributionsCents
+        // Backend field names (decode-only)
+        case availableBalanceCents, totalDepositsCents, totalClaimsCents
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(poolBalanceCents, forKey: .poolBalanceCents)
+        try c.encode(totalContributionsCents, forKey: .totalContributionsCents)
+        try c.encode(totalPaidClaimsCents, forKey: .totalPaidClaimsCents)
+        try c.encode(activeClaimsCount, forKey: .activeClaimsCount)
+        try c.encode(userContributionsCents, forKey: .userContributionsCents)
+    }
+
     /// Formatted pool balance as dollars
     var formattedPoolBalance: String {
         let dollars = Double(poolBalanceCents) / 100.0
         return String(format: "$%.2f", dollars)
     }
-    
+
     /// Formatted total contributions as dollars
     var formattedTotalContributions: String {
         let dollars = Double(totalContributionsCents) / 100.0
         return String(format: "$%.2f", dollars)
     }
-    
+
     /// Formatted user contributions as dollars
     var formattedUserContributions: String {
         let dollars = Double(userContributionsCents) / 100.0

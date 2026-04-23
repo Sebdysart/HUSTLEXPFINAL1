@@ -55,7 +55,12 @@ final class BatchQuestService: ObservableObject {
             let maxDistanceMeters: Int?
         }
 
-        let suggestions: [BatchSuggestion] = try await trpc.call(
+        struct WrappedResponse: Codable {
+            let success: Bool?
+            let data: [BatchSuggestion]?
+        }
+
+        let wrapped: WrappedResponse = try await trpc.call(
             router: "batchQuest",
             procedure: "getSuggestions",
             type: .query,
@@ -65,6 +70,7 @@ final class BatchQuestService: ObservableObject {
                 maxDistanceMeters: maxDistanceMeters
             )
         )
+        let suggestions = wrapped.data ?? []
 
         HXLogger.info("BatchQuestService: Found \(suggestions.count) batch suggestions", category: "Task")
         return suggestions

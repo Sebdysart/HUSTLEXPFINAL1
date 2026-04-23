@@ -463,7 +463,11 @@ struct HustlerHomeScreen: View {
             
             if let activeTask = dataService.activeTask {
                 ActiveTaskCard(task: activeTask) {
-                    router.navigateToHustler(.taskInProgress(taskId: activeTask.id))
+                    if activeTask.state == .proofSubmitted {
+                        router.navigateToHustler(.taskDetail(taskId: activeTask.id))
+                    } else {
+                        router.navigateToHustler(.taskInProgress(taskId: activeTask.id))
+                    }
                 }
                 .padding(.horizontal, 20)
             } else {
@@ -667,6 +671,22 @@ struct ActiveTaskCard: View {
     
     @State private var pulseOpacity: Double = 0.3
     
+    private var statusLabel: String {
+        switch task.state {
+        case .claimed: return "ACCEPTED"
+        case .inProgress: return "IN PROGRESS"
+        case .proofSubmitted: return "AWAITING REVIEW"
+        default: return "ACTIVE"
+        }
+    }
+
+    private var statusColor: Color {
+        switch task.state {
+        case .proofSubmitted: return .infoBlue
+        default: return .warningOrange
+        }
+    }
+
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 16) {
@@ -674,19 +694,19 @@ struct ActiveTaskCard: View {
                 HStack {
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(Color.warningOrange)
+                            .fill(statusColor)
                             .frame(width: 10, height: 10)
-                            .shadow(color: Color.warningOrange, radius: 4)
-                            .opacity(pulseOpacity)
-                        
-                        Text("IN PROGRESS")
+                            .shadow(color: statusColor, radius: 4)
+                            .opacity(task.state == .proofSubmitted ? 1.0 : pulseOpacity)
+
+                        Text(statusLabel)
                             .font(.system(size: 10, weight: .heavy))
                             .tracking(1.5)
-                            .foregroundStyle(Color.warningOrange)
+                            .foregroundStyle(statusColor)
                     }
-                    
+
                     Spacer()
-                    
+
                     Text(task.estimatedDuration)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.textSecondary)
@@ -711,12 +731,12 @@ struct ActiveTaskCard: View {
                     Spacer()
                     
                     HStack(spacing: 4) {
-                        Text("Continue")
+                        Text(task.state == .proofSubmitted ? "View Details" : "Continue")
                             .font(.subheadline.weight(.semibold))
                         Image(systemName: "arrow.right")
                             .font(.caption.weight(.bold))
                     }
-                    .foregroundStyle(Color.brandPurple)
+                    .foregroundStyle(task.state == .proofSubmitted ? Color.infoBlue : Color.brandPurple)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(Color.brandPurple.opacity(0.15))

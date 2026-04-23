@@ -115,15 +115,21 @@ struct HustlerTaskDetailScreen: View {
             }
             // v2.5.0: Error alert for accept failures
             .alert("Couldn't Accept Task", isPresented: $showAcceptError) {
-                Button("Try Again") {
-                    acceptTask(task)
+                if acceptError?.contains("background check") == true {
+                    Button("Start Verification") {
+                        appState.selectedTab = 3
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } else if acceptError?.contains("trust tier") == true {
+                    Button("OK", role: .cancel) {}
+                } else {
+                    Button("Try Again") {
+                        acceptTask(task)
+                    }
+                    Button("Cancel", role: .cancel) {}
                 }
-                Button("Continue Offline", role: .destructive) {
-                    acceptTaskOffline(task)
-                }
-                Button("Cancel", role: .cancel) {}
             } message: {
-                Text(acceptError ?? "An unexpected error occurred. You can try again or continue in offline mode.")
+                Text(acceptError ?? "An unexpected error occurred.")
             }
             // v2.6.0: Worker → Poster rating sheet
             .sheet(isPresented: $showRatingSheet) {
@@ -265,76 +271,38 @@ struct HustlerTaskDetailScreen: View {
                 .lineLimit(3)
                 .minimumScaleFactor(0.7)
             
-            // Price and duration row
-            HStack(spacing: 20) {
+            // Price, duration, and tier row
+            HStack(spacing: 0) {
                 // Payment
-                HStack(spacing: 6) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.moneyGreen.opacity(0.15))
-                            .frame(width: 36, height: 36)
-                        Image(systemName: "dollarsign")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Color.moneyGreen)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("$\(Int(task.payment))")
-                            .font(.system(size: 20, weight: .bold))
-                            .minimumScaleFactor(0.7)
-                            .foregroundStyle(Color.moneyGreen)
-                        Text("Payment")
-                            .font(.caption)
-                            .foregroundStyle(Color.textMuted)
-                    }
-                }
-                
-                Spacer()
-                
+                statPill(
+                    icon: "dollarsign",
+                    iconColor: .moneyGreen,
+                    value: "$\(Int(task.payment))",
+                    valueColor: .moneyGreen,
+                    label: "Payment"
+                )
+
+                Spacer(minLength: 8)
+
                 // Duration
-                HStack(spacing: 6) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.brandPurple.opacity(0.15))
-                            .frame(width: 36, height: 36)
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color.brandPurple)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(task.estimatedDuration)
-                            .font(.system(size: 16, weight: .semibold))
-                            .minimumScaleFactor(0.7)
-                            .foregroundStyle(Color.textPrimary)
-                        Text("Duration")
-                            .font(.caption)
-                            .foregroundStyle(Color.textMuted)
-                    }
-                }
-                
-                Spacer()
-                
+                statPill(
+                    icon: "clock.fill",
+                    iconColor: .brandPurple,
+                    value: task.estimatedDuration,
+                    valueColor: .textPrimary,
+                    label: "Duration"
+                )
+
+                Spacer(minLength: 8)
+
                 // Required tier
-                HStack(spacing: 6) {
-                    ZStack {
-                        Circle()
-                            .fill(tierColor(task.requiredTier).opacity(0.15))
-                            .frame(width: 36, height: 36)
-                        Image(systemName: "shield.checkered")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(tierColor(task.requiredTier))
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(task.requiredTier.name)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(tierColor(task.requiredTier))
-                        Text("Min Tier")
-                            .font(.caption)
-                            .foregroundStyle(Color.textMuted)
-                    }
-                }
+                statPill(
+                    icon: "shield.checkered",
+                    iconColor: tierColor(task.requiredTier),
+                    value: task.requiredTier.name,
+                    valueColor: tierColor(task.requiredTier),
+                    label: "Min Tier"
+                )
             }
         }
         .padding(20)
@@ -351,6 +319,29 @@ struct HustlerTaskDetailScreen: View {
         .animation(.easeOut(duration: 0.4), value: showContent)
     }
     
+    /// Compact stat pill used in the hero card — icon + value + label, never wraps.
+    private func statPill(icon: String, iconColor: Color, value: String, valueColor: Color, label: String) -> some View {
+        VStack(spacing: 4) {
+            ZStack {
+                Circle()
+                    .fill(iconColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(iconColor)
+            }
+            Text(value)
+                .font(.system(size: 14, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .foregroundStyle(valueColor)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(Color.textMuted)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     // MARK: - Quick Stats Row
     
     private func quickStatsRow(_ task: HXTask) -> some View {
@@ -716,36 +707,68 @@ struct HustlerTaskDetailScreen: View {
                 .accessibilityLabel("Save task")
                 
                 // Main action button
-                if task.state == .completed {
-                    // v2.6.0: Rate poster for completed tasks
-                    Button(action: { showRatingSheet = true }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 18, weight: .semibold))
-                            Text("Rate \(task.posterName)")
-                                .font(.headline.weight(.semibold))
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.warningOrange, Color.warningOrange.opacity(0.8)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
+                if task.state == .proofSubmitted {
+                    // Awaiting poster review — no action needed
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock.badge.checkmark")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text("Awaiting Poster Review")
+                            .font(.headline.weight(.semibold))
+                    }
+                    .foregroundStyle(Color.infoBlue)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.infoBlue.opacity(0.15))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.infoBlue.opacity(0.3), lineWidth: 1)
+                    )
+                } else if task.state == .completed {
+                    VStack(spacing: 10) {
+                        // v2.6.0: Rate poster for completed tasks
+                        Button(action: { showRatingSheet = true }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text("Rate \(task.posterName)")
+                                    .font(.headline.weight(.semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.warningOrange, Color.warningOrange.opacity(0.8)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
                                     )
-                                )
-                        )
-                        .shadow(color: Color.warningOrange.opacity(0.3), radius: 12, y: 4)
+                            )
+                            .shadow(color: Color.warningOrange.opacity(0.3), radius: 12, y: 4)
+                        }
+
+                        // Report Issue / File Dispute
+                        Button(action: {
+                            router.navigateToHustler(.dispute(taskId: task.id))
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 14))
+                                Text("Report Issue")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .foregroundStyle(Color.errorRed)
+                        }
                     }
                 } else {
                     Button(action: {
                         if task.state == .posted {
-                            if !hasApplied {
-                                showApplySheet = true
-                            }
+                            acceptTask(task)
                         } else {
                             router.navigateToHustler(.taskInProgress(taskId: task.id))
                         }
@@ -755,11 +778,11 @@ struct HustlerTaskDetailScreen: View {
                                 ProgressView()
                                     .tint(.white)
                             } else {
-                                Image(systemName: task.state == .posted ? (hasApplied ? "checkmark.seal.fill" : "paperplane.fill") : "arrow.right.circle.fill")
+                                Image(systemName: task.state == .posted ? "bolt.fill" : "arrow.right.circle.fill")
                                     .font(.system(size: 18, weight: .semibold))
                             }
 
-                            Text(task.state == .posted ? (hasApplied ? "Applied ✓" : "Apply Now") : "View Progress")
+                            Text(task.state == .posted ? (isAccepting ? "Accepting..." : "Accept Task") : "View Progress")
                                 .font(.headline.weight(.semibold))
                         }
                         .foregroundStyle(.white)
@@ -783,7 +806,7 @@ struct HustlerTaskDetailScreen: View {
                         )
                         .shadow(color: isEligible ? Color.brandPurple.opacity(0.3) : .clear, radius: 12, y: 4)
                     }
-                    .disabled(!isEligible || isAccepting || hasApplied || isApplying)
+                    .disabled(!isEligible || isAccepting)
                 }
             }
             .padding(.horizontal, 16)
@@ -909,9 +932,9 @@ struct HustlerTaskDetailScreen: View {
                 
                 router.navigateToHustler(.taskInProgress(taskId: task.id))
             } catch {
-                // v2.5.0: Show error alert instead of silent fallback
                 HXLogger.error("TaskDetail: API accept failed - \(error.localizedDescription)", category: "Task")
-                acceptError = "Could not accept this task. Please check your connection and try again."
+                HXLogger.error("TaskDetail: Accept full error - \(String(describing: error))", category: "Task")
+                acceptError = "Could not accept this task: \(error.localizedDescription)"
                 showAcceptError = true
             }
             isAccepting = false
@@ -943,7 +966,8 @@ struct HustlerTaskDetailScreen: View {
                 impact.notificationOccurred(.success)
             } catch {
                 HXLogger.error("TaskDetail: Apply failed - \(error.localizedDescription)", category: "Task")
-                acceptError = "Could not submit application. Please try again."
+                HXLogger.error("TaskDetail: Apply full error - \(String(describing: error))", category: "Task")
+                acceptError = "Could not submit application: \(error.localizedDescription)"
                 showAcceptError = true
             }
             isApplying = false

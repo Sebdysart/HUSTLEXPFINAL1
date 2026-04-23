@@ -370,9 +370,22 @@ final class TaskService: ObservableObject {
 
     /// Hustler applies for a task with optional message
     func applyForTask(taskId: String, message: String? = nil) async throws -> ApplicationResponse {
-        throw unsupportedTaskWorkflow(
-            "Task application is not available in the live backend contract for task \(taskId)."
+        isLoading = true
+        defer { isLoading = false }
+
+        struct ApplyInput: Codable {
+            let taskId: String
+            let message: String?
+        }
+
+        let response: ApplicationResponse = try await trpc.call(
+            router: "task",
+            procedure: "applyForTask",
+            input: ApplyInput(taskId: taskId, message: message)
         )
+
+        HXLogger.info("TaskService: Applied for task \(taskId)", category: "Task")
+        return response
     }
 
     /// Hustler withdraws their application

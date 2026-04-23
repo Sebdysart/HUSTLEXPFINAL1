@@ -79,6 +79,9 @@ struct SettingsMainScreen: View {
                 SettingsListItem(icon: "questionmark.circle.fill", iconColor: .infoBlue, title: "Help & Support") {
                     router.navigateToSettings(.help)
                 }
+                SettingsListItem(icon: "exclamationmark.triangle.fill", iconColor: .warningOrange, title: "My Disputes") {
+                    router.navigateToSettings(.disputes)
+                }
             } header: {
                 Text("Support")
                     .foregroundStyle(Color.textSecondary)

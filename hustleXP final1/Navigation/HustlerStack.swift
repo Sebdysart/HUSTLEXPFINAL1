@@ -72,6 +72,8 @@ struct HustlerStack: View {
                         NotificationCenterScreen()
                     case .conversation(let taskId):
                         ConversationScreen(conversationId: taskId)
+                    case .dispute(let taskId):
+                        DisputeScreen(taskId: taskId)
                     }
                 }
         }
