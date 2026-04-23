@@ -9,29 +9,45 @@ import SwiftUI
 
 struct EarningsScreen: View {
     @Environment(LiveDataService.self) private var dataService
-    
+
+    // Live earnings animation state
+    @State private var earningsBurst: EarningsEvent?
+    @State private var showBurst = false
+    @State private var lastHandledEvent: EarningsEvent?
+
     var body: some View {
         GeometryReader { geometry in
             let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
             let isCompact = safeHeight < 600
-            
+
             ZStack {
                 Color.brandBlack
                     .ignoresSafeArea()
-                
+
                 ScrollView {
                     VStack(spacing: isCompact ? 18 : 24) {
                         // Total earnings hero
                         earningsHero(isCompact: isCompact)
-                        
+
                         // Period breakdown
                         periodBreakdown(isCompact: isCompact)
-                        
+
                         // Recent earnings
                         recentEarnings(isCompact: isCompact)
                     }
                     .padding(.vertical, isCompact ? 12 : 16)
                     .padding(.bottom, max(16, geometry.safeAreaInsets.bottom))
+                }
+
+                // Inline "+$X earned" toast
+                if showBurst, let burst = earningsBurst {
+                    VStack {
+                        earningsBurstBanner(burst)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        Spacer()
+                    }
+                    .padding(.top, 8)
+                    .zIndex(10)
                 }
             }
         }
@@ -40,6 +56,60 @@ struct EarningsScreen: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .task {
+            // Refresh user to get latest earnings on appear
+            await dataService.refreshAll()
+        }
+        .onChange(of: dataService.latestEarningsEvent) { _, newEvent in
+            guard let event = newEvent, event != lastHandledEvent else { return }
+            lastHandledEvent = event
+            earningsBurst = event
+
+            withAnimation(.spring(response: 0.4)) {
+                showBurst = true
+            }
+            // Auto-dismiss after 4 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    showBurst = false
+                }
+            }
+        }
+    }
+
+    // MARK: - Earnings Burst Banner
+
+    private func earningsBurstBanner(_ event: EarningsEvent) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.title2)
+                .foregroundStyle(.white)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("+\(event.formattedPayout) earned")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+                Text(event.taskTitle)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .lineLimit(1)
+            }
+
+            Spacer()
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.successGreen, Color.successGreen.opacity(0.8)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .shadow(color: .successGreen.opacity(0.4), radius: 12, y: 4)
+        )
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Earnings Hero

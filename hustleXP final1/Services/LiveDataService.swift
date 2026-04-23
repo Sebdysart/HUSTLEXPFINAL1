@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import Combine
 
 @MainActor
 @Observable
@@ -75,6 +76,11 @@ final class LiveDataService {
     )
 
     var insuranceClaims: [InsuranceClaim] = []
+
+    // MARK: - Live Earnings Sync (v2.7.0)
+    /// Latest earnings event received via SSE — observed by EarningsScreen for animation.
+    var latestEarningsEvent: EarningsEvent?
+    private var sseCancellable: AnyCancellable?
 
     // MARK: - Loading State
     var isLoading = false
@@ -195,6 +201,43 @@ final class LiveDataService {
             HXLogger.error("LiveData: Failed to fetch insurance status - \(error.localizedDescription)", category: "General")
             // Keep defaults on error - non-blocking
         }
+    }
+
+    // MARK: - Live Earnings SSE Subscription
+
+    /// Start listening for `earnings.updated` SSE events.
+    /// Call once after login; tears down automatically on disconnect.
+    func subscribeToEarningsUpdates() {
+        // Avoid double-subscribing
+        guard sseCancellable == nil else { return }
+        sseCancellable = RealtimeSSEClient.shared.messageReceived
+            .filter { $0.event == "earnings.updated" }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] message in
+                guard let self else { return }
+                do {
+                    let event = try JSONDecoder().decode(EarningsEvent.self, from: message.data)
+                    HXLogger.info("LiveData: earnings.updated — +$\(String(format: "%.2f", Double(event.netPayoutCents) / 100.0)) for \(event.taskTitle)", category: "General")
+
+                    // Update totalEarnings from server-authoritative value
+                    let newTotal = Double(event.newTotalEarningsCents) / 100.0
+                    if var user = self.authService.currentUser, user.totalEarnings != newTotal {
+                        user.totalEarnings = newTotal
+                        self.authService.currentUser = user
+                    }
+
+                    // Surface event for UI animation
+                    self.latestEarningsEvent = event
+                } catch {
+                    HXLogger.error("LiveData: Failed to decode earnings event - \(error.localizedDescription)", category: "General")
+                }
+            }
+    }
+
+    /// Stop listening (called on logout).
+    func unsubscribeFromEarningsUpdates() {
+        sseCancellable?.cancel()
+        sseCancellable = nil
     }
 
     // MARK: - Actions (backed by real API)
@@ -497,4 +540,20 @@ final class LiveDataService {
         isVerified: false,
         createdAt: Date()
     )
+}
+
+// MARK: - Earnings Event (SSE payload)
+
+struct EarningsEvent: Codable, Equatable {
+    let userId: String
+    let taskId: String
+    let taskTitle: String
+    let amountCents: Int
+    let netPayoutCents: Int
+    let newTotalEarningsCents: Int
+
+    /// Net payout formatted as dollars
+    var formattedPayout: String {
+        String(format: "$%.2f", Double(netPayoutCents) / 100.0)
+    }
 }

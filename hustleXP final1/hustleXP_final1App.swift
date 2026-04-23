@@ -142,6 +142,13 @@ struct hustleXP_final1App: App {
                         }
                     }
 
+                    // Connect SSE + earnings sync for authenticated users
+                    if authService.isAuthenticated,
+                       let token = KeychainManager.shared.get(forKey: KeychainManager.Key.authToken) {
+                        RealtimeSSEClient.shared.connect(authToken: token)
+                        dataService.subscribeToEarningsUpdates()
+                    }
+
                     await MainActor.run {
                         withAnimation(.easeOut(duration: 0.3)) {
                             isInitialized = true
@@ -170,13 +177,23 @@ struct hustleXP_final1App: App {
                 GIDSignIn.sharedInstance.handle(url)
             }
             .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
-                // Consume any pending deep link that arrived before authentication
-                if isAuthenticated,
-                   let destination = deepLinkManager.consumePendingDeepLink() {
-                    // Small delay to let the main navigation mount first
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        router.navigate(to: destination, appState: appState)
+                if isAuthenticated {
+                    // Connect SSE + earnings sync on login
+                    if let token = KeychainManager.shared.get(forKey: KeychainManager.Key.authToken) {
+                        RealtimeSSEClient.shared.connect(authToken: token)
+                        dataService.subscribeToEarningsUpdates()
                     }
+
+                    // Consume any pending deep link that arrived before authentication
+                    if let destination = deepLinkManager.consumePendingDeepLink() {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            router.navigate(to: destination, appState: appState)
+                        }
+                    }
+                } else {
+                    // Disconnect SSE + earnings sync on logout
+                    RealtimeSSEClient.shared.disconnect()
+                    dataService.unsubscribeFromEarningsUpdates()
                 }
             }
         }
