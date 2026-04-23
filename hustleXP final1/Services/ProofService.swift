@@ -36,6 +36,52 @@ private struct SubmitProofWrapper: Codable {
     let proof: ProofSubmission
 }
 
+/// Photo attached to a proof — mirrors `proof_photos` DB table.
+struct ProofPhoto: Codable, Identifiable {
+    let id: String
+    let proofId: String
+    let storageKey: String   // The actual URL or R2 key
+    let contentType: String
+    let sequenceNumber: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case proofId = "proof_id"
+        case storageKey = "storage_key"
+        case contentType = "content_type"
+        case sequenceNumber = "sequence_number"
+    }
+}
+
+/// Full proof detail returned by `task.getProof` — includes photos and videos.
+struct ProofDetail: Codable {
+    let id: String
+    let taskId: String
+    let submitterId: String
+    let state: String
+    let description: String?
+    let submittedAt: Date?
+    let reviewedAt: Date?
+    let reviewedBy: String?
+    let photos: [ProofPhoto]
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case taskId = "task_id"
+        case submitterId = "submitter_id"
+        case state, description
+        case submittedAt = "submitted_at"
+        case reviewedAt = "reviewed_at"
+        case reviewedBy = "reviewed_by"
+        case photos
+    }
+
+    /// Convenience: extract photo URLs from attached photos
+    var photoUrls: [String] {
+        photos.map { $0.storageKey }
+    }
+}
+
 /// Pre-signed URL response for R2 upload
 struct PresignedUploadURL: Codable {
     let uploadUrl: String
@@ -186,13 +232,13 @@ final class ProofService: ObservableObject {
         return response.proof
     }
 
-    /// Gets proof submission for a task
-    func getProof(taskId: String) async throws -> ProofSubmission {
+    /// Gets proof detail (with photos) for a task
+    func getProof(taskId: String) async throws -> ProofDetail {
         struct GetInput: Codable {
             let taskId: String
         }
 
-        let proof: ProofSubmission = try await trpc.call(
+        let proof: ProofDetail = try await trpc.call(
             router: "task",
             procedure: "getProof",
             type: .query,

@@ -12,8 +12,9 @@ struct ProofReviewScreen: View {
     @Environment(AppState.self) private var appState
     
     let taskId: String
-    
+
     @State private var task: HXTask?
+    @State private var proofDetail: ProofDetail?
     @State private var rating: Int = 0
     @State private var tipAmount: Double = 0
     @State private var showApproveConfirmation = false
@@ -36,10 +37,13 @@ struct ProofReviewScreen: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         // Photo proof section
-                        ProofPhotoSection()
-                        
+                        ProofPhotoSection(photoUrls: proofDetail?.photoUrls ?? [])
+
                         // Hustler notes
-                        HustlerNotesSection()
+                        HustlerNotesSection(
+                            notes: proofDetail?.description,
+                            submittedAt: proofDetail?.submittedAt
+                        )
                         
                         HXDivider()
                         
@@ -90,16 +94,32 @@ struct ProofReviewScreen: View {
             RequestChangesSheet(taskId: taskId)
         }
         .task {
-            do {
-                task = try await TaskService.shared.getTask(id: taskId)
-                HXLogger.info("ProofReview: Loaded task from API", category: "Task")
-            } catch {
-                HXLogger.error("ProofReview: API failed - \(error.localizedDescription)", category: "Task")
-                task = LiveDataService.shared.getTask(by: taskId)
-            }
+            // Fetch task and proof in parallel
+            async let taskFetch: () = loadTask()
+            async let proofFetch: () = loadProof()
+            _ = await (taskFetch, proofFetch)
         }
     }
     
+    private func loadTask() async {
+        do {
+            task = try await TaskService.shared.getTask(id: taskId)
+            HXLogger.info("ProofReview: Loaded task from API", category: "Task")
+        } catch {
+            HXLogger.error("ProofReview: Task API failed - \(error.localizedDescription)", category: "Task")
+            task = LiveDataService.shared.getTask(by: taskId)
+        }
+    }
+
+    private func loadProof() async {
+        do {
+            proofDetail = try await ProofService.shared.getProof(taskId: taskId)
+            HXLogger.info("ProofReview: Loaded proof with \(proofDetail?.photoUrls.count ?? 0) photos", category: "Task")
+        } catch {
+            HXLogger.error("ProofReview: Proof API failed - \(error.localizedDescription)", category: "Task")
+        }
+    }
+
     private func approveAndPay() {
         isProcessing = true
 
@@ -154,62 +174,120 @@ struct ProofReviewScreen: View {
 
 // MARK: - Proof Photo Section
 private struct ProofPhotoSection: View {
+    let photoUrls: [String]
     @State private var selectedPhotoIndex = 0
-    
+    @State private var showFullScreen = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 HXText("Submitted Proof", style: .headline)
                 Spacer()
-                HXText("2 photos", style: .caption, color: .textSecondary)
-            }
-            
-            // Main photo
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.surfaceElevated)
-                    .aspectRatio(4/3, contentMode: .fit)
-                
-                VStack(spacing: 12) {
-                    Image(systemName: "photo.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(Color.textSecondary)
-                    
-                    HXText("Task completion photo", style: .caption, color: .textTertiary)
+                if !photoUrls.isEmpty {
+                    HXText("\(photoUrls.count) photo\(photoUrls.count == 1 ? "" : "s")", style: .caption, color: .textSecondary)
                 }
             }
-            
-            // Thumbnail strip
-            HStack(spacing: 12) {
-                ForEach(0..<2, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.surfaceSecondary)
-                        .frame(width: 60, height: 60)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .foregroundStyle(Color.textTertiary)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(
-                                    selectedPhotoIndex == index ? Color.brandPurple : Color.clear,
-                                    lineWidth: 2
-                                )
-                        )
-                        .onTapGesture {
-                            selectedPhotoIndex = index
-                        }
-                }
-                
-                Spacer()
-                
-                Button(action: {}) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        HXText("Full Screen", style: .caption)
+
+            if photoUrls.isEmpty {
+                // No photos submitted
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.surfaceElevated)
+                        .aspectRatio(4/3, contentMode: .fit)
+
+                    VStack(spacing: 12) {
+                        Image(systemName: "photo.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(Color.textSecondary)
+                        HXText("No photos submitted", style: .caption, color: .textTertiary)
                     }
-                    .foregroundStyle(Color.brandPurple)
                 }
+            } else {
+                // Main photo
+                let currentUrl = photoUrls[min(selectedPhotoIndex, photoUrls.count - 1)]
+                AsyncImage(url: URL(string: currentUrl)) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(maxHeight: 280)
+                            .clipped()
+                            .cornerRadius(16)
+                    case .failure:
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.surfaceElevated)
+                                .aspectRatio(4/3, contentMode: .fit)
+                            VStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.title2)
+                                    .foregroundStyle(Color.warningOrange)
+                                HXText("Failed to load photo", style: .caption, color: .textTertiary)
+                            }
+                        }
+                    case .empty:
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.surfaceElevated)
+                                .aspectRatio(4/3, contentMode: .fit)
+                            ProgressView()
+                                .tint(.brandPurple)
+                        }
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+                .onTapGesture {
+                    showFullScreen = true
+                }
+
+                // Thumbnail strip (only if multiple photos)
+                if photoUrls.count > 1 {
+                    HStack(spacing: 12) {
+                        ForEach(Array(photoUrls.enumerated()), id: \.offset) { index, url in
+                            AsyncImage(url: URL(string: url)) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                case .failure, .empty:
+                                    Color.surfaceSecondary
+                                        .overlay(
+                                            Image(systemName: "photo")
+                                                .foregroundStyle(Color.textTertiary)
+                                        )
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
+                            .frame(width: 60, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(
+                                        selectedPhotoIndex == index ? Color.brandPurple : Color.clear,
+                                        lineWidth: 2
+                                    )
+                            )
+                            .onTapGesture {
+                                withAnimation { selectedPhotoIndex = index }
+                            }
+                        }
+
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showFullScreen) {
+            if !photoUrls.isEmpty {
+                ProofFullScreenViewer(
+                    photoUrls: photoUrls,
+                    initialIndex: selectedPhotoIndex,
+                    isPresented: $showFullScreen
+                )
             }
         }
     }
@@ -217,31 +295,44 @@ private struct ProofPhotoSection: View {
 
 // MARK: - Hustler Notes Section
 private struct HustlerNotesSection: View {
+    let notes: String?
+    let submittedAt: Date?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HXText("Hustler's Notes", style: .headline)
-            
+
             VStack(alignment: .leading, spacing: 12) {
-                HXText(
-                    "Task completed as requested. Picked up all items from the store and delivered to the specified location. Receipt is attached in the second photo.",
-                    style: .body,
-                    color: .textSecondary
-                )
-                
+                if let notes, !notes.isEmpty {
+                    HXText(notes, style: .body, color: .textSecondary)
+                } else {
+                    HXText("No notes provided.", style: .body, color: .textTertiary)
+                }
+
                 HXDivider()
-                
+
                 HStack(spacing: 8) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 12))
                         .foregroundStyle(Color.textTertiary)
-                    
-                    HXText("Submitted 15 minutes ago", style: .caption, color: .textTertiary)
+
+                    if let submittedAt {
+                        HXText(timeAgoText(submittedAt), style: .caption, color: .textTertiary)
+                    } else {
+                        HXText("Submission time unknown", style: .caption, color: .textTertiary)
+                    }
                 }
             }
             .padding(16)
             .background(Color.surfaceElevated)
             .cornerRadius(12)
         }
+    }
+
+    private func timeAgoText(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return "Submitted " + formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 
@@ -579,6 +670,72 @@ private struct RequestChangesSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Full Screen Photo Viewer
+private struct ProofFullScreenViewer: View {
+    let photoUrls: [String]
+    let initialIndex: Int
+    @Binding var isPresented: Bool
+    @State private var currentIndex: Int = 0
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            TabView(selection: $currentIndex) {
+                ForEach(Array(photoUrls.enumerated()), id: \.offset) { index, url in
+                    AsyncImage(url: URL(string: url)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        case .failure:
+                            VStack(spacing: 12) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.largeTitle)
+                                    .foregroundStyle(.white.opacity(0.6))
+                                Text("Failed to load")
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                        case .empty:
+                            ProgressView()
+                                .tint(.white)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                    .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: photoUrls.count > 1 ? .always : .never))
+
+            // Close button
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        isPresented = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title)
+                            .foregroundStyle(.white.opacity(0.8))
+                            .padding(16)
+                    }
+                }
+                Spacer()
+
+                if photoUrls.count > 1 {
+                    Text("\(currentIndex + 1) of \(photoUrls.count)")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(.bottom, 8)
+                }
+            }
+        }
+        .onAppear { currentIndex = initialIndex }
     }
 }
 
