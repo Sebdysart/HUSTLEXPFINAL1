@@ -19,6 +19,8 @@ struct AITaskCreationScreen: View {
     @State private var showTaskPreview: Bool = false
     @State private var isPosting: Bool = false
     @State private var showReviewSheet: Bool = false
+    @State private var postError: String?
+    @State private var showPostError: Bool = false
     
     // Animation states
     @State private var showInitialPrompt: Bool = true
@@ -66,6 +68,11 @@ struct AITaskCreationScreen: View {
         }
         .sheet(isPresented: $showReviewSheet) {
             ReviewTaskSheet(draft: taskDraft, onPost: { postTask() })
+        }
+        .alert("Couldn't Post Task", isPresented: $showPostError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(postError ?? "An unexpected error occurred. Please try again.")
         }
     }
     
@@ -530,13 +537,17 @@ struct AITaskCreationScreen: View {
                 HXLogger.info("AITaskCreation: Task posted via API - \(task.id)", category: "Task")
                 // Refresh poster's task list so it appears immediately
                 await LiveDataService.shared.refreshAll()
+                isPosting = false
+                dismiss()
+                return
             } catch {
                 print("🔴 [PostTask] API FAILED: \(error)")
-                print("🔴 [PostTask] Full error: \(String(describing: error))")
                 HXLogger.error("AITaskCreation: API failed - \(error.localizedDescription)", category: "Task")
+
+                postError = error.localizedDescription
+                showPostError = true
             }
             isPosting = false
-            dismiss()
         }
     }
 }
