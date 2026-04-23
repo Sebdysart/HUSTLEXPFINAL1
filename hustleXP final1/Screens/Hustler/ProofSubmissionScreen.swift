@@ -322,15 +322,15 @@ struct ProofSubmissionScreen: View {
             HXText("Take a photo showing your completed work", style: .caption, color: .textSecondary)
 
             if viewModel.hasPhoto, let image = viewModel.capturedImage {
-                ZStack {
+                GeometryReader { geo in
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .aspectRatio(4/3, contentMode: .fit)
+                        .frame(width: geo.size.width, height: geo.size.width * 3 / 4)
                         .clipped()
                         .cornerRadius(12)
                 }
+                .aspectRatio(4/3, contentMode: .fit)
                 .overlay(alignment: .topTrailing) {
                     Button(action: { viewModel.removePhoto() }) {
                         Image(systemName: "xmark.circle.fill")
