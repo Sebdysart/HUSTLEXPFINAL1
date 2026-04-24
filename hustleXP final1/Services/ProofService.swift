@@ -13,20 +13,18 @@ import Combine
 /// Proof submission record — mirrors the `proofs` DB table (columns snake_case → camelCase via decoder).
 /// `submitterId` is the worker who submitted the proof (DB: submitter_id).
 /// `reviewedBy` is the poster who reviewed it (DB: reviewed_by), populated after review.
+/// Proof record returned by backend — mirrors the `proofs` DB table.
+/// Photos are stored separately in `proof_photos`; use `ProofDetail` for full data with photos.
 struct ProofSubmission: Codable, Identifiable {
     let id: String
     let taskId: String
-    let submitterId: String        // DB: submitter_id — the worker who submitted proof
-    let photoUrls: [String]
-    let notes: String?
-    let gpsLatitude: Double?
-    let gpsLongitude: Double?
-    let biometricHash: String?
-    let submittedAt: Date
+    let submitterId: String
+    let state: String
+    let description: String?
+    let submittedAt: Date?
     let reviewedAt: Date?
-    let reviewedBy: String?        // DB: reviewed_by — populated after poster reviews
-    let approved: Bool?
-    let reviewerFeedback: String?
+    let reviewedBy: String?
+    let rejectionReason: String?
 }
 
 /// Wraps the nested { task, proof } response from task.submitProof.

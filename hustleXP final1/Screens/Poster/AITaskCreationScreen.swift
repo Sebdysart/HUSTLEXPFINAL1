@@ -7,7 +7,7 @@
 //
 
 import SwiftUI
-import CoreLocation
+import MapKit
 
 struct AITaskCreationScreen: View {
     @Environment(Router.self) private var router
@@ -523,12 +523,14 @@ struct AITaskCreationScreen: View {
                 var taskLat: Double?
                 var taskLng: Double?
                 if !taskDraft.locationDisplay.isEmpty {
-                    let geocoder = CLGeocoder()
-                    if let placemark = try? await geocoder.geocodeAddressString(taskDraft.locationDisplay).first,
-                       let coord = placemark.location?.coordinate {
-                        taskLat = coord.latitude
-                        taskLng = coord.longitude
-                        print("🟢 [PostTask] Geocoded: \(taskDraft.locationDisplay) → \(coord.latitude), \(coord.longitude)")
+                    let request = MKLocalSearch.Request()
+                    request.naturalLanguageQuery = taskDraft.locationDisplay
+                    let search = MKLocalSearch(request: request)
+                    if let response = try? await search.start(),
+                       let item = response.mapItems.first {
+                        taskLat = item.location.coordinate.latitude
+                        taskLng = item.location.coordinate.longitude
+                        print("🟢 [PostTask] Geocoded: \(taskDraft.locationDisplay) → \(taskLat!), \(taskLng!)")
                     }
                 }
 

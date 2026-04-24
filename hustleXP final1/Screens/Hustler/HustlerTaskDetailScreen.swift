@@ -934,8 +934,21 @@ struct HustlerTaskDetailScreen: View {
                 router.navigateToHustler(.taskInProgress(taskId: task.id))
             } catch {
                 HXLogger.error("TaskDetail: API accept failed - \(error.localizedDescription)", category: "Task")
-                HXLogger.error("TaskDetail: Accept full error - \(String(describing: error))", category: "Task")
-                acceptError = "Could not accept this task: \(error.localizedDescription)"
+
+                // Timeout or network error — the backend may have succeeded.
+                // Re-fetch the task to check its actual state before showing an error.
+                if let refreshed = try? await TaskService.shared.getTask(id: task.id),
+                   refreshed.state == .claimed || refreshed.state == .inProgress {
+                    HXLogger.info("TaskDetail: Accept timed out but task is accepted — proceeding", category: "Task")
+                    apiTask = refreshed
+                    dataService.availableTasks.removeAll { $0.id == task.id }
+                    dataService.activeTask = refreshed
+                    isAccepting = false
+                    router.navigateToHustler(.taskInProgress(taskId: task.id))
+                    return
+                }
+
+                acceptError = error.localizedDescription
                 showAcceptError = true
             }
             isAccepting = false

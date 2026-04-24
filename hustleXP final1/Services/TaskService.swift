@@ -286,7 +286,8 @@ final class TaskService: ObservableObject {
     // MARK: - Task Actions (Poster)
 
     /// Poster reviews and approves proof submission
-    func reviewProof(taskId: String, approved: Bool, feedback: String?) async throws -> HXTask {
+    @discardableResult
+    func reviewProof(taskId: String, approved: Bool, feedback: String?) async throws -> ProofSubmission {
         isLoading = true
         defer { isLoading = false }
 
@@ -296,15 +297,14 @@ final class TaskService: ObservableObject {
             let feedback: String?
         }
 
-        let task: HXTask = try await trpc.call(
+        let proof: ProofSubmission = try await trpc.call(
             router: "task",
             procedure: "reviewProof",
             input: ReviewInput(taskId: taskId, approved: approved, feedback: feedback)
         )
 
-        HXLogger.info("TaskService: Reviewed proof for task - \(task.title), approved: \(approved)", category: "Task")
-        AnalyticsService.shared.trackTaskEvent(approved ? .proofApproved : .proofRejected, taskId: task.id, taskTitle: task.title)
-        return task
+        HXLogger.info("TaskService: Reviewed proof for task \(taskId), approved: \(approved)", category: "Task")
+        return proof
     }
 
     /// Poster marks task as complete (after proof approved)
