@@ -84,7 +84,13 @@ final class LiveDataService {
 
     // MARK: - Loading State
     var isLoading = false
-    var lastError: String?
+    var lastError: String? {
+        didSet {
+            if let error = lastError {
+                ErrorToastManager.shared.show(error)
+            }
+        }
+    }
 
     // MARK: - Initialization
 

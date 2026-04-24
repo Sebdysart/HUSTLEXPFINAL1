@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 struct AITaskCreationScreen: View {
     @Environment(Router.self) private var router
@@ -517,6 +518,20 @@ struct AITaskCreationScreen: View {
                     fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                     return fmt.date(from: taskDraft.deadline) ?? ISO8601DateFormatter().date(from: taskDraft.deadline)
                 }()
+
+                // Geocode location string to GPS coordinates for geofence support
+                var taskLat: Double?
+                var taskLng: Double?
+                if !taskDraft.locationDisplay.isEmpty {
+                    let geocoder = CLGeocoder()
+                    if let placemark = try? await geocoder.geocodeAddressString(taskDraft.locationDisplay).first,
+                       let coord = placemark.location?.coordinate {
+                        taskLat = coord.latitude
+                        taskLng = coord.longitude
+                        print("🟢 [PostTask] Geocoded: \(taskDraft.locationDisplay) → \(coord.latitude), \(coord.longitude)")
+                    }
+                }
+
                 let task = try await TaskService.shared.createTask(
                     title: taskDraft.title,
                     description: taskDraft.description,
@@ -525,8 +540,8 @@ struct AITaskCreationScreen: View {
                     locationCity: taskDraft.locationCity,
                     locationState: taskDraft.locationState,
                     locationRadiusMiles: taskDraft.locationRadiusMiles,
-                    latitude: nil,
-                    longitude: nil,
+                    latitude: taskLat,
+                    longitude: taskLng,
                     estimatedDuration: taskDraft.duration.isEmpty ? "1 hr" : taskDraft.duration,
                     category: taskDraft.category,
                     templateSlug: taskDraft.templateSlug,

@@ -116,6 +116,7 @@ struct hustleXP_final1App: App {
             .environment(dataService)
             .environment(serviceAreaManager)
             .adaptiveLayout()  // Inject AdaptiveLayout for consistent responsive sizing
+            .errorToast()      // Global error toast overlay
             .onAppear {
                 // Bridge AuthService to AppState for coordinated auth state
                 authService.appState = appState

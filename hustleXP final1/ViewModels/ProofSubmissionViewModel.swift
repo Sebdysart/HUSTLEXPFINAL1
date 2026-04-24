@@ -221,13 +221,12 @@ final class ProofSubmissionViewModel {
 
         isSubmitting = true
         HXLogger.debug("[ProofSubmission] Submitting proof for task: \(taskId)", category: "Task")
-        HXLogger.debug("[ProofSubmission] GPS: \(coords.latitude), \(coords.longitude)", category: "Task")
 
         Task {
-            do {
-                // Upload photo if we have one
-                var photoUrls: [String] = uploadedPhotoUrls
-                if let image = capturedImage, photoUrls.isEmpty {
+            // ── Step 1: Upload photo ──
+            var photoUrls: [String] = uploadedPhotoUrls
+            if let image = capturedImage, photoUrls.isEmpty {
+                do {
                     HXLogger.debug("[ProofSubmission] Uploading photo to R2...", category: "Task")
                     let url = try await proofService.uploadProofPhoto(
                         image: image,
@@ -236,16 +235,21 @@ final class ProofSubmissionViewModel {
                     )
                     photoUrls = [url]
                     uploadedPhotoUrls = photoUrls
-                    HXLogger.debug("[ProofSubmission] Photo uploaded: \(url)", category: "Task")
+                } catch {
+                    HXLogger.error("ProofSubmission: Photo upload failed - \(error.localizedDescription)", category: "Task")
+                    isSubmitting = false
+                    ErrorToastManager.shared.show("Photo upload failed. Please try again.")
+                    return
                 }
+            }
 
-                // Generate biometric hash
-                let biometricHash = BiometricProofGenerator.generateHash(
-                    latitude: coords.latitude,
-                    longitude: coords.longitude
-                )
+            // ── Step 2: Submit proof to backend ──
+            let biometricHash = BiometricProofGenerator.generateHash(
+                latitude: coords.latitude,
+                longitude: coords.longitude
+            )
 
-                // Submit proof via API — this transitions task to PROOF_SUBMITTED on backend
+            do {
                 let proofResult = try await proofService.submitProof(
                     taskId: taskId,
                     photoUrls: photoUrls.isEmpty ? [localProofPhotoURL] : photoUrls,
@@ -254,24 +258,24 @@ final class ProofSubmissionViewModel {
                     gpsLongitude: coords.longitude,
                     biometricHash: biometricHash
                 )
+                HXLogger.info("ProofSubmission: Proof submitted - proofId: \(proofResult.id)", category: "Task")
+            } catch {
+                HXLogger.error("ProofSubmission: Proof submission failed - \(error.localizedDescription)", category: "Task")
+                isSubmitting = false
+                ErrorToastManager.shared.show("Failed to submit proof: \(error.localizedDescription)")
+                return
+            }
 
-                HXLogger.info("ProofSubmission: Proof submitted via API - proofId: \(proofResult.id)", category: "Task")
-
-                // Generate biometric hash
-
-                // Submit biometric proof for real validation via tRPC
-                let proofId = UUID().uuidString
+            // ── Step 3: Biometric validation (optional — failures are non-blocking) ──
+            do {
                 let photoUrlString = photoUrls.first ?? localProofPhotoURL
                 let now = ISO8601DateFormatter().string(from: Date())
                 let gpsTs = ISO8601DateFormatter().string(from: coords.timestamp)
-
-                // Use the task's known location for GPS proximity check;
-                // fall back to the hustler's current coords if unavailable.
                 let taskLat = task?.latitude ?? coords.latitude
                 let taskLon = task?.longitude ?? coords.longitude
 
                 let biometricInput = BiometricProofInput(
-                    proofId: proofId,
+                    proofId: UUID().uuidString,
                     taskId: taskId,
                     photoUrl: photoUrlString,
                     gpsCoordinates: BiometricProofInput.GPSPoint(
@@ -291,7 +295,6 @@ final class ProofSubmissionViewModel {
 
                 let apiResult = try await BiometricService.shared.submitBiometricProof(biometricInput)
 
-                // Map BiometricVerificationResult → BiometricValidationResult
                 let recommendation = ValidationRecommendation(rawValue: apiResult.recommendation) ?? .manualReview
                 let scores = ValidationScores(
                     liveness: Int((apiResult.biometricScores?.livenessScore ?? 0) * 100),
@@ -306,42 +309,32 @@ final class ProofSubmissionViewModel {
                     default: return recommendation == .approve ? .low : .medium
                     }
                 }()
-                let result = BiometricValidationResult(
+
+                isSubmitting = false
+                validationResult = BiometricValidationResult(
                     recommendation: recommendation,
                     reasoning: apiResult.reasoning ?? "Biometric validation complete.",
                     flags: apiResult.flags,
                     scores: scores,
                     riskLevel: riskLevel
                 )
-
-                isSubmitting = false
-                validationResult = result
-
-                withAnimation(.spring(response: 0.4)) {
-                    showValidationFeedback = true
-                }
-
-                HXLogger.debug("[ProofSubmission] Validation result: \(result.recommendation.rawValue)", category: "Task")
-
             } catch {
-                HXLogger.error("ProofSubmission: Biometric API failed - \(error.localizedDescription)", category: "Task")
+                HXLogger.error("ProofSubmission: Biometric validation failed (non-blocking) - \(error.localizedDescription)", category: "Task")
 
-                // Degrade gracefully: surface a manual_review result so the proof
-                // is not silently lost — the poster will review it manually.
-                let fallbackResult = BiometricValidationResult(
+                // Proof is already submitted — biometric is optional.
+                // Show manual review fallback.
+                isSubmitting = false
+                validationResult = BiometricValidationResult(
                     recommendation: .manualReview,
                     reasoning: "Automatic validation unavailable. The poster will review your submission.",
                     flags: ["validation_service_unavailable"],
                     scores: ValidationScores(liveness: 0, deepfake: 0, gpsProximity: 0),
                     riskLevel: .medium
                 )
+            }
 
-                isSubmitting = false
-                validationResult = fallbackResult
-
-                withAnimation(.spring(response: 0.4)) {
-                    showValidationFeedback = true
-                }
+            withAnimation(.spring(response: 0.4)) {
+                showValidationFeedback = true
             }
         }
     }

@@ -16,10 +16,13 @@ import CoreLocation
 // MARK: - Geofence Types
 
 struct ProximityCheckResult: Codable {
-    let taskId: String
-    let isWithinGeofence: Bool
+    let withinGeofence: Bool
     let distanceMeters: Double
-    let checkInTime: Date?
+    let eventLogged: Bool?
+    let autoCheckinTriggered: Bool?
+
+    /// Alias for readability
+    var isWithinGeofence: Bool { withinGeofence }
 }
 
 struct GeofenceEventRecord: Codable, Identifiable {

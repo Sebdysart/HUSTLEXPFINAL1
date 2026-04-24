@@ -54,6 +54,8 @@ final class TaskService: ObservableObject {
             let locationCity: String?
             let locationState: String?
             let locationRadiusMiles: Int?
+            let latitude: Double?
+            let longitude: Double?
             let category: String?
             let estimatedDuration: String?
             let templateSlug: String?
@@ -71,6 +73,8 @@ final class TaskService: ObservableObject {
             locationCity: locationCity,
             locationState: locationState,
             locationRadiusMiles: locationRadiusMiles,
+            latitude: latitude,
+            longitude: longitude,
             category: category?.rawValue,
             estimatedDuration: estimatedDuration,
             templateSlug: templateSlug,

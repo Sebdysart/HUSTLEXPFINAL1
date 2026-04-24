@@ -387,23 +387,27 @@ private struct AssignedHustlerSection: View {
     let task: HXTask
     let router: Router
     
+    private var hustlerInitials: String {
+        let name = task.hustlerName ?? "?"
+        let parts = name.split(separator: " ")
+        if parts.count >= 2 {
+            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+        }
+        return String(name.prefix(2)).uppercased()
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HXText("Assigned Hustler", style: .headline)
-            
+
             HStack(spacing: 16) {
-                HXAvatar(initials: "JD", size: .medium)
-                
+                HXAvatar(initials: hustlerInitials, size: .medium)
+
                 VStack(alignment: .leading, spacing: 4) {
-                    HXText("Jane Doe", style: .headline)
-                    
+                    HXText(task.hustlerName ?? "Hustler", style: .headline)
+
                     HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.warningOrange)
-                        HXText("4.9", style: .caption)
-                        HXText("•", style: .caption, color: .textTertiary)
-                        HXBadge(variant: .tier(.verified))
+                        HXBadge(variant: .tier(task.requiredTier))
                     }
                 }
                 

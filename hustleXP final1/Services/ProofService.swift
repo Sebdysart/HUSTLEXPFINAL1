@@ -37,23 +37,17 @@ private struct SubmitProofWrapper: Codable {
 }
 
 /// Photo attached to a proof — mirrors `proof_photos` DB table.
+/// TRPCClient uses `.convertFromSnakeCase` so no explicit CodingKeys needed.
 struct ProofPhoto: Codable, Identifiable {
     let id: String
     let proofId: String
     let storageKey: String   // The actual URL or R2 key
     let contentType: String
     let sequenceNumber: Int
-
-    private enum CodingKeys: String, CodingKey {
-        case id
-        case proofId = "proof_id"
-        case storageKey = "storage_key"
-        case contentType = "content_type"
-        case sequenceNumber = "sequence_number"
-    }
 }
 
 /// Full proof detail returned by `task.getProof` — includes photos and videos.
+/// TRPCClient uses `.convertFromSnakeCase` so no explicit CodingKeys needed.
 struct ProofDetail: Codable {
     let id: String
     let taskId: String
@@ -64,17 +58,6 @@ struct ProofDetail: Codable {
     let reviewedAt: Date?
     let reviewedBy: String?
     let photos: [ProofPhoto]
-
-    private enum CodingKeys: String, CodingKey {
-        case id
-        case taskId = "task_id"
-        case submitterId = "submitter_id"
-        case state, description
-        case submittedAt = "submitted_at"
-        case reviewedAt = "reviewed_at"
-        case reviewedBy = "reviewed_by"
-        case photos
-    }
 
     /// Convenience: extract photo URLs from attached photos
     var photoUrls: [String] {
@@ -110,36 +93,34 @@ final class ProofService: ObservableObject {
         taskId: String,
         filename: String,
         contentType: String = "image/jpeg",
+        fileSize: Int,
         purpose: UploadPurpose = .proof
     ) async throws -> PresignedUploadURL {
         struct GetURLInput: Codable {
             let taskId: String
             let filename: String
             let contentType: String
+            let fileSize: Int
             let purpose: UploadPurpose
         }
 
         let response: PresignedUploadURL = try await trpc.call(
             router: "upload",
             procedure: "getPresignedUrl",
-            input: GetURLInput(taskId: taskId, filename: filename, contentType: contentType, purpose: purpose)
+            input: GetURLInput(taskId: taskId, filename: filename, contentType: contentType, fileSize: fileSize, purpose: purpose)
         )
 
-        HXLogger.info("ProofService: Got pre-signed URL for \(filename) (purpose: \(purpose.rawValue))", category: "Task")
+        HXLogger.info("ProofService: Got pre-signed URL for \(filename) (\(fileSize) bytes)", category: "Task")
         return response
     }
 
-    /// Uploads an image to the pre-signed R2 URL
-    func uploadImage(_ image: UIImage, to presignedURL: PresignedUploadURL) async throws -> String {
+    /// Uploads raw image data to the pre-signed R2 URL
+    func uploadImageData(_ imageData: Data, to presignedURL: PresignedUploadURL) async throws -> String {
         isUploading = true
         uploadProgress = 0
         defer {
             isUploading = false
             uploadProgress = 1.0
-        }
-
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-            throw ProofError.imageCompressionFailed
         }
 
         guard let uploadURL = URL(string: presignedURL.uploadUrl) else {
@@ -150,7 +131,6 @@ final class ProofService: ObservableObject {
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
         request.setValue("\(imageData.count)", forHTTPHeaderField: "Content-Length")
 
-        // Upload with progress tracking
         let (_, response) = try await URLSession.shared.upload(for: request, from: imageData)
 
         guard let httpResponse = response as? HTTPURLResponse,
@@ -158,8 +138,16 @@ final class ProofService: ObservableObject {
             throw ProofError.uploadFailed
         }
 
-        HXLogger.info("ProofService: Uploaded image to R2", category: "Task")
+        HXLogger.info("ProofService: Uploaded image to R2 (\(imageData.count) bytes)", category: "Task")
         return presignedURL.publicUrl
+    }
+
+    /// Uploads a UIImage to the pre-signed R2 URL (convenience wrapper)
+    func uploadImage(_ image: UIImage, to presignedURL: PresignedUploadURL) async throws -> String {
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            throw ProofError.imageCompressionFailed
+        }
+        return try await uploadImageData(imageData, to: presignedURL)
     }
 
     /// Convenience method: Gets URL and uploads image in one call
@@ -168,9 +156,16 @@ final class ProofService: ObservableObject {
         taskId: String,
         photoIndex: Int
     ) async throws -> String {
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            throw ProofError.imageCompressionFailed
+        }
         let filename = "proof_\(taskId)_\(photoIndex)_\(Int(Date().timeIntervalSince1970)).jpg"
-        let presignedURL = try await getUploadURL(taskId: taskId, filename: filename)
-        let publicUrl = try await uploadImage(image, to: presignedURL)
+        let presignedURL = try await getUploadURL(
+            taskId: taskId,
+            filename: filename,
+            fileSize: imageData.count
+        )
+        let publicUrl = try await uploadImageData(imageData, to: presignedURL)
         return publicUrl
     }
 

@@ -926,10 +926,11 @@ struct HustlerTaskDetailScreen: View {
             do {
                 let updatedTask = try await taskService.acceptTask(taskId: task.id)
                 apiTask = updatedTask
-                
-                // Also update mock data for consistency
-                dataService.claimTask(task.id)
-                
+
+                // Update local state (don't call claimTask — it would re-call the API)
+                dataService.availableTasks.removeAll { $0.id == task.id }
+                dataService.activeTask = updatedTask
+
                 router.navigateToHustler(.taskInProgress(taskId: task.id))
             } catch {
                 HXLogger.error("TaskDetail: API accept failed - \(error.localizedDescription)", category: "Task")
