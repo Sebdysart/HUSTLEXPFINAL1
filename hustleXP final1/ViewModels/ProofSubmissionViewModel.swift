@@ -266,72 +266,16 @@ final class ProofSubmissionViewModel {
                 return
             }
 
-            // ── Step 3: Biometric validation (optional — failures are non-blocking) ──
-            do {
-                let photoUrlString = photoUrls.first ?? localProofPhotoURL
-                let now = ISO8601DateFormatter().string(from: Date())
-                let gpsTs = ISO8601DateFormatter().string(from: coords.timestamp)
-                let taskLat = task?.latitude ?? coords.latitude
-                let taskLon = task?.longitude ?? coords.longitude
-
-                let biometricInput = BiometricProofInput(
-                    proofId: UUID().uuidString,
-                    taskId: taskId,
-                    photoUrl: photoUrlString,
-                    gpsCoordinates: BiometricProofInput.GPSPoint(
-                        latitude: coords.latitude,
-                        longitude: coords.longitude
-                    ),
-                    gpsAccuracyMeters: coords.accuracyMeters,
-                    gpsTimestamp: gpsTs,
-                    taskLocation: BiometricProofInput.GPSPoint(
-                        latitude: taskLat,
-                        longitude: taskLon
-                    ),
-                    lidarDepthMapUrl: nil,
-                    timeLockHash: biometricHash,
-                    submissionTimestamp: now
-                )
-
-                let apiResult = try await BiometricService.shared.submitBiometricProof(biometricInput)
-
-                let recommendation = ValidationRecommendation(rawValue: apiResult.recommendation) ?? .manualReview
-                let scores = ValidationScores(
-                    liveness: Int((apiResult.biometricScores?.livenessScore ?? 0) * 100),
-                    deepfake: Int((apiResult.biometricScores?.deepfakeScore ?? 0) * 100),
-                    gpsProximity: apiResult.gpsValidation?.passed == true ? 90 : 30
-                )
-                let riskLevel: RiskLevel = {
-                    switch apiResult.gpsValidation?.riskLevel {
-                    case "HIGH": return .high
-                    case "MEDIUM": return .medium
-                    case "LOW": return .low
-                    default: return recommendation == .approve ? .low : .medium
-                    }
-                }()
-
-                isSubmitting = false
-                validationResult = BiometricValidationResult(
-                    recommendation: recommendation,
-                    reasoning: apiResult.reasoning ?? "Biometric validation complete.",
-                    flags: apiResult.flags,
-                    scores: scores,
-                    riskLevel: riskLevel
-                )
-            } catch {
-                HXLogger.error("ProofSubmission: Biometric validation failed (non-blocking) - \(error.localizedDescription)", category: "Task")
-
-                // Proof is already submitted — biometric is optional.
-                // Show manual review fallback.
-                isSubmitting = false
-                validationResult = BiometricValidationResult(
-                    recommendation: .manualReview,
-                    reasoning: "Automatic validation unavailable. The poster will review your submission.",
-                    flags: ["validation_service_unavailable"],
-                    scores: ValidationScores(liveness: 0, deepfake: 0, gpsProximity: 0),
-                    riskLevel: .medium
-                )
-            }
+            // Step 3: Biometric validation skipped for beta.
+            // Poster reviews proof manually. Re-enable when BIPA consent flow is built.
+            isSubmitting = false
+            validationResult = BiometricValidationResult(
+                recommendation: .manualReview,
+                reasoning: "Your proof has been submitted. The poster will review it shortly.",
+                flags: [],
+                scores: ValidationScores(liveness: 0, deepfake: 0, gpsProximity: 0),
+                riskLevel: .low
+            )
 
             withAnimation(.spring(response: 0.4)) {
                 showValidationFeedback = true

@@ -124,15 +124,29 @@ final class ProofService: ObservableObject {
         guard let uploadURL = URL(string: presignedURL.uploadUrl) else {
             throw ProofError.uploadFailed
         }
+
+        HXLogger.debug("ProofService: Uploading \(imageData.count) bytes to \(uploadURL.host ?? "unknown")", category: "Task")
+
         var request = URLRequest(url: uploadURL)
         request.httpMethod = "PUT"
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
         request.setValue("\(imageData.count)", forHTTPHeaderField: "Content-Length")
 
-        let (_, response) = try await URLSession.shared.upload(for: request, from: imageData)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.upload(for: request, from: imageData)
+        } catch {
+            HXLogger.error("ProofService: Upload network error - \(error.localizedDescription)", category: "Task")
+            HXLogger.error("ProofService: Upload URL domain was: \(uploadURL.host ?? "nil")", category: "Task")
+            throw ProofError.uploadFailed
+        }
 
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let body = String(data: data, encoding: .utf8) ?? ""
+            HXLogger.error("ProofService: Upload failed HTTP \(statusCode) - \(body.prefix(500))", category: "Task")
             throw ProofError.uploadFailed
         }
 

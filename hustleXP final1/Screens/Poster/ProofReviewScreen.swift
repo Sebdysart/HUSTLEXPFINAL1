@@ -21,6 +21,9 @@ struct ProofReviewScreen: View {
     @State private var showRejectSheet = false
     @State private var isProcessing = false
     @State private var showSuccess = false
+    @State private var paymentError: String?
+    @State private var showPaymentError = false
+    @State private var paymentPartialSuccess = false // proof approved but money transfer failed
     
     let tipOptions: [Double] = [0, 5, 10, 20]
     
@@ -93,6 +96,26 @@ struct ProofReviewScreen: View {
         .sheet(isPresented: $showRejectSheet) {
             RequestChangesSheet(taskId: taskId)
         }
+        .alert(
+            paymentPartialSuccess ? "Payment Pending" : "Payment Failed",
+            isPresented: $showPaymentError
+        ) {
+            if paymentPartialSuccess {
+                Button("OK") {
+                    // Proof approved + task completed, but money not transferred yet.
+                    // Go home — poster can retry release from task detail later.
+                    router.posterPath = NavigationPath()
+                }
+            } else {
+                Button("OK", role: .cancel) {}
+            }
+        } message: {
+            if paymentPartialSuccess {
+                Text("The proof was approved but payment couldn't be transferred yet. \(paymentError ?? "") The funds are safe in escrow and will be released when the issue is resolved.")
+            } else {
+                Text(paymentError ?? "An unexpected error occurred.")
+            }
+        }
         .task {
             // Fetch task and proof in parallel
             async let taskFetch: () = loadTask()
@@ -115,6 +138,9 @@ struct ProofReviewScreen: View {
         do {
             proofDetail = try await ProofService.shared.getProof(taskId: taskId)
             HXLogger.info("ProofReview: Loaded proof with \(proofDetail?.photoUrls.count ?? 0) photos", category: "Task")
+            for (i, url) in (proofDetail?.photoUrls ?? []).enumerated() {
+                HXLogger.debug("ProofReview: Photo[\(i)] URL = \(url)", category: "Task")
+            }
         } catch {
             HXLogger.error("ProofReview: Proof API failed - \(error.localizedDescription)", category: "Task")
         }
@@ -124,46 +150,59 @@ struct ProofReviewScreen: View {
         isProcessing = true
 
         Task {
+            // ── Step 1: Approve the proof ──
             do {
-                // 1. Approve the proof
                 _ = try await TaskService.shared.reviewProof(
                     taskId: taskId,
                     approved: true,
                     feedback: rating > 0 ? "Rated \(rating)/5" : nil
                 )
-                HXLogger.info("ProofReview: Approved via API", category: "Task")
-
-                // 2. Complete the task (PROOF_SUBMITTED → COMPLETED)
-                _ = try await TaskService.shared.completeTask(taskId: taskId)
-                HXLogger.info("ProofReview: Task completed via API", category: "Task")
-
-                // 3. Release escrow to worker
-                do {
-                    let escrow = try await EscrowService.shared.getEscrowByTask(taskId: taskId)
-                    _ = try await EscrowService.shared.releaseToWorker(escrowId: escrow.id)
-                    HXLogger.info("ProofReview: Escrow released to worker", category: "Task")
-                } catch {
-                    // Escrow release may fail if worker hasn't set up Stripe Connect yet.
-                    // The funds remain in escrow and can be released later.
-                    HXLogger.error("ProofReview: Escrow release failed - \(error.localizedDescription)", category: "Task")
-                }
-
-                // 4. Submit rating if user gave one
-                if rating > 0 {
-                    do {
-                        try await RatingService.shared.submitRating(
-                            taskId: taskId,
-                            rating: rating,
-                            review: nil
-                        )
-                        HXLogger.info("ProofReview: Rating \(rating)/5 submitted via API", category: "Task")
-                    } catch {
-                        HXLogger.error("ProofReview: Rating submission failed - \(error.localizedDescription)", category: "Task")
-                    }
-                }
+                HXLogger.info("ProofReview: Proof approved", category: "Task")
             } catch {
-                HXLogger.error("ProofReview: API approve failed - \(error.localizedDescription)", category: "Task")
+                HXLogger.error("ProofReview: Proof approval failed - \(error.localizedDescription)", category: "Task")
+                isProcessing = false
+                paymentError = "Failed to approve proof: \(error.localizedDescription)"
+                showPaymentError = true
+                return
             }
+
+            // ── Step 2: Complete the task (PROOF_SUBMITTED → COMPLETED) ──
+            do {
+                _ = try await TaskService.shared.completeTask(taskId: taskId)
+                HXLogger.info("ProofReview: Task completed", category: "Task")
+            } catch {
+                HXLogger.error("ProofReview: Task completion failed - \(error.localizedDescription)", category: "Task")
+                isProcessing = false
+                paymentError = "Proof approved but task completion failed: \(error.localizedDescription)"
+                showPaymentError = true
+                return
+            }
+
+            // ── Step 3: Release escrow (transfer money to worker) ──
+            do {
+                let escrow = try await EscrowService.shared.getEscrowByTask(taskId: taskId)
+                _ = try await EscrowService.shared.releaseToWorker(escrowId: escrow.id)
+                HXLogger.info("ProofReview: Payment transferred to worker", category: "Task")
+            } catch {
+                HXLogger.error("ProofReview: Payment transfer failed - \(error.localizedDescription)", category: "Task")
+                isProcessing = false
+                paymentPartialSuccess = true
+                paymentError = error.localizedDescription
+                showPaymentError = true
+                return
+            }
+
+            // ── Step 4: Submit rating (non-blocking) ──
+            if rating > 0 {
+                do {
+                    try await RatingService.shared.submitRating(taskId: taskId, rating: rating, review: nil)
+                    HXLogger.info("ProofReview: Rating \(rating)/5 submitted", category: "Task")
+                } catch {
+                    HXLogger.error("ProofReview: Rating failed - \(error.localizedDescription)", category: "Task")
+                }
+            }
+
+            // ── All steps succeeded ──
             isProcessing = false
             withAnimation(.spring(response: 0.5)) {
                 showSuccess = true

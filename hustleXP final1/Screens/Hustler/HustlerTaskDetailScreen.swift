@@ -872,13 +872,36 @@ struct HustlerTaskDetailScreen: View {
                 .padding(24)
             } else {
                 VStack(spacing: 16) {
-                    ProgressView()
-                        .scaleEffect(1.2)
+                    if loadError != nil {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 40))
+                            .foregroundStyle(Color.warningOrange)
+                        Text("Failed to load task")
+                            .font(.headline)
+                            .foregroundStyle(Color.textPrimary)
+                        Text(loadError?.localizedDescription ?? "")
+                            .font(.caption)
+                            .foregroundStyle(Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                        Button("Retry") {
+                            loadError = nil
+                            Task { await loadTaskFromAPI() }
+                        }
+                        .buttonStyle(.borderedProminent)
                         .tint(Color.brandPurple)
-                    
-                    Text("Loading task...")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.textSecondary)
+                    } else {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .tint(Color.brandPurple)
+                        Text("Loading task...")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+                .task {
+                    // Task is nil — fetch from API
+                    await loadTaskFromAPI()
                 }
             }
         }
@@ -990,12 +1013,15 @@ struct HustlerTaskDetailScreen: View {
 
     // v2.2.0: Load task from API
     private func loadTaskFromAPI() async {
+        HXLogger.info("TaskDetail: Loading task \(taskId) from API...", category: "Task")
         do {
             apiTask = try await taskService.getTask(id: taskId)
-            HXLogger.info("TaskDetail: Loaded task from API", category: "Task")
+            HXLogger.info("TaskDetail: Loaded task from API - title: \(apiTask?.title ?? "nil"), state: \(apiTask?.state.rawValue ?? "nil")", category: "Task")
         } catch {
             loadError = error
-            HXLogger.error("TaskDetail: API load failed, using mock - \(error.localizedDescription)", category: "Task")
+            HXLogger.error("TaskDetail: API load FAILED - \(error.localizedDescription)", category: "Task")
+            // Show error toast so user knows what happened
+            ErrorToastManager.shared.show("Failed to load task: \(error.localizedDescription)")
         }
     }
 

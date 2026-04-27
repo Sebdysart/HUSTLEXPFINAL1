@@ -82,7 +82,9 @@ struct PaymentIntentResponse: Codable {
     let escrowId: String
     let paymentIntentId: String
     let clientSecret: String
-    let amountCents: Int                    // This procedure uses "amountCents" as field name
+    let amount: Int  // cents
+
+    var amountCents: Int { amount }
 }
 
 // MARK: - XP Ledger Entry

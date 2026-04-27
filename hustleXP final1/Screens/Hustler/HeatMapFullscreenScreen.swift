@@ -131,7 +131,7 @@ struct HeatMapFullscreenScreen: View {
                     )
                 }
                 if let b = response.bounds {
-                    apiBounds = (minLat: b.min_lat, maxLat: b.max_lat, minLon: b.min_lng, maxLon: b.max_lng)
+                    apiBounds = (minLat: b.minLat, maxLat: b.maxLat, minLon: b.minLng, maxLon: b.maxLng)
                 }
                 HXLogger.info("HeatMapFullscreen: Loaded \(response.zones.count) zones from API", category: "General")
             } catch {

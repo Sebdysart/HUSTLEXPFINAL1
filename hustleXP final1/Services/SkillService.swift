@@ -142,16 +142,34 @@ final class SkillService: ObservableObject {
     func getMySkills() async throws -> [WorkerSkillRecord] {
         struct EmptyInput: Codable {}
 
-        let skills: [WorkerSkillRecord] = try await trpc.call(
-            router: "skills",
-            procedure: "getMySkills",
-            type: .query,
-            input: EmptyInput()
-        )
+        // Backend wraps response as {success, data: [...]}
+        struct WrappedResponse: Codable {
+            let data: [WorkerSkillRecord]
+        }
 
-        self.mySkills = skills
-        HXLogger.info("SkillService: User has \(skills.count) skills", category: "Skill")
-        return skills
+        do {
+            // Try flat array first
+            let skills: [WorkerSkillRecord] = try await trpc.call(
+                router: "skills",
+                procedure: "getMySkills",
+                type: .query,
+                input: EmptyInput()
+            )
+            self.mySkills = skills
+            HXLogger.info("SkillService: User has \(skills.count) skills", category: "Skill")
+            return skills
+        } catch {
+            // Fall back to {success, data} wrapper
+            let wrapped: WrappedResponse = try await trpc.call(
+                router: "skills",
+                procedure: "getMySkills",
+                type: .query,
+                input: EmptyInput()
+            )
+            self.mySkills = wrapped.data
+            HXLogger.info("SkillService: User has \(wrapped.data.count) skills (wrapped)", category: "Skill")
+            return wrapped.data
+        }
     }
 
     /// Adds skills to user's profile
