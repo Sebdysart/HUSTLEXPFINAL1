@@ -19,6 +19,7 @@ struct SignupScreen: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
+    @State private var acceptedTerms: Bool = false
     @State private var isLoading: Bool = false
     @State private var showContent = false
     @State private var errors: [String: String] = [:]
@@ -26,17 +27,18 @@ struct SignupScreen: View {
     @State private var isSocialLoading = false
     @State private var appleSignInDelegate: AppleSignInDelegateSignup?
     @FocusState private var focusedField: Field?
-    
+
     enum Field: Hashable {
         case name, email, password, confirmPassword
     }
-    
+
     private var isValid: Bool {
-        !name.isEmpty && 
-        !email.isEmpty && 
-        !password.isEmpty && 
+        !name.isEmpty &&
+        !email.isEmpty &&
+        !password.isEmpty &&
         password == confirmPassword &&
         password.count >= 8 &&
+        acceptedTerms &&
         errors.isEmpty
     }
     
@@ -234,6 +236,46 @@ struct SignupScreen: View {
                 .background(Color.errorRed.opacity(0.1))
                 .cornerRadius(8)
             }
+
+            // Terms of Service acceptance — required
+            HStack(alignment: .top, spacing: 12) {
+                Button(action: { acceptedTerms.toggle() }) {
+                    Image(systemName: acceptedTerms ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 22))
+                        .foregroundStyle(acceptedTerms ? Color.brandPurple : Color.textSecondary)
+                }
+                .accessibilityLabel(acceptedTerms ? "Accepted terms" : "Accept terms")
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("I agree to HustleXP's")
+                        .font(.caption)
+                        .foregroundStyle(Color.textSecondary)
+                    HStack(spacing: 4) {
+                        Button("Terms of Service") {
+                            if let url = URL(string: "https://hustlexp.app/terms") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.brandPurple)
+
+                        Text("and")
+                            .font(.caption)
+                            .foregroundStyle(Color.textSecondary)
+
+                        Button("Privacy Policy") {
+                            if let url = URL(string: "https://hustlexp.app/privacy") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.brandPurple)
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(.vertical, 8)
 
             // Create account button
             HXButton("Create Account", icon: isLoading ? nil : "arrow.right", variant: .primary, isLoading: isLoading) {

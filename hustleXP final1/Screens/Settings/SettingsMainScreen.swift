@@ -79,11 +79,28 @@ struct SettingsMainScreen: View {
                 SettingsListItem(icon: "questionmark.circle.fill", iconColor: .infoBlue, title: "Help & Support") {
                     router.navigateToSettings(.help)
                 }
+                SettingsListItem(icon: "envelope.fill", iconColor: .infoBlue, title: "Contact Support") {
+                    contactSupport()
+                }
                 SettingsListItem(icon: "exclamationmark.triangle.fill", iconColor: .warningOrange, title: "My Disputes") {
                     router.navigateToSettings(.disputes)
                 }
             } header: {
                 Text("Support")
+                    .foregroundStyle(Color.textSecondary)
+            }
+            .listRowBackground(Color.surfaceElevated)
+
+            // Legal
+            Section {
+                SettingsListItem(icon: "doc.text.fill", iconColor: .textSecondary, title: "Terms of Service") {
+                    openURL("https://hustlexp.app/terms")
+                }
+                SettingsListItem(icon: "hand.raised.fill", iconColor: .textSecondary, title: "Privacy Policy") {
+                    openURL("https://hustlexp.app/privacy")
+                }
+            } header: {
+                Text("Legal")
                     .foregroundStyle(Color.textSecondary)
             }
             .listRowBackground(Color.surfaceElevated)
@@ -122,14 +139,48 @@ struct SettingsMainScreen: View {
                     Spacer()
                     HXText(appState.userRole?.rawValue.capitalized ?? "—", style: .body)
                 }
-                
+
                 HStack {
                     HXText("Version", style: .body, color: .textSecondary)
                     Spacer()
-                    HXText("1.0.0", style: .body)
+                    HXText("\(appVersion) (\(buildNumber))", style: .body)
                 }
+
+                HStack {
+                    HXText("Environment", style: .body, color: .textSecondary)
+                    Spacer()
+                    HXText(AppConfig.isProduction ? "Production" : "Staging", style: .body, color: AppConfig.isProduction ? .successGreen : .warningOrange)
+                }
+
+                // Tap to copy debug info to clipboard for support tickets
+                Button(action: copyDebugInfo) {
+                    HStack {
+                        HXText("Copy Debug Info", style: .body, color: .infoBlue)
+                        Spacer()
+                        Image(systemName: "doc.on.doc")
+                            .foregroundStyle(Color.infoBlue)
+                    }
+                }
+                .accessibilityLabel("Copy debug info to clipboard")
             }
             .listRowBackground(Color.surfaceElevated)
+
+            #if DEBUG
+            // Crash test (debug only — used to verify Crashlytics is working)
+            Section {
+                Button(action: triggerTestCrash) {
+                    HStack {
+                        Image(systemName: "exclamationmark.octagon.fill")
+                            .foregroundStyle(Color.errorRed)
+                        HXText("Trigger Test Crash", style: .body, color: .errorRed)
+                    }
+                }
+            } header: {
+                Text("Debug")
+                    .foregroundStyle(Color.textSecondary)
+            }
+            .listRowBackground(Color.surfaceElevated)
+            #endif
             
             // Logout
             Section {
@@ -157,6 +208,64 @@ struct SettingsMainScreen: View {
         router.resetAll()
         appState.logout()
     }
+
+    // MARK: - App Info Helpers
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+
+    private var buildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+    }
+
+    // MARK: - Support / Legal Actions
+
+    private func contactSupport() {
+        let subject = "HustleXP Support — v\(appVersion) (\(buildNumber))"
+        let body = """
+
+
+        --- Debug info (please don't delete) ---
+        User ID: \(dataService.currentUser.id)
+        Role: \(appState.userRole?.rawValue ?? "unknown")
+        Version: \(appVersion) (\(buildNumber))
+        Environment: \(AppConfig.isProduction ? "Production" : "Staging")
+        """
+        let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "mailto:support@hustlexp.app?subject=\(encodedSubject)&body=\(encodedBody)") {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func openURL(_ urlString: String) {
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func copyDebugInfo() {
+        let info = """
+        HustleXP Debug Info
+        Version: \(appVersion) (\(buildNumber))
+        Environment: \(AppConfig.isProduction ? "Production" : "Staging")
+        User ID: \(dataService.currentUser.id)
+        Email: \(dataService.currentUser.email)
+        Role: \(appState.userRole?.rawValue ?? "unknown")
+        Trust Tier: \(dataService.currentUser.trustTier.rawValue)
+        Date: \(Date().formatted())
+        """
+        UIPasteboard.general.string = info
+        ErrorToastManager.shared.show("Debug info copied — paste into your support email", style: .info)
+    }
+
+    #if DEBUG
+    private func triggerTestCrash() {
+        // Force a crash to verify Crashlytics is reporting correctly
+        let _ = [Int]()[42]
+    }
+    #endif
 }
 
 // MARK: - Settings List Item
