@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import StripePaymentSheet
 
 struct ProofReviewScreen: View {
     @Environment(Router.self) private var router
@@ -178,9 +179,13 @@ struct ProofReviewScreen: View {
                 return
             }
 
-            // ── Step 3: Release escrow (transfer money to worker) ──
+            // ── Step 3: Release escrow (already funded at task creation time) ──
+            // Tasks only become accept-able after escrow is FUNDED, so we know the money
+            // is already locked. Just transfer it to the worker.
             do {
                 let escrow = try await EscrowService.shared.getEscrowByTask(taskId: taskId)
+                HXLogger.info("ProofReview: Escrow state: \(escrow.state) — releasing to worker", category: "Task")
+
                 _ = try await EscrowService.shared.releaseToWorker(escrowId: escrow.id)
                 HXLogger.info("ProofReview: Payment transferred to worker", category: "Task")
             } catch {

@@ -36,13 +36,51 @@ enum AppConfig {
     static var stripePublishableKey: String {
         #if DEBUG
         // TODO: Replace with your valid Stripe test publishable key from https://dashboard.stripe.com/test/apikeys
-        return "pk_test_51TJalM9SBxHIlhrch4h3vPxThf0ziWoOrWzLz2vW3xZx3pID7Ba90C59AgoBB3CecmbyMRefHw4OgS4zd6an6sxb00LnrNR8MR"
+        return "pk_test_51TQloy7lgRanKHG9HXvDgTphaTLytSisS1BkNMGvWWXgs5sqLnobAEBoPkJhBjuVvb2RQ7jNZyQm1dxdvyNzGrk200pr0dquoo"
         #else
         // IMPORTANT: Replace with your live publishable key before App Store submission.
         // This is safe to embed — publishable keys are public by design.
         // Get it from: https://dashboard.stripe.com/apikeys
-        return "pk_test_51TJalM9SBxHIlhrch4h3vPxThf0ziWoOrWzLz2vW3xZx3pID7Ba90C59AgoBB3CecmbyMRefHw4OgS4zd6an6sxb00LnrNR8MR"
+        return "pk_test_51TQloy7lgRanKHG9HXvDgTphaTLytSisS1BkNMGvWWXgs5sqLnobAEBoPkJhBjuVvb2RQ7jNZyQm1dxdvyNzGrk200pr0dquoo"
         #endif
+    }
+
+    /// True when using Stripe test keys — used to show test mode UI hints.
+    static var isStripeTestMode: Bool {
+        stripePublishableKey.hasPrefix("pk_test_")
+    }
+
+    // MARK: - Test Mode Helpers
+
+    /// Stripe-provided test card numbers for posters to use in test mode.
+    /// See: https://stripe.com/docs/testing
+    enum TestCard: String, CaseIterable {
+        case visaSuccess     = "4242 4242 4242 4242"
+        case visaDeclined    = "4000 0000 0000 0002"
+        case visaInsufficientFunds = "4000 0000 0000 9995"
+        case mastercard      = "5555 5555 5555 4444"
+        case amex            = "3782 822463 10005"
+
+        var label: String {
+            switch self {
+            case .visaSuccess: return "Visa — Success"
+            case .visaDeclined: return "Visa — Declined"
+            case .visaInsufficientFunds: return "Visa — Insufficient funds"
+            case .mastercard: return "Mastercard — Success"
+            case .amex: return "Amex — Success"
+            }
+        }
+
+        /// Number stripped of spaces for copy/paste
+        var rawNumber: String { rawValue.replacingOccurrences(of: " ", with: "") }
+    }
+
+    /// Test bank account values for hustler Stripe Connect onboarding.
+    enum TestBank {
+        static let routingNumber = "110000000"   // Stripe test routing
+        static let accountNumber = "000123456789" // Successful payout
+        static let ssnLast4      = "0000"        // Bypasses identity verification
+        static let dateOfBirth   = "01/01/1990"  // Any past date works
     }
 
     // MARK: - SSL Pinning

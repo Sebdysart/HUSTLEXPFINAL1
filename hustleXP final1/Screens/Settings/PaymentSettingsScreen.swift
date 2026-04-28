@@ -25,6 +25,10 @@ struct PaymentSettingsScreen: View {
     @State private var cashOutSuccess = false
     @State private var connectSetup = false
 
+    private var isHustler: Bool {
+        dataService.currentUser.role == .hustler
+    }
+
     var body: some View {
         ZStack {
             Color.brandBlack
@@ -32,19 +36,29 @@ struct PaymentSettingsScreen: View {
 
             ScrollView {
                 VStack(spacing: 24) {
-                    // Balance card
-                    balanceCard
+                    // Test mode banner — visible to all users when Stripe is in test mode
+                    if AppConfig.isStripeTestMode {
+                        testModeBanner
+                    }
 
-                    // Saved payment methods
-                    paymentMethodsSection
+                    if isHustler {
+                        // Hustler: balance + payout setup — set up bank account via Stripe onboarding
+                        balanceCard
 
-                    // Add payment method button
-                    addCardButton
+                        payoutSection
+                    } else {
+                        // Poster: payment methods for funding tasks
+                        paymentMethodsSection
 
-                    // Payout Section
-                    payoutSection
+                        addCardButton
 
-                    // History Section
+                        // Test mode helper: show test cards in test mode
+                        if AppConfig.isStripeTestMode {
+                            testCardsSection
+                        }
+                    }
+
+                    // Both roles: transaction history
                     historySection
 
                     // Security note
@@ -304,6 +318,82 @@ struct PaymentSettingsScreen: View {
         .padding(16)
     }
 
+    // MARK: - Test Mode
+
+    /// Banner shown at top of screen when in Stripe test mode
+    private var testModeBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "flask.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(Color.warningOrange)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HXText("Test Mode", style: .subheadline, color: .warningOrange)
+                HXText("No real money will be charged or transferred.", style: .caption, color: .textSecondary)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.warningOrange.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.warningOrange.opacity(0.3), lineWidth: 1)
+                )
+        )
+    }
+
+    /// Test card numbers (poster only) — tap to copy
+    private var testCardsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HXText("Test Cards", style: .caption, color: .textSecondary)
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) {
+                ForEach(Array(AppConfig.TestCard.allCases.enumerated()), id: \.offset) { index, card in
+                    Button {
+                        UIPasteboard.general.string = card.rawNumber
+                        errorMessage = "Copied \(card.label) to clipboard"
+                        Task {
+                            try? await Task.sleep(nanoseconds: 2_000_000_000)
+                            await MainActor.run { errorMessage = nil }
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "creditcard.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.brandPurple)
+                                .frame(width: 24)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                HXText(card.label, style: .subheadline)
+                                HXText(card.rawValue, style: .caption, color: .textTertiary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.textTertiary)
+                        }
+                        .padding(14)
+                    }
+                    .buttonStyle(.plain)
+
+                    if index < AppConfig.TestCard.allCases.count - 1 {
+                        Divider().background(Color.borderSubtle).padding(.leading, 50)
+                    }
+                }
+            }
+            .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12))
+
+            HXText("Use any future expiry (e.g. 12/30) and any 3-digit CVC.", style: .caption2, color: .textTertiary)
+                .padding(.leading, 4)
+        }
+    }
+
     // MARK: - Actions
 
     private func fetchPaymentMethods() async {
@@ -463,28 +553,114 @@ struct PaymentSettingsScreen: View {
 
     private func openStripeDashboard() {
         Task {
-            do {
-                struct EmptyInput: Codable {}
-                struct DashboardResponse: Codable {
-                    let url: String
-                }
+            // Step 1: Check onboarding status first
+            struct EmptyInput: Codable {}
+            struct StatusResponse: Codable {
+                let onboardingComplete: Bool?
+                let detailsSubmitted: Bool?
+                let payoutsEnabled: Bool?
+                let chargesEnabled: Bool?
+            }
 
-                let response: DashboardResponse = try await TRPCClient.shared.call(
+            var isComplete = false
+            do {
+                let status: StatusResponse = try await TRPCClient.shared.call(
                     router: "stripeConnect",
-                    procedure: "getDashboardLink",
+                    procedure: "getOnboardingStatus",
                     type: .query,
                     input: EmptyInput()
                 )
-
-                if let url = URL(string: response.url) {
-                    await MainActor.run {
-                        UIApplication.shared.open(url)
-                    }
-                }
+                isComplete = status.payoutsEnabled == true && status.detailsSubmitted == true
+                HXLogger.info("PaymentSettings: Onboarding status — complete=\(isComplete), payouts=\(status.payoutsEnabled ?? false)", category: "Payment")
             } catch {
-                errorMessage = "Set up payout account first by completing a task."
+                // No Connect account exists — go straight to onboarding
+                HXLogger.info("PaymentSettings: No Connect account yet — starting onboarding", category: "Payment")
+                await startStripeOnboarding()
+                return
+            }
+
+            // Step 2: If onboarding complete, open Express dashboard. Otherwise, continue onboarding.
+            if isComplete {
+                await openExpressDashboard()
+            } else {
+                HXLogger.info("PaymentSettings: Onboarding incomplete — resuming setup", category: "Payment")
+                await startStripeOnboarding()
             }
         }
+    }
+
+    private func openExpressDashboard() async {
+        do {
+            struct EmptyInput: Codable {}
+            struct LinkResponse: Codable {
+                let url: String
+            }
+
+            let response: LinkResponse = try await TRPCClient.shared.call(
+                router: "stripeConnect",
+                procedure: "getDashboardLink",
+                type: .query,
+                input: EmptyInput()
+            )
+
+            HXLogger.info("PaymentSettings: Opening Express dashboard - \(response.url.prefix(50))...", category: "Payment")
+
+            if let url = URL(string: response.url) {
+                await UIApplication.shared.open(url)
+            }
+        } catch {
+            HXLogger.error("PaymentSettings: Dashboard link failed - \(error.localizedDescription)", category: "Payment")
+            await openFallbackPayoutHelp(reason: error.localizedDescription)
+        }
+    }
+
+    private func startStripeOnboarding() async {
+        do {
+            struct OnboardingInput: Codable {
+                let refreshUrl: String
+                let returnUrl: String
+                let collectTaxInfo: Bool
+            }
+            struct OnboardingResponse: Codable {
+                let url: String
+            }
+
+            let response: OnboardingResponse = try await TRPCClient.shared.call(
+                router: "stripeConnect",
+                procedure: "createOnboardingLink",
+                input: OnboardingInput(
+                    refreshUrl: "https://hustlexp.app/settings/payments?refresh=1",
+                    returnUrl: "https://hustlexp.app/settings/payments?return=1",
+                    collectTaxInfo: true
+                )
+            )
+
+            if let url = URL(string: response.url) {
+                await MainActor.run {
+                    UIApplication.shared.open(url)
+                }
+            }
+        } catch {
+            HXLogger.error("PaymentSettings: Onboarding failed - \(error.localizedDescription)", category: "Payment")
+            // Fallback: open Stripe Express help page so the user isn't stuck
+            await openFallbackPayoutHelp(reason: error.localizedDescription)
+        }
+    }
+
+    /// Opens a fallback web page when both Stripe API calls fail.
+    /// Lets the user understand the issue and provides a path to set up payouts manually.
+    @MainActor
+    private func openFallbackPayoutHelp(reason: String) async {
+        errorMessage = "Couldn't connect to Stripe. Opening setup info..."
+
+        // Open Stripe Connect Express info page as a safe fallback
+        if let url = URL(string: "https://stripe.com/connect/express") {
+            await UIApplication.shared.open(url)
+        }
+
+        // Clear error after brief delay so user has time to read it
+        try? await Task.sleep(nanoseconds: 3_000_000_000)
+        errorMessage = nil
     }
 
     private func formatCents(_ cents: Int) -> String {

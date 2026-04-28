@@ -551,14 +551,60 @@ struct AITaskCreationScreen: View {
                     deadline: deadlineDate
                 )
                 print("🟢 [PostTask] Task created successfully: id=\(task.id), title=\(task.title)")
-                HXLogger.info("AITaskCreation: Task posted via API - \(task.id)", category: "Task")
-                // Refresh poster's task list so it appears immediately
-                await LiveDataService.shared.refreshAll()
-                isPosting = false
-                dismiss()
-                return
+                HXLogger.info("AITaskCreation: Task created - \(task.id), funding escrow...", category: "Task")
+
+                // ── CRITICAL: Fund escrow before task goes live ──
+                // Without this, hustlers could accept tasks that have no money behind them.
+                do {
+                    let paymentIntent = try await EscrowService.shared.createPaymentIntent(taskId: task.id)
+                    HXLogger.info("AITaskCreation: Payment intent created", category: "Task")
+
+                    let stripeManager = StripePaymentManager.shared
+                    stripeManager.preparePaymentSheet(clientSecret: paymentIntent.clientSecret)
+                    let payResult = await stripeManager.presentPaymentSheet()
+
+                    switch payResult {
+                    case .completed:
+                        // Confirm funding so escrow goes PENDING → FUNDED
+                        _ = try await EscrowService.shared.confirmFunding(
+                            escrowId: paymentIntent.escrowId,
+                            stripePaymentIntentId: paymentIntent.paymentIntentId
+                        )
+                        HXLogger.info("AITaskCreation: Escrow funded, task is now live", category: "Task")
+                        await LiveDataService.shared.refreshAll()
+                        isPosting = false
+                        dismiss()
+                        return
+
+                    case .canceled:
+                        // Payment cancelled — cancel the task so it never goes live
+                        HXLogger.info("AITaskCreation: Payment cancelled, cancelling task", category: "Task")
+                        _ = try? await TaskService.shared.cancelTask(taskId: task.id, reason: "Payment cancelled")
+                        isPosting = false
+                        postError = "Payment was cancelled. Your task was not posted. Please try again to post the task."
+                        showPostError = true
+                        return
+
+                    case .failed(let payError):
+                        // Payment failed — cancel the task
+                        HXLogger.error("AITaskCreation: Payment failed - \(payError.localizedDescription)", category: "Task")
+                        _ = try? await TaskService.shared.cancelTask(taskId: task.id, reason: "Payment failed")
+                        isPosting = false
+                        postError = "Payment failed: \(payError.localizedDescription). Your task was not posted. Please check your card and try again."
+                        showPostError = true
+                        return
+                    }
+                } catch {
+                    // Funding setup failed — cancel the task
+                    HXLogger.error("AITaskCreation: Funding failed - \(error.localizedDescription)", category: "Task")
+                    _ = try? await TaskService.shared.cancelTask(taskId: task.id, reason: "Funding failed")
+                    isPosting = false
+                    postError = "Couldn't set up payment: \(error.localizedDescription). Your task was not posted."
+                    showPostError = true
+                    return
+                }
             } catch {
-                print("🔴 [PostTask] API FAILED: \(error)")
+                print("🔴 [PostTask] Task creation FAILED: \(error)")
                 HXLogger.error("AITaskCreation: API failed - \(error.localizedDescription)", category: "Task")
 
                 postError = error.localizedDescription
