@@ -575,19 +575,20 @@ private struct ReviewActionBar: View {
 // MARK: - Payment Success View
 private struct PaymentSuccessView: View {
     let onDone: () -> Void
-    
+
     @State private var showCheckmark = false
-    
+
     var body: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 24) {
             Spacer()
-            
+
+            // Animated checkmark
             ZStack {
                 Circle()
                     .fill(Color.successGreen)
                     .frame(width: 120, height: 120)
                     .scaleEffect(showCheckmark ? 1 : 0)
-                
+
                 Image(systemName: "checkmark")
                     .font(.system(size: 48, weight: .bold))
                     .foregroundStyle(.white)
@@ -598,26 +599,87 @@ private struct PaymentSuccessView: View {
                     showCheckmark = true
                 }
             }
-            
-            VStack(spacing: 12) {
-                HXText("Payment Sent!", style: .largeTitle)
-                
+
+            // Headline
+            VStack(spacing: 8) {
+                HXText("Payment Approved!", style: .largeTitle)
+
                 HXText(
-                    "The hustler has been paid and will receive your rating.",
+                    "Your payment is on its way to the hustler.",
                     style: .body,
                     color: .textSecondary
                 )
                 .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
-            
+
+            // Timeline / status info card
+            VStack(alignment: .leading, spacing: 14) {
+                timelineRow(
+                    icon: "checkmark.circle.fill",
+                    iconColor: .successGreen,
+                    title: "Approved",
+                    subtitle: "You approved the proof",
+                    isCompleted: true
+                )
+
+                timelineRow(
+                    icon: "arrow.right.circle.fill",
+                    iconColor: .successGreen,
+                    title: "Payment released",
+                    subtitle: "Funds transferred from escrow",
+                    isCompleted: true
+                )
+
+                timelineRow(
+                    icon: "clock.fill",
+                    iconColor: .warningOrange,
+                    title: "Settling to bank",
+                    subtitle: "Standard payouts arrive in 1–2 business days",
+                    isCompleted: false
+                )
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 24)
+
+            // Friendly note
+            HStack(spacing: 10) {
+                Image(systemName: "info.circle.fill")
+                    .foregroundStyle(Color.infoBlue)
+                Text("The hustler will be notified when funds land in their account.")
+                    .font(.caption)
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(.horizontal, 32)
+
             Spacer()
-            
+
             HXButton("Done", variant: .primary) {
                 onDone()
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 48)
+        }
+    }
+
+    private func timelineRow(icon: String, iconColor: Color, title: String, subtitle: String, isCompleted: Bool) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundStyle(iconColor)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(isCompleted ? Color.textPrimary : Color.textSecondary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Color.textTertiary)
+            }
         }
     }
 }

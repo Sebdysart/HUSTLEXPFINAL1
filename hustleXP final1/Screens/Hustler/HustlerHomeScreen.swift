@@ -577,27 +577,23 @@ struct HustlerHomeScreen: View {
                 )
                 .padding(.horizontal, 20)
             } else {
-                GeometryReader { geo in
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 16) {
-                            ForEach(Array(dataService.availableTasks.prefix(3).enumerated()), id: \.element.id) { index, task in
-                                TaskCard(
-                                    title: task.title,
-                                    payment: task.payment,
-                                    location: task.location,
-                                    duration: task.estimatedDuration,
-                                    variant: index == 0 ? .featured : .compact,
-                                    category: index == 0 ? "Top Pick" : nil
-                                ) {
-                                    router.navigateToHustler(.taskDetail(taskId: task.id))
-                                }
-                                .frame(width: index == 0 ? min(300, geo.size.width * 0.77) : min(260, geo.size.width * 0.67))
-                            }
+                // Vertical stack — each card stretches full screen width
+                VStack(spacing: 12) {
+                    ForEach(Array(dataService.availableTasks.prefix(3).enumerated()), id: \.element.id) { index, task in
+                        TaskCard(
+                            title: task.title,
+                            payment: task.payment,
+                            location: task.location,
+                            duration: task.estimatedDuration,
+                            variant: index == 0 ? .featured : .compact,
+                            category: index == 0 ? "Top Pick" : nil
+                        ) {
+                            router.navigateToHustler(.taskDetail(taskId: task.id))
                         }
-                        .padding(.horizontal, 20)
+                        .frame(maxWidth: .infinity)
                     }
                 }
-                .frame(height: 220)
+                .padding(.horizontal, 20)
             }
         }
     }

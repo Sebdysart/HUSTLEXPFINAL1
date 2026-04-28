@@ -860,17 +860,43 @@ private struct HistoryRow: View {
 
 // MARK: - Transaction History View
 private struct TransactionHistoryView: View {
+    @State private var transactions: [EscrowHistoryItem] = []
+    @State private var isLoading = true
+    @State private var loadError: String?
+
     var body: some View {
         ZStack {
-            Color.brandBlack
-                .ignoresSafeArea()
+            Color.brandBlack.ignoresSafeArea()
 
-            VStack {
+            if isLoading {
+                ProgressView().tint(.brandPurple)
+            } else if let loadError {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.title)
+                        .foregroundStyle(Color.warningOrange)
+                    Text("Couldn't load history")
+                        .font(.headline)
+                        .foregroundStyle(Color.textPrimary)
+                    Text(loadError)
+                        .font(.caption)
+                        .foregroundStyle(Color.textSecondary)
+                }
+            } else if transactions.isEmpty {
                 EmptyState(
                     icon: "clock.arrow.circlepath",
                     title: "No Transactions Yet",
                     message: "Your payment history will appear here."
                 )
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(transactions) { tx in
+                            TransactionRow(item: tx)
+                        }
+                    }
+                    .padding(16)
+                }
             }
         }
         .navigationTitle("Transaction History")
@@ -878,6 +904,124 @@ private struct TransactionHistoryView: View {
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .task {
+            await loadHistory()
+        }
+    }
+
+    private func loadHistory() async {
+        do {
+            struct GetHistoryInput: Codable { let limit: Int }
+            let response: [EscrowHistoryItem] = try await TRPCClient.shared.call(
+                router: "escrow",
+                procedure: "getHistory",
+                type: .query,
+                input: GetHistoryInput(limit: 50)
+            )
+            transactions = response
+            isLoading = false
+        } catch {
+            HXLogger.error("TransactionHistory: Load failed - \(error.localizedDescription)", category: "Payment")
+            loadError = error.localizedDescription
+            isLoading = false
+        }
+    }
+}
+
+/// Maps backend escrow rows for transaction history display.
+/// TRPCClient uses .convertFromSnakeCase, so backend snake_case → camelCase automatically.
+struct EscrowHistoryItem: Codable, Identifiable {
+    let id: String
+    let taskId: String
+    let amount: Int          // cents
+    let state: String        // PENDING, FUNDED, RELEASED, REFUNDED, LOCKED_DISPUTE
+    let createdAt: Date?
+    let releasedAt: Date?
+    let refundedAt: Date?
+}
+
+private struct TransactionRow: View {
+    let item: EscrowHistoryItem
+
+    private var statusColor: Color {
+        switch item.state {
+        case "RELEASED": return .successGreen
+        case "REFUNDED": return .infoBlue
+        case "LOCKED_DISPUTE": return .warningOrange
+        case "FUNDED": return .brandPurple
+        case "PENDING": return .textSecondary
+        default: return .textSecondary
+        }
+    }
+
+    private var statusIcon: String {
+        switch item.state {
+        case "RELEASED": return "checkmark.circle.fill"
+        case "REFUNDED": return "arrow.uturn.backward.circle.fill"
+        case "LOCKED_DISPUTE": return "exclamationmark.triangle.fill"
+        case "FUNDED": return "lock.fill"
+        case "PENDING": return "clock.fill"
+        default: return "circle"
+        }
+    }
+
+    private var statusLabel: String {
+        switch item.state {
+        case "RELEASED": return "Paid to worker"
+        case "REFUNDED": return "Refunded to your card"
+        case "LOCKED_DISPUTE": return "Disputed — under review"
+        case "FUNDED": return "Funded — held in escrow"
+        case "PENDING": return "Awaiting payment"
+        default: return item.state
+        }
+    }
+
+    private var subtitle: String {
+        if item.state == "REFUNDED" {
+            return "Funds returned to your original payment method (5-10 business days)"
+        }
+        if item.state == "RELEASED" {
+            return "Released to worker"
+        }
+        if item.state == "LOCKED_DISPUTE" {
+            return "Funds locked pending dispute resolution"
+        }
+        return "In escrow"
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(statusColor.opacity(0.15))
+                    .frame(width: 40, height: 40)
+                Image(systemName: statusIcon)
+                    .foregroundStyle(statusColor)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(statusLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Color.textSecondary)
+                    .lineLimit(2)
+                if let date = item.createdAt {
+                    Text(date.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption2)
+                        .foregroundStyle(Color.textTertiary)
+                }
+            }
+
+            Spacer()
+
+            Text("$\(String(format: "%.2f", Double(item.amount) / 100.0))")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(item.state == "REFUNDED" ? Color.infoBlue : Color.textPrimary)
+        }
+        .padding(14)
+        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12))
     }
 }
 

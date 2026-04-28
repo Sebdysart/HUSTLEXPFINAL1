@@ -8,6 +8,7 @@
 
 import SwiftUI
 import MapKit
+import StripePaymentSheet
 
 struct AITaskCreationScreen: View {
     @Environment(Router.self) private var router
@@ -585,7 +586,7 @@ struct AITaskCreationScreen: View {
                         showPostError = true
                         return
 
-                    case .failed(let payError):
+                    case .failed(error: let payError):
                         // Payment failed — cancel the task
                         HXLogger.error("AITaskCreation: Payment failed - \(payError.localizedDescription)", category: "Task")
                         _ = try? await TaskService.shared.cancelTask(taskId: task.id, reason: "Payment failed")

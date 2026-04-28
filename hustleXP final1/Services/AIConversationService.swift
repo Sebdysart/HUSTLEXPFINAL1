@@ -136,23 +136,20 @@ class AITaskDraft {
         if let city = draft.locationCity { locationCity = city }
         if let state = draft.locationState { locationState = state }
         if let radius = draft.locationRadiusMiles { locationRadiusMiles = radius }
+        // Always display duration in hours for consistency — backend AI returns
+        // total committed minutes (sum of all sessions for recurring tasks).
         if let dur = draft.estimatedDurationMinutes, dur > 0 {
-            if dur < 60 {
-                duration = "\(dur) min"
-            } else if dur < 1440 { // less than 24 hours
-                let hrs = dur / 60
-                let mins = dur % 60
-                if mins > 0 {
-                    duration = "\(hrs) hr\(hrs > 1 ? "s" : "") \(mins) min"
-                } else {
-                    duration = "\(hrs) hr\(hrs > 1 ? "s" : "")"
-                }
-            } else if dur < 10080 { // less than 7 days
-                let days = dur / 1440
-                duration = "\(days) day\(days > 1 ? "s" : "")"
+            let hours = Double(dur) / 60.0
+            if hours < 1 {
+                // Sub-hour tasks: round to 1 decimal (e.g. "0.5 hr")
+                duration = String(format: "%.1f hr", hours)
+            } else if hours == hours.rounded() {
+                // Whole-number hours (e.g. "3 hrs", "270 hrs")
+                let intHrs = Int(hours)
+                duration = "\(intHrs) hr\(intHrs == 1 ? "" : "s")"
             } else {
-                let weeks = dur / 10080
-                duration = "\(weeks) week\(weeks > 1 ? "s" : "")"
+                // Fractional hours (e.g. "1.5 hrs")
+                duration = String(format: "%.1f hrs", hours)
             }
         }
         if let diff = draft.difficulty { difficulty = diff }

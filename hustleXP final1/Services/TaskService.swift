@@ -261,21 +261,21 @@ final class TaskService: ObservableObject {
         return task
     }
 
-    /// Worker cancels their acceptance of a task
-    /// Note: Backend uses 'cancel' for both poster cancellation and worker abandonment
+    /// Worker abandons their accepted task — task returns to OPEN for another hustler.
+    /// Escrow stays funded; money is not refunded (poster keeps task active).
     func abandonTask(taskId: String, reason: String?) async throws -> HXTask {
         isLoading = true
         defer { isLoading = false }
 
-        struct CancelInput: Codable {
+        struct AbandonInput: Codable {
             let taskId: String
             let reason: String?
         }
 
         let task: HXTask = try await trpc.call(
             router: "task",
-            procedure: "cancel",
-            input: CancelInput(taskId: taskId, reason: reason)
+            procedure: "abandon",
+            input: AbandonInput(taskId: taskId, reason: reason)
         )
 
         HXLogger.info("TaskService: Abandoned task - \(task.title)", category: "Task")
