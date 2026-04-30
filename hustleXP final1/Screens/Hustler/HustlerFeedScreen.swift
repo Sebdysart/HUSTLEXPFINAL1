@@ -41,6 +41,26 @@ struct HustlerFeedScreen: View {
     @State private var apiHeatZones: [HeatZone]?
     
     // v2.2.0: Use API tasks when available, fall back to mock data
+    /// Open a task detail screen.
+    /// Feed tab has no NavigationStack, so we switch to the Home tab first
+    /// (which DOES have a stack), then push the route there.
+    private func openTaskDetail(_ taskId: String) {
+        // Switch to Home tab (tag 0)
+        appState.selectedTab = 0
+        // Defer the navigation push slightly so the tab switch animates first
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            router.navigateToHustler(.taskDetail(taskId: taskId))
+        }
+    }
+
+    /// Same pattern as openTaskDetail — for any other Hustler route from the Feed tab.
+    private func openHustlerRoute(_ route: HustlerRoute) {
+        appState.selectedTab = 0
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            router.navigateToHustler(route)
+        }
+    }
+
     private var filteredTasks: [HXTask] {
         // Use API tasks if loaded, otherwise fall back to mock
         var tasks = apiTasks.isEmpty ? (matchmakerResult?.eligibleTasks ?? dataService.availableTasks) : apiTasks
@@ -243,7 +263,7 @@ struct HustlerFeedScreen: View {
                     // Could show zone details
                 },
                 onTaskTapped: { task in
-                    router.navigateToHustler(.taskDetail(taskId: task.id))
+                    openTaskDetail(task.id)
                 }
             )
             .padding(.horizontal, 16)
@@ -612,7 +632,7 @@ struct HustlerFeedScreen: View {
                             posterName: "Top Poster",
                             category: "Best Match"
                         ) {
-                            router.navigateToHustler(.taskDetail(taskId: featured.id))
+                            openTaskDetail(featured.id)
                         }
                     }
                     .padding(.bottom, 8)
@@ -628,7 +648,7 @@ struct HustlerFeedScreen: View {
                         variant: .expanded,
                         posterName: "Task Poster"
                     ) {
-                        router.navigateToHustler(.taskDetail(taskId: task.id))
+                        openTaskDetail(task.id)
                     }
                 }
             }

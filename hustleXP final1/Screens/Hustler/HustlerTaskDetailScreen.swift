@@ -239,28 +239,30 @@ struct HustlerTaskDetailScreen: View {
             HStack {
                 Label {
                     Text("Task")
-                        .font(.caption.weight(.semibold))
+                        .font(.system(size: 14, weight: .bold))
+                        .tracking(0.5)
                 } icon: {
                     Image(systemName: "briefcase.fill")
-                        .font(.caption)
+                        .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(Color.brandPurple)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
                 .background(
                     Capsule()
-                        .fill(Color.brandPurple.opacity(0.15))
+                        .fill(Color.brandPurple.opacity(0.18))
+                        .overlay(Capsule().stroke(Color.brandPurple.opacity(0.4), lineWidth: 1))
                 )
-                
+
                 Spacer()
-                
+
                 if task.state != .posted {
                     HXBadge(variant: .status(task.badgeStatus))
                 } else {
                     // Posted time
                     Text("Posted 2h ago")
-                        .font(.caption)
-                        .foregroundStyle(Color.textMuted)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.textSecondary)
                 }
             }
             
@@ -319,25 +321,25 @@ struct HustlerTaskDetailScreen: View {
         .animation(.easeOut(duration: 0.4), value: showContent)
     }
     
-    /// Compact stat pill used in the hero card — icon + value + label, never wraps.
+    /// Stat pill used in the hero card — icon + value + label, never wraps.
     private func statPill(icon: String, iconColor: Color, value: String, valueColor: Color, label: String) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 8) {
             ZStack {
                 Circle()
-                    .fill(iconColor.opacity(0.15))
-                    .frame(width: 36, height: 36)
+                    .fill(iconColor.opacity(0.18))
+                    .frame(width: 48, height: 48)
                 Image(systemName: icon)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(iconColor)
             }
             Text(value)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 17, weight: .bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .foregroundStyle(valueColor)
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(Color.textMuted)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.textSecondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -355,22 +357,22 @@ struct HustlerTaskDetailScreen: View {
     }
     
     private func quickStatItem(icon: String, value: String, label: String, color: Color) -> some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 4) {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 12))
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(color)
                 Text(value)
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
             }
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(Color.textMuted)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.textSecondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.surfaceElevated)
@@ -679,29 +681,33 @@ struct HustlerTaskDetailScreen: View {
     
     private func bottomActionBar(_ task: HXTask) -> some View {
         let isEligible = task.requiredTier.rawValue <= appState.trustTier.rawValue
-        
+
         return VStack(spacing: 0) {
-            Rectangle()
-                .fill(Color.white.opacity(0.08))
-                .frame(height: 1)
-            
-            HStack(spacing: 16) {
-                // Save button
+            // Subtle gradient divider — fades from transparent to faint white
+            LinearGradient(
+                colors: [Color.clear, Color.white.opacity(0.12), Color.clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 1)
+
+            HStack(spacing: 14) {
+                // Save / bookmark button — refined glass pill with purple accent ring
                 Button(action: {
                     let impact = UIImpactFeedbackGenerator(style: .light)
                     impact.impactOccurred()
                 }) {
                     Image(systemName: "bookmark")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.textSecondary)
-                        .frame(width: 52, height: 52)
+                        .foregroundStyle(Color.brandPurple)
+                        .frame(width: 56, height: 56)
                         .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(Color.surfaceElevated)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                                )
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.brandPurple.opacity(0.12))
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.brandPurple.opacity(0.35), lineWidth: 1)
+                            }
                         )
                 }
                 .accessibilityLabel("Save task")
@@ -782,40 +788,48 @@ struct HustlerTaskDetailScreen: View {
                                     .font(.system(size: 18, weight: .semibold))
                             }
 
-                            Text(task.state == .posted ? (isAccepting ? "Accepting..." : "Accept Task") : "View Progress")
-                                .font(.headline.weight(.semibold))
+                            Text(task.state == .posted ? (isAccepting ? "Accepting…" : "Accept Task") : "View Progress")
+                                .font(.system(size: 17, weight: .bold))
                         }
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 52)
+                        .frame(height: 56)
                         .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(
-                                    isEligible
-                                        ? LinearGradient(
-                                            colors: [Color.brandPurple, Color.brandPurpleLight],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(
+                                        isEligible
+                                            ? LinearGradient(
+                                                colors: [Color.brandPurple, Color.aiPurple, Color.brandPurpleLight],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                            : LinearGradient(
+                                                colors: [Color.textMuted.opacity(0.4), Color.textMuted.opacity(0.3)],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                    )
+                                // Subtle shimmer overlay
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.white.opacity(0.18), Color.clear],
+                                            startPoint: .top,
+                                            endPoint: .center
                                         )
-                                        : LinearGradient(
-                                            colors: [Color.textMuted, Color.textMuted],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                )
+                                    )
+                            }
                         )
-                        .shadow(color: isEligible ? Color.brandPurple.opacity(0.3) : .clear, radius: 12, y: 4)
+                        .shadow(color: isEligible ? Color.brandPurple.opacity(0.45) : .clear, radius: 16, y: 6)
                     }
                     .disabled(!isEligible || isAccepting)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .colorScheme(.dark)
-            )
+            .padding(.horizontal, 20)
+            .padding(.top, 14)
+            .padding(.bottom, 18)
+            .background(Color.brandBlack)
         }
     }
     

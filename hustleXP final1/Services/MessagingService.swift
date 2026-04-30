@@ -107,16 +107,21 @@ final class MessagingService: ObservableObject {
         struct GetMessagesInput: Codable {
             let taskId: String
         }
+        // Backend returns: { messages: [HXMessage], hasMore: Bool }
+        struct MessagesResponse: Codable {
+            let messages: [HXMessage]
+            let hasMore: Bool?
+        }
 
-        let messages: [HXMessage] = try await trpc.call(
+        let response: MessagesResponse = try await trpc.call(
             router: "messaging",
             procedure: "getTaskMessages",
             type: .query,
             input: GetMessagesInput(taskId: taskId)
         )
 
-        HXLogger.info("MessagingService: Fetched \(messages.count) messages for task \(taskId)", category: "General")
-        return messages
+        HXLogger.info("MessagingService: Fetched \(response.messages.count) messages for task \(taskId)", category: "General")
+        return response.messages
     }
 
     // MARK: - Conversations List

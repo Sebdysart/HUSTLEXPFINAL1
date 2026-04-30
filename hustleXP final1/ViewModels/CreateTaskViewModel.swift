@@ -350,28 +350,11 @@ final class CreateTaskViewModel {
                         HXLogger.error("CreateTask: Escrow confirm failed - \(error.localizedDescription)", category: "Task")
                     }
 
-                    let mockTask = HXTask(
-                        id: newTask.id,
-                        title: title,
-                        description: description,
-                        payment: paymentAmount,
-                        location: location,
-                        latitude: nil,
-                        longitude: nil,
-                        estimatedDuration: duration.isEmpty ? "1 hr" : duration,
-                        posterId: dataService.currentUser.id,
-                        posterName: dataService.currentUser.name,
-                        posterRating: dataService.currentUser.rating,
-                        hustlerId: nil,
-                        hustlerName: nil,
-                        state: .posted,
-                        requiredTier: requiredTier,
-                        createdAt: Date(),
-                        claimedAt: nil,
-                        completedAt: nil,
-                        aiSuggestedPrice: taskWasAIPriced
-                    )
-                    dataService.postTask(mockTask)
+                    // Update local cache directly using the task we already created above —
+                    // do NOT call dataService.postTask() because that would create another
+                    // task on the backend (it makes its own createTask API call).
+                    dataService.availableTasks.insert(newTask, at: 0)
+                    dataService.postedTasks.insert(newTask, at: 0)
 
                     stripeManager.reset()
                     isSubmitting = false
@@ -389,33 +372,10 @@ final class CreateTaskViewModel {
                 }
 
             } catch {
-                HXLogger.error("CreateTask: API failed, using mock - \(error.localizedDescription)", category: "Task")
-
-                let mockTask = HXTask(
-                    id: "task-\(UUID().uuidString.prefix(8))",
-                    title: title,
-                    description: description,
-                    payment: paymentAmount,
-                    location: location,
-                    latitude: nil,
-                    longitude: nil,
-                    estimatedDuration: duration.isEmpty ? "1 hr" : duration,
-                    posterId: dataService.currentUser.id,
-                    posterName: dataService.currentUser.name,
-                    posterRating: dataService.currentUser.rating,
-                    hustlerId: nil,
-                    hustlerName: nil,
-                    state: .posted,
-                    requiredTier: requiredTier,
-                    createdAt: Date(),
-                    claimedAt: nil,
-                    completedAt: nil,
-                    aiSuggestedPrice: taskWasAIPriced
-                )
-                dataService.postTask(mockTask)
-
+                HXLogger.error("CreateTask: API failed - \(error.localizedDescription)", category: "Task")
+                // Surface the error — don't silently fall back to creating a duplicate task.
+                ErrorToastManager.shared.show("Couldn't post task: \(error.localizedDescription)")
                 isSubmitting = false
-                router.popPoster()
             }
         }
     }

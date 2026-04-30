@@ -79,6 +79,9 @@ struct ProofSubmissionScreen: View {
             .toolbarBackground(Color.brandBlack, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            // Hide the tab bar — submit flow is a focused workflow,
+            // and the Submit button needs to sit at the very bottom edge.
+            .toolbar(.hidden, for: .tabBar)
             .safeAreaInset(edge: .bottom) {
                 bottomBar(bottomSafeArea: geometry.safeAreaInsets.bottom)
             }
@@ -92,9 +95,37 @@ struct ProofSubmissionScreen: View {
     // MARK: - Header Section
 
     private func headerSection(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: isCompact ? 6 : 8) {
-            HXText("Submit Proof", style: .title2)
-            HXText("Capture your location and photo to verify completion", style: .subheadline, color: .textSecondary)
+        HStack(alignment: .top, spacing: 14) {
+            // Hero icon with glow
+            ZStack {
+                Circle()
+                    .fill(Color.brandPurple.opacity(0.15))
+                    .frame(width: 52, height: 52)
+                    .blur(radius: 8)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.brandPurple, Color.aiPurple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Submit Proof")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.textPrimary)
+                Text("Verify completion to release payment")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textSecondary)
+            }
+
+            Spacer()
         }
     }
 
@@ -143,39 +174,70 @@ struct ProofSubmissionScreen: View {
     // MARK: - Task Summary Card
 
     private func taskSummaryCard(_ task: HXTask, isCompact: Bool) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: isCompact ? 3 : 4) {
-                HXText(task.title, style: .headline)
+        HStack(spacing: 14) {
+            // Briefcase icon chip
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.brandPurple.opacity(0.18))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "briefcase.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.brandPurple)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(task.title)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
-                HXText(task.location, style: .caption, color: .textSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.textTertiary)
+                    Text(task.location)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.textSecondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
 
-            PriceDisplay(amount: task.payment, size: .small)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("$\(Int(task.payment))")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.moneyGreen)
+                Text("PAYOUT")
+                    .font(.system(size: 9, weight: .bold))
+                    .tracking(1.2)
+                    .foregroundStyle(Color.textTertiary)
+            }
         }
-        .padding(isCompact ? 12 : 16)
-        .background(Color.surfaceElevated)
-        .cornerRadius(isCompact ? 10 : 12)
+        .padding(16)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.surfaceElevated)
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.brandPurple.opacity(0.05), Color.clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
+            }
+        )
     }
 
     // MARK: - GPS Section (v1.8.0)
 
     private func gpsSection(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: isCompact ? 10 : 12) {
-            HStack {
-                HXText("Location Capture", style: .headline)
-                Spacer()
-                if viewModel.gpsCoordinates != nil {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.successGreen)
-                }
-            }
-
-            HXText("We'll capture your GPS coordinates to verify you're at the task location", style: .caption, color: .textSecondary)
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("STEP 1 · LOCATION", icon: "location.fill", isComplete: viewModel.gpsCoordinates != nil)
 
             if let coords = viewModel.gpsCoordinates {
                 gpsCapturedCard(coords)
@@ -183,6 +245,27 @@ struct ProofSubmissionScreen: View {
                 gpsErrorCard(error)
             } else {
                 gpsCaptureButton
+            }
+        }
+    }
+
+    /// Reusable section label with completion indicator.
+    private func sectionLabel(_ text: String, icon: String, isComplete: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(isComplete ? Color.successGreen : Color.brandPurple)
+            Text(text)
+                .font(.system(size: 11, weight: .heavy))
+                .tracking(1.5)
+                .foregroundStyle(isComplete ? Color.successGreen : Color.brandPurple)
+
+            Spacer()
+
+            if isComplete {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.successGreen)
             }
         }
     }
@@ -227,50 +310,93 @@ struct ProofSubmissionScreen: View {
     }
 
     private func gpsCapturedCard(_ coords: GPSCoordinates) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "location.fill")
-                    .foregroundStyle(Color.successGreen)
+        VStack(spacing: 14) {
+            // Header row with status pill
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(Color.successGreen.opacity(0.2))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.successGreen)
+                }
 
-                HXText("Location Captured", style: .subheadline)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Location Captured")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Verified at task location")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.textSecondary)
+                }
 
                 Spacer()
 
                 Button(action: { viewModel.clearGPS() }) {
-                    HXText("Recapture", style: .caption, color: .brandPurple)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("Recapture")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.brandPurple)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.brandPurple.opacity(0.15)))
                 }
             }
 
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HXText("Coordinates", style: .caption, color: .textSecondary)
-                    HXText(String(format: "%.4f, %.4f", coords.latitude, coords.longitude), style: .footnote)
+            Divider().background(Color.successGreen.opacity(0.2))
+
+            // Stats grid
+            HStack(spacing: 0) {
+                // Coordinates
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("COORDINATES")
+                        .font(.system(size: 10, weight: .heavy))
+                        .tracking(1)
+                        .foregroundStyle(Color.textTertiary)
+                    Text(String(format: "%.4f, %.4f", coords.latitude, coords.longitude))
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.textPrimary)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    HXText("Accuracy", style: .caption, color: .textSecondary)
-                    HStack(spacing: 4) {
+                // Accuracy
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("ACCURACY")
+                        .font(.system(size: 10, weight: .heavy))
+                        .tracking(1)
+                        .foregroundStyle(Color.textTertiary)
+                    HStack(spacing: 5) {
                         accuracyIndicator(for: coords.accuracyMeters)
-                        HXText(String(format: "+-%.0fm", coords.accuracyMeters), style: .footnote)
+                        Text(String(format: "±%.0fm", coords.accuracyMeters))
+                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.textPrimary)
                     }
                 }
             }
 
-            HStack {
-                HXText("Captured", style: .caption, color: .textSecondary)
+            // Timestamp footer
+            HStack(spacing: 6) {
+                Image(systemName: "clock")
+                    .font(.system(size: 10))
+                Text("Captured \(coords.timestamp.formatted(date: .omitted, time: .shortened))")
+                    .font(.system(size: 11))
                 Spacer()
-                HXText(coords.timestamp.formatted(date: .omitted, time: .shortened), style: .caption, color: .textSecondary)
             }
+            .foregroundStyle(Color.textTertiary)
         }
-        .padding()
-        .background(Color.successGreen.opacity(0.1))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.successGreen.opacity(0.3), lineWidth: 1)
+        .padding(16)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.successGreen.opacity(0.08))
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.successGreen.opacity(0.3), lineWidth: 1)
+            }
         )
-        .cornerRadius(12)
     }
 
     private func accuracyIndicator(for accuracy: Double) -> some View {
@@ -310,16 +436,8 @@ struct ProofSubmissionScreen: View {
     // MARK: - Photo Upload Section
 
     private func photoUploadSection(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: isCompact ? 10 : 12) {
-            HStack {
-                HXText("Photo Proof", style: .headline)
-                Spacer()
-                if viewModel.hasPhoto {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.successGreen)
-                }
-            }
-            HXText("Take a photo showing your completed work", style: .caption, color: .textSecondary)
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("STEP 2 · PHOTO PROOF", icon: "camera.fill", isComplete: viewModel.hasPhoto)
 
             if viewModel.hasPhoto, let image = viewModel.capturedImage {
                 GeometryReader { geo in
@@ -454,17 +572,24 @@ struct ProofSubmissionScreen: View {
     // MARK: - Notes Section
 
     private func notesSection(isCompact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: isCompact ? 10 : 12) {
-            HXText("Notes (Optional)", style: .headline)
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("STEP 3 · NOTES", icon: "text.bubble.fill", isComplete: !viewModel.notes.isEmpty)
 
-            TextField("Add any notes about the completed task", text: Binding(
+            TextField("", text: Binding(
                 get: { viewModel.notes },
                 set: { viewModel.notes = $0 }
-            ), axis: .vertical)
+            ), prompt: Text("Add any notes about the completed task (optional)").foregroundColor(.textTertiary), axis: .vertical)
+                .font(.system(size: 14))
                 .lineLimit(3...6)
-                .padding()
-                .background(Color.surfaceElevated)
-                .cornerRadius(12)
+                .padding(14)
+                .background(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.surfaceElevated)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                    }
+                )
                 .foregroundStyle(Color.textPrimary)
         }
     }
@@ -472,9 +597,23 @@ struct ProofSubmissionScreen: View {
     // MARK: - Bottom Bar
 
     private func bottomBar(bottomSafeArea: CGFloat = 0) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
+            // Subtle gradient hairline divider — separates content from action bar
+            LinearGradient(
+                colors: [Color.clear, Color.white.opacity(0.12), Color.clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 1)
+            .padding(.bottom, 4)
+
             if !viewModel.canProceedToPhoto {
-                HXButton("Capture GPS to Continue", variant: .secondary) {
+                // Active primary CTA — same vibrant styling as other primary actions
+                HXButton(
+                    viewModel.isCapturingGPS ? "Capturing GPS..." : "Capture GPS to Continue",
+                    variant: .primary,
+                    isLoading: viewModel.isCapturingGPS
+                ) {
                     viewModel.captureGPS()
                 }
                 .disabled(viewModel.isCapturingGPS)
@@ -483,20 +622,24 @@ struct ProofSubmissionScreen: View {
             } else {
                 HXButton(
                     viewModel.isSubmitting ? "Submitting..." : "Submit for Review",
-                    variant: viewModel.canSubmit ? .primary : .secondary,
+                    variant: .primary,
                     isLoading: viewModel.isSubmitting
                 ) {
                     viewModel.submitProof()
                 }
                 .disabled(!viewModel.canSubmit || viewModel.isSubmitting)
+                .opacity(viewModel.canSubmit ? 1 : 0.5)
 
                 if !viewModel.hasPhoto {
                     HXText("Add a photo to submit", style: .caption, color: .textSecondary)
                 }
             }
         }
-        .padding()
-        .background(.ultraThinMaterial)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        // Use system safe area inset only (no extra padding) — sits flush at bottom
+        .padding(.bottom, max(20, bottomSafeArea))
+        .background(Color.brandBlack)
     }
 
     // MARK: - Validation Result View (v1.8.0)
@@ -664,94 +807,155 @@ struct ProofSubmissionScreen: View {
     // MARK: - Success View
 
     private var submissionSuccessView: some View {
-        VStack(spacing: 24) {
-            Spacer()
+        ZStack {
+            // Dark background — extends edge to edge, including under nav bar
+            Color.brandBlack.ignoresSafeArea()
 
-            ZStack {
-                Circle()
-                    .fill(Color.successGreen.opacity(0.1))
-                    .frame(width: 120, height: 120)
+            VStack(spacing: 24) {
+                Spacer()
 
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(Color.successGreen)
-            }
+                // Animated success icon with glow
+                ZStack {
+                    Circle()
+                        .fill(Color.successGreen.opacity(0.18))
+                        .frame(width: 140, height: 140)
+                        .blur(radius: 24)
 
-            VStack(spacing: 8) {
-                HXText("Proof Submitted!", style: .title)
-                HXText("The poster will review your work", style: .body, color: .textSecondary, alignment: .center)
-            }
+                    Circle()
+                        .fill(Color.successGreen.opacity(0.15))
+                        .frame(width: 120, height: 120)
 
-            if let task = viewModel.task {
-                VStack(spacing: 4) {
-                    HXText("You'll earn", style: .subheadline, color: .textSecondary)
-                    PriceDisplay(amount: task.payment, size: .large, color: .successGreen)
-                }
-                .padding()
-                .background(Color.successGreen.opacity(0.1))
-                .cornerRadius(12)
-            }
+                    Circle()
+                        .stroke(Color.successGreen.opacity(0.4), lineWidth: 2)
+                        .frame(width: 120, height: 120)
 
-            if let coords = viewModel.gpsCoordinates {
-                HStack(spacing: 8) {
-                    Image(systemName: "location.fill")
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 64, weight: .bold))
                         .foregroundStyle(Color.successGreen)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        HXText("Location Verified", style: .caption)
-                        HXText(String(format: "%.4f, %.4f", coords.latitude, coords.longitude), style: .caption, color: .textSecondary)
-                    }
+                        .shadow(color: Color.successGreen.opacity(0.6), radius: 8)
                 }
-                .padding()
-                .background(Color.surfaceElevated)
-                .cornerRadius(8)
-            }
 
-            // v2.6.0: Rate the poster prompt
-            if let task = viewModel.task {
-                Button {
-                    showRatingSheet = true
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(Color.warningOrange)
+                VStack(spacing: 8) {
+                    Text("Proof Submitted!")
+                        .font(.system(size: 28, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.textPrimary)
+                    Text("The poster will review your work shortly")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Rate \(task.posterName)")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.textPrimary)
-                            Text("How was your experience?")
-                                .font(.caption)
-                                .foregroundStyle(Color.textSecondary)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.textMuted)
+                if let task = viewModel.task {
+                    VStack(spacing: 4) {
+                        Text("YOU'LL EARN")
+                            .font(.system(size: 11, weight: .heavy))
+                            .tracking(1.5)
+                            .foregroundStyle(Color.textSecondary)
+                        Text("$\(String(format: "%.2f", task.payment))")
+                            .font(.system(size: 38, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Color.successGreen)
                     }
-                    .padding(16)
-                    .background(Color.surfaceElevated)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.warningOrange.opacity(0.3), lineWidth: 1)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 18)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.successGreen.opacity(0.12))
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.successGreen.opacity(0.3), lineWidth: 1)
+                        }
                     )
                 }
+
+                if let coords = viewModel.gpsCoordinates {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.successGreen.opacity(0.2))
+                                .frame(width: 30, height: 30)
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color.successGreen)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Location Verified")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color.textPrimary)
+                            Text(String(format: "%.4f, %.4f", coords.latitude, coords.longitude))
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.surfaceElevated)
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        }
+                    )
+                }
+
+                // Rate the poster prompt
+                if let task = viewModel.task {
+                    Button {
+                        showRatingSheet = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.warningOrange.opacity(0.18))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(Color.warningOrange)
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Rate \(task.posterName)")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundStyle(Color.textPrimary)
+                                Text("How was your experience?")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                        .padding(14)
+                        .background(
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(Color.surfaceElevated)
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Color.warningOrange.opacity(0.3), lineWidth: 1)
+                            }
+                        )
+                    }
+                    .padding(.horizontal, 24)
+                }
+
+                Spacer()
+
+                HXButton("Back to Home") {
+                    viewModel.completeAndGoHome()
+                }
                 .padding(.horizontal, 24)
+                .padding(.bottom, 32)
             }
-
-            Spacer()
-
-            HXButton("Back to Home") {
-                viewModel.completeAndGoHome()
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
         }
         .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbarBackground(Color.brandBlack, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .sheet(isPresented: $showRatingSheet) {
             if let task = viewModel.task {
                 RateTaskSheet(

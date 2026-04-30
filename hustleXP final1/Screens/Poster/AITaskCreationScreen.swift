@@ -157,17 +157,16 @@ struct AITaskCreationScreen: View {
             Spacer()
             
             // AI branding with glow
-            HStack(spacing: isCompact ? 6 : 8) {
+            HStack(spacing: isCompact ? 8 : 10) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: isCompact ? 12 : 14, weight: .semibold))
+                    .font(.system(size: isCompact ? 18 : 20, weight: .semibold))
                     .foregroundStyle(Color.aiPurple)
                     .shadow(color: Color.aiPurple.opacity(0.8), radius: 8)
-                
+
                 Text("AI CREATOR")
-                    .font(.system(size: isCompact ? 10 : 12, weight: .bold))
-                    .minimumScaleFactor(0.7)
-                    .tracking(2)
-                    .foregroundStyle(Color.textSecondary)
+                    .font(.system(size: isCompact ? 16 : 18, weight: .bold))
+                    .tracking(1.8)
+                    .foregroundStyle(Color.textPrimary)
             }
             
             Spacer()
@@ -349,6 +348,7 @@ struct AITaskCreationScreen: View {
         }
         .accessibilityLabel("Post task")
         .disabled(isPosting)
+        .opacity(isPosting ? 0.6 : 1)
         .padding(.horizontal, isCompact ? 16 : 20)
         .padding(.vertical, isCompact ? 10 : 12)
         .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -805,16 +805,16 @@ struct NeonTaskCardPreview: View {
             VStack(alignment: .leading, spacing: 0) {
                 // ── Header ──
                 HStack {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         Image(systemName: "sparkles")
-                            .font(.system(size: isCompact ? 11 : 13, weight: .bold))
+                            .font(.system(size: isCompact ? 16 : 18, weight: .bold))
                             .foregroundStyle(Color.aiPurple)
                             .rotationEffect(.degrees(hasAppeared ? 0 : -180))
                             .scaleEffect(hasAppeared ? 1.0 : 0.3)
 
                         Text("YOUR TASK")
-                            .font(.system(size: isCompact ? 9 : 10, weight: .heavy))
-                            .tracking(2)
+                            .font(.system(size: isCompact ? 14 : 15, weight: .heavy))
+                            .tracking(1.5)
                             .foregroundStyle(Color.aiPurple)
                     }
                     .opacity(showHeader ? 1 : 0)
@@ -823,42 +823,57 @@ struct NeonTaskCardPreview: View {
                     Spacer()
 
                     // Status badge with color transition
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         Circle()
                             .fill(isComplete ? Color.successGreen : Color.warningOrange)
-                            .frame(width: 8, height: 8)
+                            .frame(width: 10, height: 10)
                             .shadow(color: (isComplete ? Color.successGreen : Color.warningOrange).opacity(0.8), radius: 6)
                             .scaleEffect(completionBounce ? 2.0 : 1.0)
 
                         Text(isComplete ? "Ready" : "Building...")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: isCompact ? 13 : 14, weight: .bold))
                             .foregroundStyle(isComplete ? Color.successGreen : Color.warningOrange)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule().fill((isComplete ? Color.successGreen : Color.warningOrange).opacity(0.12))
+                    )
                     .opacity(showHeader ? 1 : 0)
                     .animation(.easeInOut(duration: 0.4), value: isComplete)
                 }
                 .padding(.bottom, isCompact ? 12 : 16)
 
                 // ── Category + Risk badges ──
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     if let category = category {
                         Text(category.displayName.uppercased())
-                            .font(.system(size: isCompact ? 9 : 10, weight: .bold))
-                            .tracking(1)
+                            .font(.system(size: isCompact ? 12 : 13, weight: .bold))
+                            .tracking(0.8)
                             .foregroundStyle(Color.brandPurple)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(Color.brandPurple.opacity(0.15)))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(Capsule().fill(Color.brandPurple.opacity(0.18)))
+                            .overlay(
+                                Capsule().stroke(Color.brandPurple.opacity(0.4), lineWidth: 1)
+                            )
                     }
 
                     let rc: Color = riskLevel == "LOW" ? .successGreen : riskLevel == "MEDIUM" ? .warningOrange : .errorRed
-                    HStack(spacing: 3) {
-                        Image(systemName: "shield.fill").font(.system(size: 9))
-                        Text(riskLevel).font(.system(size: 9, weight: .bold))
+                    HStack(spacing: 5) {
+                        Image(systemName: "shield.fill")
+                            .font(.system(size: 12, weight: .bold))
+                        Text(riskLevel)
+                            .font(.system(size: isCompact ? 12 : 13, weight: .bold))
+                            .tracking(0.5)
                     }
                     .foregroundStyle(rc)
-                    .padding(.horizontal, 6).padding(.vertical, 3)
-                    .background(Capsule().fill(rc.opacity(0.15)))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(rc.opacity(0.18)))
+                    .overlay(
+                        Capsule().stroke(rc.opacity(0.4), lineWidth: 1)
+                    )
                 }
                 .opacity(showBadges ? 1 : 0)
                 .offset(x: showBadges ? 0 : -30)

@@ -148,6 +148,7 @@ struct hustleXP_final1App: App {
                        let token = KeychainManager.shared.get(forKey: KeychainManager.Key.authToken) {
                         RealtimeSSEClient.shared.connect(authToken: token)
                         dataService.subscribeToEarningsUpdates()
+                        await NotificationService.shared.subscribeToSSE()
                     }
 
                     await MainActor.run {
@@ -179,10 +180,11 @@ struct hustleXP_final1App: App {
             }
             .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
                 if isAuthenticated {
-                    // Connect SSE + earnings sync on login
+                    // Connect SSE + subscribe to real-time channels on login
                     if let token = KeychainManager.shared.get(forKey: KeychainManager.Key.authToken) {
                         RealtimeSSEClient.shared.connect(authToken: token)
                         dataService.subscribeToEarningsUpdates()
+                        Task { await NotificationService.shared.subscribeToSSE() }
                     }
 
                     // Consume any pending deep link that arrived before authentication
@@ -192,9 +194,10 @@ struct hustleXP_final1App: App {
                         }
                     }
                 } else {
-                    // Disconnect SSE + earnings sync on logout
+                    // Disconnect SSE + unsubscribe on logout
                     RealtimeSSEClient.shared.disconnect()
                     dataService.unsubscribeFromEarningsUpdates()
+                    Task { await NotificationService.shared.unsubscribeFromSSE() }
                 }
             }
         }

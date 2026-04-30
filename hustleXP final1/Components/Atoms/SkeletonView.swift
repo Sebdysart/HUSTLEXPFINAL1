@@ -1,60 +1,87 @@
+//
+//  SkeletonView.swift
+//  hustleXP final1
+//
+//  Animated shimmer placeholders for loading states.
+//  Use instead of plain ProgressView for polished perceived-performance.
+//
+
 import SwiftUI
 
-/// Animated skeleton loading placeholder
+/// Animated skeleton loading placeholder — generic rounded rect.
 struct SkeletonView: View {
     var width: CGFloat? = nil
     var height: CGFloat = 16
     var cornerRadius: CGFloat = 8
 
-    @State private var isAnimating = false
+    @State private var phase: CGFloat = -1
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(
+            .fill(Color.surfaceElevated)
+            .frame(width: width, height: height)
+            .overlay(
                 LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(.systemGray5),
-                        Color(.systemGray4),
-                        Color(.systemGray5),
-                    ]),
-                    startPoint: isAnimating ? .trailing : .leading,
-                    endPoint: isAnimating ? .leading : .trailing
+                    stops: [
+                        .init(color: Color.white.opacity(0), location: 0),
+                        .init(color: Color.white.opacity(0.08), location: 0.5),
+                        .init(color: Color.white.opacity(0), location: 1),
+                    ],
+                    startPoint: UnitPoint(x: phase - 0.3, y: 0.5),
+                    endPoint: UnitPoint(x: phase + 0.3, y: 0.5)
                 )
             )
-            .frame(width: width, height: height)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .onAppear {
-                withAnimation(
-                    .easeInOut(duration: 1.2)
-                    .repeatForever(autoreverses: true)
-                ) {
-                    isAnimating = true
+                withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: false)) {
+                    phase = 2
                 }
             }
     }
 }
 
-/// Skeleton card for task list loading state
+/// Alias for clarity in newer code — same as SkeletonView.
+typealias SkeletonRect = SkeletonView
+
+/// Skeleton card for task list loading state — matches real TaskCard layout.
 struct SkeletonTaskCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SkeletonView(width: 200, height: 20)
-            SkeletonView(height: 14)
-            SkeletonView(width: 140, height: 14)
             HStack {
-                SkeletonView(width: 60, height: 24, cornerRadius: 12)
+                SkeletonView(width: 180, height: 18, cornerRadius: 6)
                 Spacer()
-                SkeletonView(width: 80, height: 24, cornerRadius: 12)
+                SkeletonView(width: 60, height: 22, cornerRadius: 11) // status pill
+            }
+
+            HStack(spacing: 12) {
+                SkeletonView(width: 50, height: 14)
+                SkeletonView(width: 70, height: 14)
+                Spacer()
+            }
+
+            SkeletonView(width: nil, height: 12)
+            SkeletonView(width: 220, height: 12)
+
+            HStack {
+                SkeletonView(width: 60, height: 24, cornerRadius: 8)
+                Spacer()
+                SkeletonView(width: 80, height: 28, cornerRadius: 14)
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.surfaceElevated.opacity(0.5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                )
+        )
     }
 }
 
-/// Skeleton list for loading screens
-struct SkeletonList: View {
+/// Skeleton list — drop-in replacement for "loading" state.
+struct SkeletonTaskList: View {
     var count: Int = 3
 
     var body: some View {
@@ -63,15 +90,19 @@ struct SkeletonList: View {
                 SkeletonTaskCard()
             }
         }
-        .padding(.horizontal)
     }
 }
 
+/// Older alias kept for compatibility with existing call sites.
+typealias SkeletonList = SkeletonTaskList
+
 #Preview {
-    VStack(spacing: 20) {
-        SkeletonView(width: 200, height: 20)
-        SkeletonTaskCard()
-        SkeletonList(count: 2)
+    ZStack {
+        Color.brandBlack.ignoresSafeArea()
+        VStack(spacing: 20) {
+            SkeletonView(width: 200, height: 20)
+            SkeletonTaskList(count: 2)
+        }
+        .padding()
     }
-    .padding()
 }

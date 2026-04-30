@@ -166,6 +166,41 @@ struct SettingsMainScreen: View {
             .listRowBackground(Color.surfaceElevated)
 
             #if DEBUG
+            // Notifications debug — verify push token + send test notification
+            Section {
+                HStack {
+                    HXText("Push Permission", style: .body, color: .textSecondary)
+                    Spacer()
+                    HXText(
+                        PushNotificationManager.shared.isAuthorized ? "Granted ✓" : "Not granted",
+                        style: .body,
+                        color: PushNotificationManager.shared.isAuthorized ? .successGreen : .errorRed
+                    )
+                }
+
+                HStack {
+                    HXText("FCM Token", style: .body, color: .textSecondary)
+                    Spacer()
+                    HXText(
+                        PushNotificationManager.shared.fcmToken != nil ? "Registered ✓" : "Missing",
+                        style: .body,
+                        color: PushNotificationManager.shared.fcmToken != nil ? .successGreen : .errorRed
+                    )
+                }
+
+                Button(action: requestNotificationPermission) {
+                    HStack {
+                        Image(systemName: "bell.badge.fill")
+                            .foregroundStyle(Color.warningOrange)
+                        HXText("Request Notification Permission", style: .body, color: .warningOrange)
+                    }
+                }
+            } header: {
+                Text("Debug — Notifications")
+                    .foregroundStyle(Color.textSecondary)
+            }
+            .listRowBackground(Color.surfaceElevated)
+
             // Crash test (debug only — used to verify Crashlytics is working)
             Section {
                 Button(action: triggerTestCrash) {
@@ -195,13 +230,20 @@ struct SettingsMainScreen: View {
             }
             .listRowBackground(Color.surfaceElevated)
         }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
         .background(Color.brandBlack)
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Settings")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
     }
     
     private func handleLogout() {
@@ -264,6 +306,19 @@ struct SettingsMainScreen: View {
     private func triggerTestCrash() {
         // Force a crash to verify Crashlytics is reporting correctly
         let _ = [Int]()[42]
+    }
+
+    private func requestNotificationPermission() {
+        Task {
+            let granted = await PushNotificationManager.shared.requestAuthorization()
+            HXLogger.info("Settings: Notification permission \(granted ? "granted" : "denied")", category: "Push")
+            if granted {
+                PushNotificationManager.shared.registerForRemoteNotifications()
+                ErrorToastManager.shared.show("Notifications enabled", style: .info)
+            } else {
+                ErrorToastManager.shared.show("Permission denied. Enable in iOS Settings → HustleXP → Notifications.")
+            }
+        }
     }
     #endif
 }

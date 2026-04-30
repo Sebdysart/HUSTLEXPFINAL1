@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 struct HustlerHomeScreen: View {
     @Environment(AppState.self) private var appState
@@ -16,6 +17,7 @@ struct HustlerHomeScreen: View {
     @State private var showGreeting = false
     @State private var statsAnimated = false
     @State private var glowPulse: Double = 0.3
+    @State private var userLocation: GPSCoordinates?
     
     var body: some View {
         GeometryReader { geometry in
@@ -47,6 +49,9 @@ struct HustlerHomeScreen: View {
                         Spacer(minLength: max(24, geometry.safeAreaInsets.bottom + 16))
                     }
                     .padding(.vertical)
+                }
+                .refreshable {
+                    await dataService.refreshAll()
                 }
             }
         }
@@ -113,9 +118,23 @@ struct HustlerHomeScreen: View {
         }
         .task {
             await dataService.refreshAll()
+            // Capture user location for distance display on task cards
+            let (coords, _) = await LocationService.current.captureLocation()
+            userLocation = coords
         }
     }
-    
+
+    /// Distance from the user's current location to the task (meters).
+    /// Returns nil if either is missing — TaskCard will hide the distance label.
+    private func distanceToTask(_ task: HXTask) -> Double? {
+        guard let user = userLocation,
+              let lat = task.latitude,
+              let lng = task.longitude else { return nil }
+        let userLoc = CLLocation(latitude: user.latitude, longitude: user.longitude)
+        let taskLoc = CLLocation(latitude: lat, longitude: lng)
+        return userLoc.distance(from: taskLoc)
+    }
+
     // MARK: - Neon Background
     
     private var neonBackground: some View {
@@ -180,90 +199,108 @@ struct HustlerHomeScreen: View {
     // MARK: - Welcome Header
     
     private func welcomeHeader(isCompact: Bool) -> some View {
-        HStack(alignment: .top, spacing: isCompact ? 12 : 16) {
-            // Avatar with neon glow
-            ZStack {
-                // Outer glow
-                Circle()
-                    .fill(Color.brandPurple.opacity(glowPulse * 0.5))
-                    .frame(width: isCompact ? 60 : 76, height: isCompact ? 60 : 76)
-                    .blur(radius: 15)
-                
-                // Avatar ring
-                Circle()
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.brandPurple, Color.aiPurple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: isCompact ? 2 : 3
-                    )
-                    .frame(width: isCompact ? 52 : 66, height: isCompact ? 52 : 66)
-                
-                // Avatar fill
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.brandPurple, Color.brandPurpleLight],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: isCompact ? 46 : 58, height: isCompact ? 46 : 58)
-                
-                Text(String(dataService.currentUser.name.prefix(1)))
-                    .font(.system(size: isCompact ? 20 : 24, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-            
-            VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
-                Text("Hey, \(dataService.currentUser.name)!")
-                    .font(.system(size: isCompact ? 22 : 26, weight: .bold))
-                    .minimumScaleFactor(0.7)
-                    .foregroundStyle(Color.textPrimary)
-                    .opacity(showGreeting ? 1 : 0)
-                    .offset(x: showGreeting ? 0 : -20)
-                
-                Text("Ready to hustle?")
-                    .font(.system(size: isCompact ? 14 : 15))
-                    .minimumScaleFactor(0.7)
-                    .foregroundStyle(Color.textSecondary)
-                    .opacity(showGreeting ? 1 : 0)
-                    .offset(x: showGreeting ? 0 : -20)
-            }
-            
-            Spacer()
-            
-            // Trust tier badge with glow
-            VStack(alignment: .trailing, spacing: 4) {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: isCompact ? 14 : 18) {
+                // Avatar with online indicator
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(tierColor.opacity(0.15))
-                        .frame(height: 32)
-                    
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(tierColor.opacity(0.5), lineWidth: 1)
-                        .frame(height: 32)
-                    
-                    HStack(spacing: 6) {
-                        Image(systemName: tierIcon)
-                            .font(.system(size: 12, weight: .bold))
-                        Text(dataService.currentUser.trustTier.name.uppercased())
-                            .font(.system(size: 10, weight: .heavy))
-                            .tracking(0.5)
-                    }
-                    .foregroundStyle(tierColor)
-                    .padding(.horizontal, 12)
+                    // Soft outer glow
+                    Circle()
+                        .fill(Color.brandPurple.opacity(glowPulse * 0.45))
+                        .frame(width: isCompact ? 68 : 82, height: isCompact ? 68 : 82)
+                        .blur(radius: 18)
+
+                    // Gradient ring
+                    Circle()
+                        .strokeBorder(
+                            AngularGradient(
+                                colors: [Color.brandPurple, Color.aiPurple, Color.brandPurpleLight, Color.brandPurple],
+                                center: .center
+                            ),
+                            lineWidth: isCompact ? 2.5 : 3
+                        )
+                        .frame(width: isCompact ? 58 : 72, height: isCompact ? 58 : 72)
+
+                    // Avatar fill
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.brandPurple, Color.brandPurpleLight],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: isCompact ? 50 : 62, height: isCompact ? 50 : 62)
+
+                    Text(String(dataService.currentUser.name.prefix(1)).uppercased())
+                        .font(.system(size: isCompact ? 22 : 26, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white)
+
+                    // Online indicator dot
+                    Circle()
+                        .fill(Color.successGreen)
+                        .frame(width: 14, height: 14)
+                        .overlay(Circle().stroke(Color.brandBlack, lineWidth: 2.5))
+                        .offset(x: isCompact ? 22 : 26, y: isCompact ? 22 : 26)
                 }
-                .shadow(color: tierColor.opacity(0.3), radius: 8)
-                
-                Text("Level \(trustTierLevel)")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(Color.textMuted)
+
+                // Greeting + status
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(timeOfDayGreeting)
+                        .font(.system(size: 12, weight: .semibold))
+                        .tracking(1.5)
+                        .foregroundStyle(Color.textSecondary)
+
+                    Text(dataService.currentUser.name)
+                        .font(.system(size: isCompact ? 22 : 26, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Color.successGreen)
+                            .frame(width: 6, height: 6)
+                        Text("Ready to hustle")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
+                Spacer()
+
+                // Tier chip — vertical layout, compact
+                VStack(spacing: 4) {
+                    ZStack {
+                        Circle()
+                            .fill(tierColor.opacity(0.18))
+                            .frame(width: 44, height: 44)
+                        Circle()
+                            .stroke(tierColor.opacity(0.4), lineWidth: 1.5)
+                            .frame(width: 44, height: 44)
+                        Image(systemName: tierIcon)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(tierColor)
+                    }
+                    Text("LV \(trustTierLevel)")
+                        .font(.system(size: 11, weight: .heavy))
+                        .tracking(0.8)
+                        .foregroundStyle(tierColor)
+                }
+                .shadow(color: tierColor.opacity(0.25), radius: 6)
             }
+            .padding(.horizontal, isCompact ? 16 : 20)
         }
-        .padding(.horizontal, isCompact ? 16 : 20)
+    }
+
+    /// Greets based on local time — nicer than a static "Hey"
+    private var timeOfDayGreeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12: return "GOOD MORNING"
+        case 12..<17: return "GOOD AFTERNOON"
+        case 17..<22: return "GOOD EVENING"
+        default: return "WELCOME BACK"
+        }
     }
     
     private var tierColor: Color {
@@ -569,7 +606,11 @@ struct HustlerHomeScreen: View {
                 .padding(.trailing, 20)
             }
             
-            if dataService.availableTasks.isEmpty {
+            if dataService.isLoading && dataService.availableTasks.isEmpty {
+                // First load — show skeleton placeholders
+                SkeletonTaskList(count: 3)
+                    .padding(.horizontal, 20)
+            } else if dataService.availableTasks.isEmpty {
                 EmptyState(
                     icon: "tray",
                     title: "No Tasks Yet",
@@ -586,7 +627,8 @@ struct HustlerHomeScreen: View {
                             location: task.location,
                             duration: task.estimatedDuration,
                             variant: index == 0 ? .featured : .compact,
-                            category: index == 0 ? "Top Pick" : nil
+                            category: index == 0 ? "Top Pick" : nil,
+                            distanceMeters: distanceToTask(task)
                         ) {
                             router.navigateToHustler(.taskDetail(taskId: task.id))
                         }

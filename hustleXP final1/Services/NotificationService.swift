@@ -8,6 +8,7 @@
 
 import Foundation
 import Combine
+import UserNotifications
 
 // MARK: - Notification Types
 
@@ -172,8 +173,64 @@ final class NotificationService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
+    private var sseCancellable: AnyCancellable?
+
     init(client: TRPCClientProtocol) {
         self.trpc = client
+    }
+
+    /// Subscribe to real-time notifications via SSE.
+    /// Call once after login. Shows an in-app toast banner for every notification
+    /// AND increments the unread badge.
+    func subscribeToSSE() {
+        guard sseCancellable == nil else { return }
+        sseCancellable = RealtimeSSEClient.shared.messageReceived
+            .filter { $0.event == "notification.created" }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] message in
+                guard let self else { return }
+                struct NotificationPayload: Codable {
+                    let userId: String
+                    let notificationId: String
+                    let category: String
+                    let title: String
+                    let body: String
+                    let deepLink: String?
+                    let taskId: String?
+                    let priority: String
+                    let createdAt: String
+                }
+                guard let payload = try? JSONDecoder().decode(NotificationPayload.self, from: message.data) else {
+                    HXLogger.error("Notification SSE: Failed to decode payload", category: "Push")
+                    return
+                }
+
+                HXLogger.info("Notification SSE: \(payload.category) — \(payload.title)", category: "Push")
+
+                // Increment unread badge instantly
+                self.unreadCount += 1
+                UNUserNotificationCenter.current().setBadgeCount(self.unreadCount)
+
+                // Pick toast style based on priority/category
+                let style: ToastStyle = {
+                    switch payload.priority.uppercased() {
+                    case "CRITICAL": return .error
+                    case "HIGH": return .warning
+                    default: return .info
+                    }
+                }()
+
+                // Show in-app banner
+                ErrorToastManager.shared.show("\(payload.title): \(payload.body)", style: style)
+
+                // Refresh notification list in background
+                Task { try? await self.getNotifications() }
+            }
+    }
+
+    func unsubscribeFromSSE() {
+        sseCancellable?.cancel()
+        sseCancellable = nil
     }
 
     // MARK: - Get Notifications

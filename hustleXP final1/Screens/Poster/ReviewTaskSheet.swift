@@ -383,6 +383,9 @@ struct ReviewTaskSheet: View {
                             .stroke(Color.brandPurple.opacity(0.2), lineWidth: 1)
                     )
 
+                    // Fee breakdown — transparency before payment
+                    feeBreakdownCard
+
                     // Post button
                     Button {
                         applyToDraft()
@@ -425,6 +428,60 @@ struct ReviewTaskSheet: View {
                         .foregroundStyle(Color.textSecondary)
                 }
             }
+        }
+    }
+
+    /// Fee breakdown card — shows the poster what they pay vs what hustler receives.
+    /// 15% platform fee.
+    private var feeBreakdownCard: some View {
+        let amount = Double(payment) ?? 0
+        let fee = amount * 0.15
+        let hustlerReceives = amount - fee
+        return VStack(spacing: 10) {
+            HStack {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.brandPurple)
+                Text("Payment Breakdown")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+                Spacer()
+            }
+
+            Divider().background(Color.white.opacity(0.08))
+
+            feeRow(label: "Total task amount", value: amount, highlight: false)
+            feeRow(label: "Platform fee (15%)", value: -fee, highlight: false, color: .textSecondary)
+
+            Divider().background(Color.white.opacity(0.08))
+
+            feeRow(label: "Hustler receives", value: hustlerReceives, highlight: true, color: .successGreen)
+
+            Text("You'll be charged $\(String(format: "%.2f", amount)) when you post this task. Funds are held in escrow and released when you approve the work.")
+                .font(.system(size: 11))
+                .foregroundStyle(Color.textSecondary)
+                .padding(.top, 4)
+        }
+        .padding(14)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.surfaceElevated)
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.brandPurple.opacity(0.2), lineWidth: 1)
+            }
+        )
+    }
+
+    private func feeRow(label: String, value: Double, highlight: Bool, color: Color = .textPrimary) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 13, weight: highlight ? .bold : .regular))
+                .foregroundStyle(highlight ? Color.textPrimary : Color.textSecondary)
+            Spacer()
+            Text("\(value < 0 ? "−" : "")$\(String(format: "%.2f", abs(value)))")
+                .font(.system(size: highlight ? 16 : 13, weight: highlight ? .bold : .semibold, design: .rounded))
+                .foregroundStyle(color)
         }
     }
 

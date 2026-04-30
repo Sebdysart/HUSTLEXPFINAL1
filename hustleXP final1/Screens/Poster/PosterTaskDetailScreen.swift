@@ -158,7 +158,7 @@ struct PosterTaskDetailScreen: View {
                             .cornerRadius(12)
                         }
 
-                        // File Dispute (completed or disputed tasks)
+                        // File Dispute (completed or disputed tasks) — formal escrow lock
                         if task.state == .completed || task.state == .disputed {
                             Button {
                                 router.navigateToPoster(.dispute(taskId: task.id))
@@ -177,6 +177,29 @@ struct PosterTaskDetailScreen: View {
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
                                         .stroke(Color.errorRed.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                        }
+
+                        // Report Issue — available throughout task lifecycle (in-progress concerns)
+                        if task.state == .claimed || task.state == .inProgress || task.state == .proofSubmitted {
+                            Button {
+                                reportIssue(for: task)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "flag.fill")
+                                        .font(.system(size: 14))
+                                    Text("Report Issue")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .foregroundStyle(Color.warningOrange)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.warningOrange.opacity(0.1))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.warningOrange.opacity(0.2), lineWidth: 1)
                                 )
                             }
                         }
@@ -313,6 +336,7 @@ struct PosterTaskDetailScreen: View {
                 HXLogger.info("PosterTaskDetail: Tip of \(amountCents) cents sent", category: "Task")
             } catch {
                 HXLogger.error("PosterTaskDetail: Tip failed - \(error.localizedDescription)", category: "Task")
+                ErrorToastManager.shared.show("Tip failed: \(error.localizedDescription)")
                 showTipSheet = false
             }
         }
@@ -349,10 +373,34 @@ struct PosterTaskDetailScreen: View {
             do {
                 _ = try await TaskService.shared.cancelTask(taskId: taskId, reason: nil)
                 HXLogger.info("PosterTaskDetail: Task cancelled via API", category: "Task")
+                ErrorToastManager.shared.show("Task cancelled. Refund is processing.", style: .info)
+                router.posterPath.removeLast()
             } catch {
                 HXLogger.error("PosterTaskDetail: Cancel API failed - \(error.localizedDescription)", category: "Task")
+                ErrorToastManager.shared.show("Couldn't cancel task: \(error.localizedDescription)")
             }
-            router.posterPath.removeLast()
+        }
+    }
+
+    /// Opens an email to support pre-filled with task context.
+    /// For lower-friction issues than a formal dispute (e.g. communication problems).
+    private func reportIssue(for task: HXTask) {
+        let subject = "Issue with task \(task.id.prefix(8))"
+        let body = """
+        I'm reporting an issue with this task:
+
+        Task: \(task.title)
+        Task ID: \(task.id)
+        State: \(task.state.rawValue)
+        Hustler: \(task.hustlerName ?? "—")
+
+        Please describe the issue:
+        [Type your concern here]
+        """
+        let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "mailto:support@hustlexp.app?subject=\(encodedSubject)&body=\(encodedBody)") {
+            UIApplication.shared.open(url)
         }
     }
 }

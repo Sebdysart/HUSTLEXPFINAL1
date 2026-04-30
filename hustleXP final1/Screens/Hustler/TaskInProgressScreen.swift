@@ -16,6 +16,8 @@ struct TaskInProgressScreen: View {
 
     @State private var currentStatus: TaskProgressStatus = .enRoute
     @State private var showMessageSheet: Bool = false
+    @State private var showAbandonSheet: Bool = false
+    @State private var isAbandoning: Bool = false
     @State private var apiTask: HXTask?
 
     // XP Burst celebration
@@ -80,6 +82,16 @@ struct TaskInProgressScreen: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .sheet(isPresented: $showMessageSheet) {
                 ConversationScreen(conversationId: task.id)
+            }
+            .sheet(isPresented: $showAbandonSheet) {
+                PaymentVerificationSheet(
+                    taskId: task.id,
+                    taskTitle: task.title,
+                    isPresented: $showAbandonSheet
+                ) { outcome in
+                    handleAbandonOutcome(outcome, taskId: task.id)
+                }
+                .presentationDetents([.large])
             }
             .task {
                 // v2.2.0: Load task from real API
@@ -412,17 +424,86 @@ struct TaskInProgressScreen: View {
                 }
             }
             
-            // Message poster button
-            Button(action: { showMessageSheet = true }) {
-                HStack {
-                    HXIcon(HXIcon.message, size: .small, color: .brandPurple)
-                    HXText("Message Poster", style: .subheadline, color: .brandPurple)
+            // Secondary actions row — equal-width pills with strong contrast
+            HStack(spacing: 12) {
+                // Message poster
+                Button(action: { showMessageSheet = true }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "message.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Message")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(Color.brandPurple)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(Color.brandPurple.opacity(0.15), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.brandPurple.opacity(0.4), lineWidth: 1)
+                    )
                 }
+                .accessibilityLabel("Message task poster")
+
+                // Abandon task
+                Button(action: { showAbandonSheet = true }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Abandon")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(Color.errorRed)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(Color.errorRed.opacity(0.15), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.errorRed.opacity(0.4), lineWidth: 1)
+                    )
+                }
+                .disabled(isAbandoning)
+                .opacity(isAbandoning ? 0.5 : 1)
+                .accessibilityLabel("Abandon this task")
             }
-            .accessibilityLabel("Message task poster")
         }
-        .padding(24)
-        .background(.ultraThinMaterial)
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+        .padding(.bottom, 24)
+        .background(Color.brandBlack)
+    }
+
+    /// Handles the user's outcome from the PaymentVerificationSheet.
+    private func handleAbandonOutcome(_ outcome: PaymentVerificationOutcome, taskId: String) {
+        switch outcome {
+        case .completedAndPaidInApp:
+            // They actually finished — push them to submit proof instead
+            ErrorToastManager.shared.show("Great — submit proof to release payment.", style: .info)
+            router.navigateToHustler(.proofSubmission(taskId: taskId))
+
+        case .didntDo, .completedButPaidOffPlatform, .somethingElse:
+            isAbandoning = true
+            let reason: String = {
+                switch outcome {
+                case .didntDo: return "didnt_do"
+                case .completedButPaidOffPlatform: return "completed_paid_off_platform"
+                case .somethingElse: return "other"
+                default: return "other"
+                }
+            }()
+            Task {
+                do {
+                    _ = try await TaskService.shared.abandonTask(taskId: taskId, reason: reason)
+                    HXLogger.info("TaskInProgress: Abandoned task \(taskId) — reason: \(reason)", category: "Task")
+                    ErrorToastManager.shared.show("Task abandoned. It's open for someone else.", style: .info)
+                    router.hustlerPath = NavigationPath()
+                } catch {
+                    HXLogger.error("TaskInProgress: Abandon failed - \(error.localizedDescription)", category: "Task")
+                    ErrorToastManager.shared.show("Couldn't abandon task: \(error.localizedDescription)")
+                }
+                isAbandoning = false
+            }
+        }
     }
 }
 

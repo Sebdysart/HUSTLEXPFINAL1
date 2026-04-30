@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PhotosUI
+import Combine
 
 struct ConversationScreen: View {
     @Environment(AppState.self) private var appState
@@ -27,6 +28,9 @@ struct ConversationScreen: View {
     @State private var showPhotosPicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var showCallAlert = false
+    @State private var pendingMessage: String?
+    @State private var showOffPlatformWarning = false
+    @State private var sseSubscription: AnyCancellable?
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var isOtherUserTyping = false
@@ -153,25 +157,98 @@ struct ConversationScreen: View {
         } message: {
             Text(errorMessage ?? "An error occurred")
         }
+        .alert("Keep Payment in HustleXP", isPresented: $showOffPlatformWarning) {
+            Button("Cancel", role: .cancel) { pendingMessage = nil }
+            Button("Send Anyway", role: .destructive) {
+                if let msg = pendingMessage {
+                    actuallySendMessage(msg)
+                }
+            }
+        } message: {
+            Text("Looks like you're trying to arrange payment outside the app. If you do, you LOSE:\n\n• Refund protection if something goes wrong\n• Insurance coverage for damage or theft\n• Dispute resolution\n• Verified completion history\n\nKeep payment in HustleXP to stay protected.")
+        }
         .onAppear {
             loadMessages()
+            subscribeToIncomingMessages()
+        }
+        .onDisappear {
+            sseSubscription?.cancel()
+            sseSubscription = nil
         }
         .onTapGesture {
             isInputFocused = false
         }
     }
+
+    /// Listens for SSE `message.new` events scoped to this conversation.
+    /// When a new message arrives from the other party, append it to the chat.
+    private func subscribeToIncomingMessages() {
+        let currentUserId = appState.userId ?? ""
+        sseSubscription = RealtimeSSEClient.shared.messageReceived
+            .filter { $0.event == "message.new" }
+            .receive(on: DispatchQueue.main)
+            .sink { event in
+                // Decode the SSE payload
+                struct NewMessagePayload: Codable {
+                    let messageId: String
+                    let taskId: String
+                    let senderId: String
+                    let recipientId: String
+                    let content: String?
+                    let createdAt: String
+                }
+                guard let payload = try? JSONDecoder().decode(NewMessagePayload.self, from: event.data),
+                      payload.taskId == conversationId else { return }
+
+                // Skip if it's our own message (already added optimistically)
+                if payload.senderId == currentUserId { return }
+
+                // Skip if we already have this message (dedupe)
+                if messages.contains(where: { $0.id == payload.messageId }) { return }
+
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                let timestamp = formatter.date(from: payload.createdAt)
+                    ?? ISO8601DateFormatter().date(from: payload.createdAt)
+                    ?? Date()
+
+                let chatMessage = ChatMessage(
+                    id: payload.messageId,
+                    text: payload.content ?? "",
+                    isFromCurrentUser: false,
+                    timestamp: timestamp,
+                    senderName: otherUserName,
+                    isRead: false
+                )
+
+                withAnimation(.spring(response: 0.3)) {
+                    messages.append(chatMessage)
+                }
+
+                // Auto-mark as read since we're viewing the conversation
+                Task { try? await messagingService.markAsRead(taskId: conversationId) }
+
+                HXLogger.info("Conversation: Received message via SSE", category: "General")
+            }
+    }
     
     private func loadMessages() {
         isLoading = true
         let currentUserId = appState.userId ?? ""
+        HXLogger.info("Conversation: loadMessages — userId=\(currentUserId.prefix(8)), conversationId(taskId)=\(conversationId)", category: "General")
 
         Task {
             // Load conversation metadata for header
             do {
                 let conversations = try await messagingService.getConversations()
+                HXLogger.info("Conversation: User has \(conversations.count) conversations total", category: "General")
                 if let conv = conversations.first(where: { $0.taskId == conversationId }) {
                     otherUserName = conv.otherUserName
                     taskTitle = conv.taskTitle
+                    HXLogger.info("Conversation: Found matching conversation — other=\(otherUserName), task=\(taskTitle)", category: "General")
+                } else {
+                    let inboxIds = conversations.map { String($0.taskId.prefix(8)) }.joined(separator: ", ")
+                    HXLogger.error("Conversation: NO matching conversation in inbox for taskId \(conversationId). Inbox returns: \(inboxIds)", category: "General")
                 }
             } catch {
                 HXLogger.error("Conversation: Failed to load metadata - \(error.localizedDescription)", category: "General")
@@ -180,6 +257,7 @@ struct ConversationScreen: View {
             // Load messages from real API
             do {
                 let hxMessages = try await messagingService.getTaskMessages(taskId: conversationId)
+                HXLogger.info("Conversation: API returned \(hxMessages.count) messages for taskId \(conversationId)", category: "General")
                 apiMessages = hxMessages
 
                 // Convert HXMessage to ChatMessage — use senderId for accurate ownership
@@ -200,36 +278,56 @@ struct ConversationScreen: View {
 
                 HXLogger.info("Conversation: Loaded \(messages.count) messages from API", category: "General")
             } catch {
-                HXLogger.error("Conversation: API failed, using mock - \(error.localizedDescription)", category: "General")
-
-                messages = [
-                    ChatMessage(
-                        id: "1",
-                        text: "Hi! I've claimed your task and I'm on my way.",
-                        isFromCurrentUser: false,
-                        timestamp: Date().addingTimeInterval(-3600),
-                        senderName: "Jane D."
-                    ),
-                    ChatMessage(
-                        id: "2",
-                        text: "Great! Let me know when you arrive.",
-                        isFromCurrentUser: true,
-                        timestamp: Date().addingTimeInterval(-3500),
-                        senderName: "You"
-                    )
-                ]
+                HXLogger.error("Conversation: Failed to load messages - \(error.localizedDescription)", category: "General")
+                // Don't show mock conversations — leave empty so the user sees the real state
+                // (and can start a fresh conversation by sending a message).
+                messages = []
+                ErrorToastManager.shared.show("Couldn't load messages: \(error.localizedDescription)")
             }
             isLoading = false
         }
     }
     
+    /// Detects off-platform payment keywords (Venmo, Cash App, etc.) and phone numbers.
+    /// These attempts to bypass the platform put both parties at risk.
+    private func detectsOffPlatformAttempt(_ text: String) -> Bool {
+        let lower = text.lowercased()
+        let keywords = [
+            "venmo", "cash app", "cashapp", "zelle", "paypal", "apple pay",
+            "google pay", "pay me cash", "pay in cash", "pay outside", "off the app",
+            "off platform", "off-platform", "skip the app", "without the app", "instead of the app",
+        ]
+        if keywords.contains(where: { lower.contains($0) }) {
+            return true
+        }
+        // Detect phone numbers (e.g. 555-555-5555 or 5555555555)
+        let phonePattern = #"(\+?1?[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}"#
+        if text.range(of: phonePattern, options: .regularExpression) != nil {
+            return true
+        }
+        return false
+    }
+
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
+
         let content = messageText
+
+        // Off-platform payment detection — warn before sending
+        if detectsOffPlatformAttempt(content) {
+            pendingMessage = content
+            showOffPlatformWarning = true
+            return
+        }
+
+        actuallySendMessage(content)
+    }
+
+    private func actuallySendMessage(_ content: String) {
         messageText = ""
+        pendingMessage = nil
         isSending = true
-        
+
         // Optimistically add message to UI
         let optimisticMessage = ChatMessage(
             id: UUID().uuidString,

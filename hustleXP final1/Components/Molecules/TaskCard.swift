@@ -23,10 +23,11 @@ struct TaskCard: View {
     let variant: TaskCardVariant
     let posterName: String?
     let category: String?
+    let distanceMeters: Double?
     let action: () -> Void
-    
+
     @State private var isPressed = false
-    
+
     init(
         title: String,
         payment: Double,
@@ -36,6 +37,7 @@ struct TaskCard: View {
         variant: TaskCardVariant = .compact,
         posterName: String? = nil,
         category: String? = nil,
+        distanceMeters: Double? = nil,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -46,6 +48,7 @@ struct TaskCard: View {
         self.variant = variant
         self.posterName = posterName
         self.category = category
+        self.distanceMeters = distanceMeters
         self.action = action
     }
     
@@ -203,10 +206,17 @@ struct TaskCard: View {
                                 .foregroundStyle(Color.infoBlue)
                         }
                         
-                        Text(location)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color.textSecondary)
-                            .lineLimit(1)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(location)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Color.textSecondary)
+                                .lineLimit(1)
+                            if let distanceMeters {
+                                Text(formatDistance(distanceMeters))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(Color.brandPurple)
+                            }
+                        }
                     }
                     
                     Spacer()
@@ -275,6 +285,22 @@ struct TaskCard: View {
         }
         .buttonStyle(CardPressStyle(isPressed: $isPressed))
     }
+
+    /// Format meters as a friendly distance string for in-person tasks.
+    private func formatDistance(_ meters: Double) -> String {
+        let miles = meters / 1609.34
+        if miles < 0.1 {
+            return "Right here"
+        } else if miles < 1 {
+            // Walking distance — show in minutes (~3 mph walking)
+            let walkMin = Int((miles / 3.0) * 60)
+            return "\(walkMin) min walk · \(String(format: "%.1f", miles)) mi"
+        } else if miles < 10 {
+            return "\(String(format: "%.1f", miles)) mi away"
+        } else {
+            return "\(Int(miles)) mi away"
+        }
+    }
 }
 
 // MARK: - Neon Status Badge
@@ -307,25 +333,25 @@ struct NeonStatusBadge: View {
     }
     
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 6) {
             Circle()
                 .fill(statusColor)
-                .frame(width: 7, height: 7)
-                .shadow(color: statusColor.opacity(0.8), radius: 3)
-            
+                .frame(width: 9, height: 9)
+                .shadow(color: statusColor.opacity(0.8), radius: 4)
+
             Text(statusText.uppercased())
-                .font(.system(size: 10, weight: .bold))
-                .tracking(0.5)
+                .font(.system(size: 13, weight: .bold))
+                .tracking(0.8)
         }
         .foregroundStyle(statusColor)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .background(
             Capsule()
-                .fill(statusColor.opacity(0.12))
+                .fill(statusColor.opacity(0.15))
                 .overlay(
                     Capsule()
-                        .stroke(statusColor.opacity(0.3), lineWidth: 1)
+                        .stroke(statusColor.opacity(0.4), lineWidth: 1)
                 )
         )
     }

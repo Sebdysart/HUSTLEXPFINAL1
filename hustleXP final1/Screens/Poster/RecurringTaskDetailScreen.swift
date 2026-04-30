@@ -86,8 +86,10 @@ struct RecurringTaskDetailScreen: View {
                         try await RecurringTaskService.shared.cancelSeries(id: seriesId)
                         await loadFromAPI()
                         HXLogger.info("RecurringTaskDetail: Series cancelled", category: "Task")
+                        ErrorToastManager.shared.show("Series cancelled.", style: .info)
                     } catch {
                         HXLogger.error("RecurringTaskDetail: Cancel failed - \(error.localizedDescription)", category: "Task")
+                        ErrorToastManager.shared.show("Couldn't cancel series: \(error.localizedDescription)")
                     }
                 }
             }
@@ -512,8 +514,10 @@ struct RecurringTaskDetailScreen: View {
                         do {
                             try await RecurringTaskService.shared.pauseSeries(id: seriesId)
                             await loadFromAPI()
+                            ErrorToastManager.shared.show("Series paused.", style: .info)
                         } catch {
                             HXLogger.error("RecurringTaskDetail: Pause failed - \(error.localizedDescription)", category: "Task")
+                            ErrorToastManager.shared.show("Couldn't pause series: \(error.localizedDescription)")
                         }
                     }
                 }
