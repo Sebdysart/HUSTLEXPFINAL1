@@ -12,22 +12,31 @@ import UserNotifications
 
 // MARK: - Notification Types
 
-/// Notification from backend
+/// Notification from backend.
+/// Backend returns snake_case fields; TRPCClient's `.convertFromSnakeCase` handles
+/// most of them automatically (e.g. `task_id` → `taskId`).
 struct HXNotification: Codable, Identifiable {
     let id: String
     let userId: String
-    let type: String
+    let category: String         // e.g. "message_received", "task_accepted"
     let title: String
     let body: String
-    let data: [String: String]?
-    let isRead: Bool
-    let isClicked: Bool
+    let deepLink: String?
+    let taskId: String?
+    let priority: String?        // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+    let readAt: Date?            // null = unread
     let createdAt: Date
 
-    /// Convenience: notification category for grouping
-    var category: NotificationCategory {
-        NotificationCategory(rawValue: type) ?? .general
+    /// True if the notification has been read.
+    var isRead: Bool { readAt != nil }
+
+    /// Maps backend lowercase category strings to the iOS enum.
+    var notificationType: NotificationCategory {
+        NotificationCategory(backendCategory: category)
     }
+
+    /// Backwards-compat alias used by older call sites.
+    var type: String { category }
 }
 
 /// Notification categories matching backend types
@@ -50,7 +59,29 @@ enum NotificationCategory: String, Codable, CaseIterable {
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
-        self = NotificationCategory(rawValue: raw) ?? .general
+        self = NotificationCategory(rawValue: raw) ?? NotificationCategory(backendCategory: raw)
+    }
+
+    /// Maps backend's lowercase categories (e.g. "message_received") to iOS enum cases.
+    /// Use this when constructing from the backend's `category` field.
+    init(backendCategory: String) {
+        switch backendCategory {
+        case "task_accepted": self = .taskAccepted
+        case "task_completed": self = .taskCompleted
+        case "task_cancelled", "task_expired", "refund_issued": self = .general
+        case "proof_submitted": self = .proofSubmitted
+        case "proof_approved": self = .proofApproved
+        case "proof_rejected": self = .proofRejected
+        case "payment_released", "escrow_funded": self = .paymentReceived
+        case "payment_due": self = .paymentSent
+        case "message_received": self = .messageReceived
+        case "rating_received": self = .ratingReceived
+        case "trust_tier_upgraded": self = .tierUp
+        case "badge_earned": self = .badgeEarned
+        case "insurance_claim": self = .insuranceClaim
+        case "new_matching_task", "instant_task_available": self = .general
+        default: self = .general
+        }
     }
 
     var iconName: String {
@@ -209,7 +240,8 @@ final class NotificationService: ObservableObject {
 
                 // Increment unread badge instantly
                 self.unreadCount += 1
-                UNUserNotificationCenter.current().setBadgeCount(self.unreadCount)
+                let newCount = self.unreadCount
+                Task { try? await UNUserNotificationCenter.current().setBadgeCount(newCount) }
 
                 // Pick toast style based on priority/category
                 let style: ToastStyle = {
@@ -319,22 +351,56 @@ final class NotificationService: ObservableObject {
         HXLogger.info("NotificationService: Marked notification \(notificationId) as read", category: "Push")
     }
 
-    /// Marks all notifications as read
+    /// Marks all notifications as read.
+    /// Always clears the local badge optimistically so the UI feels responsive.
+    /// Logs (but does not throw) any backend error — clearing the local count
+    /// is the user-visible part; backend sync happens best-effort.
     func markAllAsRead() async throws {
+        // Update local state first so the UI clears instantly
+        self.unreadCount = 0
+        try? await UNUserNotificationCenter.current().setBadgeCount(0)
+
         struct EmptyInput: Codable {}
         struct EmptyResponse: Codable {}
 
-        let _: EmptyResponse = try await trpc.call(
+        do {
+            let _: EmptyResponse = try await trpc.call(
+                router: "notification",
+                procedure: "markAllAsRead",
+                input: EmptyInput()
+            )
+            // Refresh list to pick up server-side read timestamps
+            _ = try? await getNotifications()
+            HXLogger.info("NotificationService: Marked all notifications as read", category: "Push")
+        } catch {
+            // Don't propagate — local state is already updated for the user.
+            HXLogger.error("NotificationService: markAllAsRead backend sync failed (non-fatal): \(error.localizedDescription)", category: "Push")
+        }
+    }
+
+    // MARK: - Delete
+
+    /// Deletes a single notification owned by the current user.
+    func deleteNotification(notificationId: String) async throws {
+        struct DeleteInput: Codable {
+            let notificationId: String
+        }
+
+        struct DeleteResponse: Codable {
+            let deleted: Bool
+        }
+
+        let _: DeleteResponse = try await trpc.call(
             router: "notification",
-            procedure: "markAllAsRead",
-            input: EmptyInput()
+            procedure: "delete",
+            input: DeleteInput(notificationId: notificationId)
         )
 
-        self.unreadCount = 0
-        // Refresh list
-        _ = try? await getNotifications()
+        // Drop from local cache
+        notifications.removeAll { $0.id == notificationId }
+        await refreshUnreadCount()
 
-        HXLogger.info("NotificationService: Marked all notifications as read", category: "Push")
+        HXLogger.info("NotificationService: Deleted notification \(notificationId)", category: "Push")
     }
 
     /// Marks a notification as clicked (for analytics tracking)

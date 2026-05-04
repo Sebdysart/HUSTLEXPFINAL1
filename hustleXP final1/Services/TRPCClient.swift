@@ -178,6 +178,13 @@ final class TRPCClient: ObservableObject, TRPCClientProtocol {
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
+        } catch let urlError as URLError where urlError.code == .cancelled && !isRetry {
+            // NSURLErrorCancelled (-999) — typically caused by iOS backgrounding
+            // during OAuth modal dismissal (Apple/Google Sign-In) which kills
+            // in-flight URLSession tasks. Retry once after a short delay.
+            HXLogger.info("tRPC: Request to \(path) was cancelled by system — retrying once", category: "Network")
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s settle time
+            return try await performCall(router: router, procedure: procedure, type: type, input: input, isRetry: true)
         } catch let urlError as URLError where type == .mutation && !isRetry && isOfflineError(urlError) {
             // Queue the mutation for later retry when connectivity returns
             if let bodyData = request.httpBody {

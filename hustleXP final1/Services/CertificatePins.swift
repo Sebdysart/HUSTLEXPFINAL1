@@ -45,6 +45,13 @@ enum CertificatePins {
     /// Bundled pins shipped with this binary (fallback if remote unavailable)
     static let bundledPins: [String] = [primary, backup]
 
+    /// Returns true if a pin string is still a placeholder (not yet populated
+    /// with a real SHA-256 hash). Placeholder pins must never be used to validate
+    /// connections — that would reject every legitimate request.
+    private static func isPlaceholder(_ pin: String) -> Bool {
+        pin.hasPrefix("PLACEHOLDER")
+    }
+
     // MARK: - Remote Pin Rotation
 
     /// UserDefaults key for cached remote pins
@@ -66,12 +73,15 @@ enum CertificatePins {
 
     /// All currently valid pins: union of bundled + cached remote pins.
     /// This is what SSLPinningDelegate checks against.
+    /// Placeholder pins are filtered out so they can never accidentally be
+    /// matched against. If this returns an empty array, the pinning delegate
+    /// will fall back to system trust validation.
     static var pins: [String] {
-        var allPins = Set(bundledPins)
+        var allPins = Set(bundledPins.filter { !isPlaceholder($0) })
 
         // Merge cached remote pins if still fresh
         if let cached = cachedRemotePins, isCacheFresh {
-            allPins.formUnion(cached)
+            allPins.formUnion(cached.filter { !isPlaceholder($0) })
         }
 
         return Array(allPins)

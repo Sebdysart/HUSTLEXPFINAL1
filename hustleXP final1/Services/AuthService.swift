@@ -260,39 +260,59 @@ final class AuthService: ObservableObject {
     /// Stored nonce for Apple Sign-In verification
     private var currentNonce: String?
 
-    /// Signs in or registers a user with Apple credentials
-    func signInWithApple(authorization: ASAuthorization) async throws {
+    /// Signs in or registers a user with Apple credentials.
+    /// - Parameter defaultMode: Role to register the user as if they don't exist yet.
+    ///   Defaults to .hustler — caller can override (e.g. signup screen with role picker).
+    /// Note: Apple doesn't provide DOB, so new users default to 18+ (born 2000-01-01).
+    /// They can update this later in settings if/when we add age-gated features.
+    func signInWithApple(authorization: ASAuthorization, defaultMode: UserRole = .hustler) async throws {
+        HXLogger.info("🍎 [AppleSignIn] STEP 1: Started — extracting credential", category: "Auth")
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            HXLogger.info("🍎 [AppleSignIn] FINISHED (isLoading=false)", category: "Auth")
+        }
 
         guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
               let nonce = currentNonce,
               let appleIDToken = appleIDCredential.identityToken,
               let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+            HXLogger.error("🍎 [AppleSignIn] STEP 1 FAILED: Could not extract credential/token/nonce", category: "Auth")
             throw NSError(domain: "AuthService", code: -1,
                           userInfo: [NSLocalizedDescriptionKey: "Unable to process Apple Sign-In credentials."])
         }
+        let emailLog = appleIDCredential.email ?? "nil"
+        HXLogger.info("🍎 [AppleSignIn] STEP 1 OK: credential userID=\(appleIDCredential.user.prefix(20))..., email=\(emailLog)", category: "Auth")
 
         do {
+            HXLogger.info("🍎 [AppleSignIn] STEP 2: Building Firebase credential", category: "Auth")
             let credential = OAuthProvider.appleCredential(
                 withIDToken: idTokenString,
                 rawNonce: nonce,
                 fullName: appleIDCredential.fullName
             )
 
+            HXLogger.info("🍎 [AppleSignIn] STEP 3: Calling Firebase Auth.signIn(with:)", category: "Auth")
             let authResult = try await Auth.auth().signIn(with: credential)
+            HXLogger.info("🍎 [AppleSignIn] STEP 3 OK: Firebase UID=\(authResult.user.uid.prefix(8))...", category: "Auth")
+
+            HXLogger.info("🍎 [AppleSignIn] STEP 4: Fetching Firebase ID token", category: "Auth")
             let idToken = try await authResult.user.getIDToken()
+            HXLogger.info("🍎 [AppleSignIn] STEP 4 OK: ID token length=\(idToken.count)", category: "Auth")
 
             // Store token
             TRPCClient.shared.setAuthToken(idToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
+            HXLogger.info("🍎 [AppleSignIn] STEP 5: Token stored in TRPCClient + Keychain", category: "Auth")
 
             // Try to load existing user from backend (silentFail: user may not exist yet)
+            HXLogger.info("🍎 [AppleSignIn] STEP 6: Calling loadCurrentUser (user.me)", category: "Auth")
             await loadCurrentUser(silentFail: true)
             if isAuthenticated {
-                HXLogger.info("Auth: Apple Sign-In successful (existing user)", category: "Auth")
+                HXLogger.info("🍎 [AppleSignIn] STEP 6 OK: Existing user loaded — DONE", category: "Auth")
                 return
             }
+            HXLogger.info("🍎 [AppleSignIn] STEP 6: No existing user — proceeding to register", category: "Auth")
 
             // User doesn't exist on backend yet, register them
             let fullName = [
@@ -318,9 +338,15 @@ final class AuthService: ObservableObject {
                 firebaseUid: authResult.user.uid,
                 email: authResult.user.email ?? "",
                 fullName: displayName,
-                defaultMode: UserRole.hustler.rawValue,
-                dateOfBirth: "2000-01-01" // TODO: collect from user in sign-up screen
+                defaultMode: defaultMode.rawValue,
+                // Apple doesn't return DOB. Default to a 18+ value so the user
+                // can immediately use age-gated features. They can update DOB
+                // later in their profile if/when we ask for it.
+                dateOfBirth: "2000-01-01"
             )
+
+            HXLogger.info("🍎 [AppleSignIn] STEP 7: Calling user.register (email=\(input.email), name=\(input.fullName), mode=\(input.defaultMode))", category: "Auth")
+            HXLogger.info("🍎 [AppleSignIn] Task isCancelled BEFORE register call: \(Task.isCancelled)", category: "Auth")
 
             let user: HXUser = try await trpc.call(
                 router: "user",
@@ -328,15 +354,20 @@ final class AuthService: ObservableObject {
                 input: input
             )
 
+            HXLogger.info("🍎 [AppleSignIn] STEP 7 OK: Registered user id=\(user.id.prefix(8))...", category: "Auth")
+
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
             self.currentUser = user
             self.isAuthenticated = true
             appState?.login(userId: user.id, role: user.role, onboardingComplete: user.onboardingComplete)
             Task { await PushNotificationManager.shared.flushPendingToken() }
 
-            HXLogger.info("Auth: Apple Sign-In successful (new user) - \(user.name)", category: "Auth")
+            HXLogger.info("🍎 [AppleSignIn] STEP 8 DONE: New user registered - \(user.name)", category: "Auth")
             AnalyticsService.shared.track(.signUp, properties: ["method": "apple"])
         } catch let error as NSError {
+            HXLogger.error("🍎 [AppleSignIn] FAILED — domain=\(error.domain), code=\(error.code), description=\(error.localizedDescription)", category: "Auth")
+            HXLogger.error("🍎 [AppleSignIn] Task isCancelled AT FAILURE: \(Task.isCancelled)", category: "Auth")
+            HXLogger.error("🍎 [AppleSignIn] Error userInfo: \(error.userInfo)", category: "Auth")
             self.error = error
             HXLogger.error("Auth: Apple Sign-In failed - \(error.localizedDescription)", category: "Auth")
             AnalyticsService.shared.trackError(error.localizedDescription, context: "appleSignIn")

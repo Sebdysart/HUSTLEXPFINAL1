@@ -36,12 +36,12 @@ enum AppConfig {
     static var stripePublishableKey: String {
         #if DEBUG
         // TODO: Replace with your valid Stripe test publishable key from https://dashboard.stripe.com/test/apikeys
-        return "pk_test_51TQloy7lgRanKHG9HXvDgTphaTLytSisS1BkNMGvWWXgs5sqLnobAEBoPkJhBjuVvb2RQ7jNZyQm1dxdvyNzGrk200pr0dquoo"
+        return "pk_live_51TQlom97UdWM2cEwuMkz0G1V0jcUxz7EKpFB8Jq8tQHHF1nYRECXgzcSHnR33PGbmmMVMoMid02BWIX3K0X8FZnq00LnzAlETg"
         #else
         // IMPORTANT: Replace with your live publishable key before App Store submission.
         // This is safe to embed — publishable keys are public by design.
         // Get it from: https://dashboard.stripe.com/apikeys
-        return "pk_test_51TQloy7lgRanKHG9HXvDgTphaTLytSisS1BkNMGvWWXgs5sqLnobAEBoPkJhBjuVvb2RQ7jNZyQm1dxdvyNzGrk200pr0dquoo"
+        return "pk_live_51TQlom97UdWM2cEwuMkz0G1V0jcUxz7EKpFB8Jq8tQHHF1nYRECXgzcSHnR33PGbmmMVMoMid02BWIX3K0X8FZnq00LnzAlETg"
         #endif
     }
 
@@ -115,6 +115,8 @@ enum AppConfig {
     static let serviceAreaCenterLatitude = 37.7749
     static let serviceAreaCenterLongitude = -122.4194
 
-    /// Radius from center in meters (e.g. 30_000 ≈ 30 km from downtown SF).
-    static let serviceAreaRadiusMeters: Double = 30_000
+    /// Radius from center in meters. 100 km covers the full Bay Area
+    /// (SF, Oakland, San Jose, Cupertino) so Apple's TestFlight reviewers in
+    /// Cupertino aren't blocked by the gate during Beta App Review.
+    static let serviceAreaRadiusMeters: Double = 100_000
 }

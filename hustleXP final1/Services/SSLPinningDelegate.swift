@@ -31,20 +31,30 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
             return
         }
 
+        // Safety net: if no real pins are configured (e.g. only placeholder
+        // values shipped), fall back to system trust validation. Without this,
+        // every TLS handshake would fail with NSURLErrorCancelled (-999) and
+        // the entire app would lose network connectivity.
+        let validPins = CertificatePins.pins
+        guard !validPins.isEmpty else {
+            let credential = URLCredential(trust: serverTrust)
+            completionHandler(.useCredential, credential)
+            return
+        }
+
         // Enforce pin matching against certificate chain
         let certificateChain = SecTrustCopyCertificateChain(serverTrust) as? [SecCertificate] ?? []
 
         for certificate in certificateChain {
-
             if let hash = CertificatePins.sha256(of: certificate),
-               CertificatePins.pins.contains(hash) {
+               validPins.contains(hash) {
                 let credential = URLCredential(trust: serverTrust)
                 completionHandler(.useCredential, credential)
                 return
             }
         }
 
-        // No pin matched in release build — reject the connection
+        // No pin matched — reject the connection
         completionHandler(.cancelAuthenticationChallenge, nil)
     }
 }

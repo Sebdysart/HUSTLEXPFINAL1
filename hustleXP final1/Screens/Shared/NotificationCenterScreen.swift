@@ -10,6 +10,7 @@ import SwiftUI
 
 struct NotificationCenterScreen: View {
     @Environment(Router.self) private var router
+    @Environment(AppState.self) private var appState
     @StateObject private var notificationService = NotificationService.shared
 
     @State private var notifications: [HXNotification] = []
@@ -30,12 +31,16 @@ struct NotificationCenterScreen: View {
                 notificationList
             }
         }
-        .navigationTitle("Notifications")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Notifications")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 if notificationService.unreadCount > 0 {
                     Button(action: markAllRead) {
@@ -84,34 +89,67 @@ struct NotificationCenterScreen: View {
     }
 
     private var notificationList: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(notifications) { notification in
-                    Button {
-                        handleTap(notification)
+        List {
+            ForEach(notifications) { notification in
+                Button {
+                    handleTap(notification)
+                } label: {
+                    NotificationRow(notification: notification)
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(Color.brandBlack)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        deleteNotification(notification)
                     } label: {
-                        NotificationRow(notification: notification)
+                        Label("Delete", systemImage: "trash")
                     }
-                    .buttonStyle(.plain)
-
-                    HXDivider()
-                        .padding(.leading, 64)
                 }
 
-                // Load more trigger
-                if hasMore && !isLoadingMore {
-                    Color.clear
-                        .frame(height: 1)
-                        .onAppear {
-                            Task { await loadMore() }
-                        }
-                }
+                HXDivider()
+                    .padding(.leading, 64)
+                    .listRowBackground(Color.brandBlack)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+            }
 
-                if isLoadingMore {
-                    ProgressView()
-                        .tint(Color.brandPurple)
-                        .padding()
-                }
+            // Load more trigger
+            if hasMore && !isLoadingMore {
+                Color.clear
+                    .frame(height: 1)
+                    .listRowBackground(Color.brandBlack)
+                    .listRowSeparator(.hidden)
+                    .onAppear {
+                        Task { await loadMore() }
+                    }
+            }
+
+            if isLoadingMore {
+                ProgressView()
+                    .tint(Color.brandPurple)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .listRowBackground(Color.brandBlack)
+                    .listRowSeparator(.hidden)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.brandBlack)
+    }
+
+    private func deleteNotification(_ notification: HXNotification) {
+        // Optimistic local removal
+        notifications.removeAll { $0.id == notification.id }
+        Task {
+            do {
+                try await notificationService.deleteNotification(notificationId: notification.id)
+            } catch {
+                HXLogger.error("NotificationCenter: Failed to delete - \(error.localizedDescription)", category: "Push")
+                // Re-fetch on failure to reconcile UI with server state
+                await loadNotifications()
             }
         }
     }
@@ -155,9 +193,49 @@ struct NotificationCenterScreen: View {
             try? await notificationService.markAsClicked(notificationId: notification.id)
         }
 
-        // Navigate based on notification data
-        if let taskId = notification.data?["taskId"] {
-            router.navigateToHustler(.taskDetail(taskId: taskId))
+        // Route based on notification category — different events go to different screens
+        guard let taskId = notification.taskId else { return }
+        let isPoster = appState.userRole == .poster
+
+        switch notification.category {
+        case "message_received":
+            // Open the conversation directly
+            if isPoster {
+                router.navigateToPoster(.conversation(taskId: taskId))
+            } else {
+                router.navigateToHustler(.conversation(taskId: taskId))
+            }
+
+        case "proof_submitted":
+            // Poster needs to review proof
+            if isPoster {
+                router.navigateToPoster(.proofReview(taskId: taskId))
+            } else {
+                router.navigateToHustler(.taskDetail(taskId: taskId))
+            }
+
+        case "dispute_opened", "dispute_resolved":
+            if isPoster {
+                router.navigateToPoster(.dispute(taskId: taskId))
+            } else {
+                router.navigateToHustler(.dispute(taskId: taskId))
+            }
+
+        case "refund_issued", "payment_released":
+            // Open payments / earnings overview
+            if isPoster {
+                router.navigateToPoster(.taskDetail(taskId: taskId))
+            } else {
+                router.navigateToHustler(.earnings)
+            }
+
+        default:
+            // Default: open the task detail screen
+            if isPoster {
+                router.navigateToPoster(.taskDetail(taskId: taskId))
+            } else {
+                router.navigateToHustler(.taskDetail(taskId: taskId))
+            }
         }
     }
 }
@@ -181,7 +259,7 @@ private struct NotificationRow: View {
                     .fill(iconColor.opacity(0.15))
                     .frame(width: 40, height: 40)
 
-                Image(systemName: notification.category.iconName)
+                Image(systemName: notification.notificationType.iconName)
                     .font(.system(size: 16))
                     .foregroundStyle(iconColor)
             }
@@ -223,7 +301,7 @@ private struct NotificationRow: View {
     }
 
     private var iconColor: Color {
-        switch notification.category {
+        switch notification.notificationType {
         case .paymentReceived, .paymentSent:
             return .moneyGreen
         case .taskAccepted, .taskCompleted, .proofApproved:

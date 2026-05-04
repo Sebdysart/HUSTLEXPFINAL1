@@ -586,30 +586,40 @@ struct SignupScreen: View {
         authService.prepareAppleSignInRequest(request)
 
         let controller = ASAuthorizationController(authorizationRequests: [request])
+        let authService = self.authService  // Strong reference for the detached task
         let delegate = AppleSignInDelegateSignup { result in
-            Task { @MainActor in
+            // Use Task.detached so the sign-in continues even if the view dismounts
+            // when the Apple sheet closes — otherwise URLSession requests get cancelled.
+            Task.detached {
                 switch result {
                 case .success(let authorization):
-                    isSocialLoading = true
-                    signupError = nil
+                    await MainActor.run { self.isSocialLoading = true; self.signupError = nil }
                     do {
                         try await authService.signInWithApple(authorization: authorization)
-                        HapticFeedback.success()
+                        await MainActor.run { HapticFeedback.success() }
                     } catch {
-                        signupError = error.localizedDescription
-                        HapticFeedback.error()
+                        let msg = error.localizedDescription
+                        HXLogger.error("Signup: Apple Sign-In failed - \(error)", category: "Auth")
+                        await MainActor.run {
+                            self.signupError = msg
+                            HapticFeedback.error()
+                        }
                     }
-                    isSocialLoading = false
+                    await MainActor.run { self.isSocialLoading = false }
                 case .failure(let error):
                     if (error as NSError).code != ASAuthorizationError.canceled.rawValue {
-                        signupError = error.localizedDescription
-                        HapticFeedback.error()
+                        let msg = error.localizedDescription
+                        await MainActor.run {
+                            self.signupError = msg
+                            HapticFeedback.error()
+                        }
                     }
                 }
             }
         }
         appleSignInDelegate = delegate
         controller.delegate = delegate
+        controller.presentationContextProvider = delegate
         controller.performRequests()
     }
 
@@ -629,10 +639,9 @@ struct SignupScreen: View {
                                   userInfo: [NSLocalizedDescriptionKey: "Firebase client ID not found."])
                 }
 
-                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                      let rootViewController = windowScene.windows.first?.rootViewController else {
+                guard let rootViewController = await UIWindowFinder.topViewController else {
                     throw NSError(domain: "AuthService", code: -1,
-                                  userInfo: [NSLocalizedDescriptionKey: "No root view controller found."])
+                                  userInfo: [NSLocalizedDescriptionKey: "No active window found to present sign-in sheet."])
                 }
 
                 let result = try await GIDSignInHelper.signIn(
@@ -646,8 +655,9 @@ struct SignupScreen: View {
                 )
                 HapticFeedback.success()
             } catch {
-                if (error as NSError).code != GIDSignInHelper.cancelledCode {
-                    signupError = error.localizedDescription
+                if !GIDSignInHelper.isUserCancellation(error) {
+                    signupError = GIDSignInHelper.friendlyMessage(for: error)
+                    HXLogger.error("Signup: Google Sign-In failed - \(error)", category: "Auth")
                     HapticFeedback.error()
                 }
             }
@@ -658,7 +668,7 @@ struct SignupScreen: View {
 
 // MARK: - Apple Sign-In Delegate (Signup)
 
-private class AppleSignInDelegateSignup: NSObject, ASAuthorizationControllerDelegate {
+private class AppleSignInDelegateSignup: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     let completion: (Result<ASAuthorization, Error>) -> Void
 
     init(completion: @escaping (Result<ASAuthorization, Error>) -> Void) {
@@ -671,6 +681,12 @@ private class AppleSignInDelegateSignup: NSObject, ASAuthorizationControllerDele
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
         completion(.failure(error))
+    }
+
+    /// Required by iOS — tells the system which window to present the Apple Sign-In sheet on.
+    @MainActor
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        UIWindowFinder.presentationAnchor
     }
 }
 

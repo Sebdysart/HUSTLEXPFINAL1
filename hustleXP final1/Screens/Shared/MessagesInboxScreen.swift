@@ -7,9 +7,11 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 struct MessagesInboxScreen: View {
     @Environment(Router.self) private var router
+    @Environment(AppState.self) private var appState
     @StateObject private var messagingService = MessagingService.shared
 
     @State private var conversations: [APIConversationSummary] = []
@@ -29,12 +31,16 @@ struct MessagesInboxScreen: View {
                 conversationList
             }
         }
-        .navigationTitle("Messages")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Messages")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 if messagingService.unreadCount > 0 {
                     Button(action: markAllRead) {
@@ -47,6 +53,11 @@ struct MessagesInboxScreen: View {
         }
         .task {
             await loadConversations()
+        }
+        .onAppear {
+            // Re-fetch when navigating back from a conversation — the user may have read
+            // messages there, so unread counts need to refresh.
+            Task { await loadConversations() }
         }
         .refreshable {
             await loadConversations()
@@ -87,7 +98,7 @@ struct MessagesInboxScreen: View {
             LazyVStack(spacing: 0) {
                 ForEach(conversations) { conv in
                     Button {
-                        router.navigateToHustler(.conversation(taskId: conv.taskId))
+                        openConversation(taskId: conv.taskId)
                     } label: {
                         ConversationRow(conversation: conv)
                     }
@@ -97,6 +108,29 @@ struct MessagesInboxScreen: View {
                         .padding(.leading, 72)
                 }
             }
+        }
+    }
+
+    /// Opens a conversation using the correct nav stack for the current user role.
+    /// Posters use posterPath; hustlers use hustlerPath. Falls back to hustler if role is unknown.
+    private func openConversation(taskId: String) {
+        // Optimistically clear the unread badge for this conversation so the UI
+        // updates instantly — backend sync happens when ConversationScreen calls markAsRead.
+        if let index = conversations.firstIndex(where: { $0.taskId == taskId }), conversations[index].unreadCount > 0 {
+            // Decrement the global unread badge by however many we're clearing
+            let cleared = conversations[index].unreadCount
+            conversations[index].unreadCount = 0
+            Task {
+                let newTotal = max(0, NotificationService.shared.unreadCount - cleared)
+                NotificationService.shared.unreadCount = newTotal
+                try? await UNUserNotificationCenter.current().setBadgeCount(newTotal)
+            }
+        }
+
+        if appState.userRole == .poster {
+            router.navigateToPoster(.conversation(taskId: taskId))
+        } else {
+            router.navigateToHustler(.conversation(taskId: taskId))
         }
     }
 

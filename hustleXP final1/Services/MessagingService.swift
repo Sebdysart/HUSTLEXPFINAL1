@@ -19,7 +19,9 @@ struct APIConversationSummary: Codable, Identifiable {
     let otherUserRole: String
     let lastMessage: String?
     let lastMessageAt: Date?
-    let unreadCount: Int
+    /// Mutable so the inbox screen can optimistically zero it out when the user
+    /// taps a conversation, before the backend confirms the markAsRead.
+    var unreadCount: Int
 }
 
 /// Manages in-app messaging via tRPC
