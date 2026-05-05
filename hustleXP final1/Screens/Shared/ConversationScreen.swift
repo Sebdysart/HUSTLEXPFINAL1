@@ -36,44 +36,53 @@ struct ConversationScreen: View {
     @State private var isOtherUserTyping = false
     @State private var otherUserName: String = ""
     @State private var taskTitle: String = ""
+    @State private var scrollProxy: ScrollViewProxy?
     @FocusState private var isInputFocused: Bool
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                Color.brandBlack
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // Task context header
-                    TaskContextHeader(
-                        otherUserName: otherUserName,
-                        taskTitle: taskTitle
-                    )
+        ZStack {
+            Color.brandBlack
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Task context header
+                TaskContextHeader(
+                    otherUserName: otherUserName,
+                    taskTitle: taskTitle
+                )
                     
                     // Messages list
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(spacing: 16) {
-                                if isLoading {
+                                if isLoading && messages.isEmpty {
+                                    // Only show spinner on first load when there are no messages yet.
+                                    // Optimistically-added messages must remain visible while the
+                                    // API call is still in flight.
                                     LoadingState(message: "Loading messages...")
                                         .frame(height: 200)
                                 } else if messages.isEmpty {
                                     EmptyMessagesView()
                                 } else {
                                     ForEach(messages) { message in
-                                        MessageBubble(message: message, maxWidth: geometry.size.width * 0.75)
+                                        MessageBubble(message: message, maxWidth: 280)
                                             .id(message.id)
                                     }
                                 }
                             }
                             .padding(16)
-                            .padding(.bottom, 8) // Extra padding before input bar
+                            .padding(.bottom, 8)
                         }
+                        .onAppear { scrollProxy = proxy }
                         .onChange(of: messages.count) { _, _ in
-                            if let lastMessage = messages.last {
-                                withAnimation {
-                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            // Small delay lets SwiftUI finish laying out the new
+                            // message row before we scroll to it.
+                            Task { @MainActor in
+                                try? await Task.sleep(nanoseconds: 80_000_000)
+                                if let last = messages.last {
+                                    withAnimation(.easeOut(duration: 0.25)) {
+                                        proxy.scrollTo(last.id, anchor: .bottom)
+                                    }
                                 }
                             }
                         }
@@ -91,13 +100,12 @@ struct ConversationScreen: View {
                         .padding(.bottom, 4)
                     }
 
-                    // Message input with safe area handling
+                    // Message input — safe area is handled by the system
                     MessageInputBar(
                         text: $messageText,
                         isFocused: $isInputFocused,
                         onSend: sendMessage,
-                        onAttachment: { showPhotosPicker = true },
-                        bottomSafeArea: geometry.safeAreaInsets.bottom
+                        onAttachment: { showPhotosPicker = true }
                     )
                     .photosPicker(isPresented: $showPhotosPicker, selection: $selectedPhotoItem, matching: .images)
                     .onChange(of: selectedPhotoItem) { _, newItem in
@@ -111,7 +119,6 @@ struct ConversationScreen: View {
                     }
                 }
             }
-        }
         .navigationTitle("Messages")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
@@ -183,12 +190,11 @@ struct ConversationScreen: View {
     /// Listens for SSE `message.new` events scoped to this conversation.
     /// When a new message arrives from the other party, append it to the chat.
     private func subscribeToIncomingMessages() {
-        let currentUserId = appState.userId ?? ""
         sseSubscription = RealtimeSSEClient.shared.messageReceived
             .filter { $0.event == "message.new" }
             .receive(on: DispatchQueue.main)
-            .sink { event in
-                // Decode the SSE payload
+            .sink { [self] event in
+                // Decode the SSE payload (backend sends snake_case keys)
                 struct NewMessagePayload: Codable {
                     let messageId: String
                     let taskId: String
@@ -196,14 +202,27 @@ struct ConversationScreen: View {
                     let recipientId: String
                     let content: String?
                     let createdAt: String
+
+                    enum CodingKeys: String, CodingKey {
+                        case messageId = "message_id"
+                        case taskId = "task_id"
+                        case senderId = "sender_id"
+                        case recipientId = "recipient_id"
+                        case content
+                        case createdAt = "created_at"
+                    }
                 }
-                guard let payload = try? JSONDecoder().decode(NewMessagePayload.self, from: event.data),
+                let decoder = JSONDecoder()
+                guard let payload = try? decoder.decode(NewMessagePayload.self, from: event.data),
                       payload.taskId == conversationId else { return }
 
-                // Skip if it's our own message (already added optimistically)
-                if payload.senderId == currentUserId { return }
+                // Look up userId fresh — it may not have been set when subscribeToIncomingMessages was called
+                let currentUserId = appState.userId ?? ""
 
-                // Skip if we already have this message (dedupe)
+                // Skip if it's our own message (already added optimistically)
+                if !currentUserId.isEmpty && payload.senderId == currentUserId { return }
+
+                // Skip if we already have this message by its real server ID (dedup)
                 if messages.contains(where: { $0.id == payload.messageId }) { return }
 
                 let formatter = ISO8601DateFormatter()
@@ -323,44 +342,51 @@ struct ConversationScreen: View {
         actuallySendMessage(content)
     }
 
+    @MainActor
     private func actuallySendMessage(_ content: String) {
         messageText = ""
         pendingMessage = nil
         isSending = true
 
-        // Optimistically add message to UI
+        let optimisticId = UUID().uuidString
         let optimisticMessage = ChatMessage(
-            id: UUID().uuidString,
+            id: optimisticId,
             text: content,
             isFromCurrentUser: true,
             timestamp: Date(),
             senderName: "You"
         )
-        
+
         withAnimation(.spring(response: 0.3)) {
             messages.append(optimisticMessage)
         }
-        
-        // v2.2.0: Send message via real API
-        Task {
+
+        // Scroll to the optimistic message immediately
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            withAnimation(.easeOut(duration: 0.25)) {
+                scrollProxy?.scrollTo(optimisticId, anchor: .bottom)
+            }
+        }
+
+        Task { @MainActor in
             do {
                 let sentMessage = try await messagingService.sendMessage(taskId: conversationId, content: content)
-                
-                // Update the optimistic message with real ID
-                if let index = messages.firstIndex(where: { $0.id == optimisticMessage.id }) {
+
+                // Replace optimistic placeholder with confirmed server message
+                if let index = messages.firstIndex(where: { $0.id == optimisticId }) {
                     messages[index] = ChatMessage(
                         id: sentMessage.id,
-                        text: sentMessage.content ?? "",
+                        text: sentMessage.content ?? content,
                         isFromCurrentUser: true,
                         timestamp: sentMessage.timestamp,
                         senderName: "You"
                     )
                 }
-                
+
                 HXLogger.info("Conversation: Message sent via API", category: "General")
             } catch {
                 HXLogger.error("Conversation: Failed to send message - \(error.localizedDescription)", category: "General")
-                // Message is already displayed optimistically, just log the error
             }
             isSending = false
         }
@@ -623,23 +649,20 @@ private struct MessageInputBar: View {
     var isFocused: FocusState<Bool>.Binding
     let onSend: () -> Void
     let onAttachment: () -> Void
-    var bottomSafeArea: CGFloat = 0
-    
+
     var body: some View {
         VStack(spacing: 0) {
             Divider()
                 .background(Color.borderSubtle)
-            
+
             HStack(spacing: 12) {
-                // Attachment button
                 Button(action: onAttachment) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 28))
                         .foregroundStyle(Color.textSecondary)
                 }
                 .accessibilityLabel("Attach photo")
-                
-                // Text input
+
                 TextField("", text: $text, prompt: Text("Type a message...").foregroundColor(.textTertiary))
                     .font(.body)
                     .foregroundStyle(Color.textPrimary)
@@ -648,8 +671,9 @@ private struct MessageInputBar: View {
                     .background(Color.surfaceElevated)
                     .cornerRadius(20)
                     .focused(isFocused)
-                
-                // Send button
+                    .submitLabel(.send)
+                    .onSubmit(onSend)
+
                 Button(action: onSend) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 32))
@@ -663,8 +687,7 @@ private struct MessageInputBar: View {
                 .accessibilityLabel("Send message")
             }
             .padding(.horizontal, 12)
-            .padding(.top, 12)
-            .padding(.bottom, max(12, bottomSafeArea))
+            .padding(.vertical, 10)
             .background(Color.brandBlack)
         }
     }

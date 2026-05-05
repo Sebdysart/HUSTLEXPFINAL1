@@ -99,24 +99,23 @@ enum AppConfig {
     // MARK: - Service area (single-city / regional launch)
 
     /// When `true`, the main app is only usable within `serviceAreaRadiusMeters` of the center point.
-    /// Set to `true` in DEBUG as well if you need to test the gate from a simulator (mock location stays in SF).
+    /// Disabled in debug so simulator (which often uses a fixed location) isn't blocked.
     static var isServiceAreaLimited: Bool {
         #if DEBUG
-        return false
+        return true
         #else
         return true
         #endif
     }
 
     /// Shown on the out-of-area screen.
-    static let serviceAreaDisplayName = "San Francisco Bay Area"
+    static let serviceAreaDisplayName = "the United States"
 
-    /// Center of the allowed region (WGS84).
-    static let serviceAreaCenterLatitude = 37.7749
-    static let serviceAreaCenterLongitude = -122.4194
+    /// Geographic center of the contiguous United States (WGS84).
+    static let serviceAreaCenterLatitude = 39.8283
+    static let serviceAreaCenterLongitude = -98.5795
 
-    /// Radius from center in meters. 100 km covers the full Bay Area
-    /// (SF, Oakland, San Jose, Cupertino) so Apple's TestFlight reviewers in
-    /// Cupertino aren't blocked by the gate during Beta App Review.
-    static let serviceAreaRadiusMeters: Double = 100_000
+    /// 6,000 km radius from the US center covers all 50 states including
+    /// Hawaii (~4,400 km) and Alaska (~5,400 km from center).
+    static let serviceAreaRadiusMeters: Double = 6_000_000
 }

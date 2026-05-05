@@ -56,7 +56,7 @@ struct ServiceAreaBlockScreen: View {
 
                             HXText(
                                 reason == .outsideRegion
-                                    ? "HustleXP is only available in \(AppConfig.serviceAreaDisplayName) right now. We’ll expand to more cities soon."
+                                    ? "HustleXP is currently only available in \(AppConfig.serviceAreaDisplayName)."
                                     : "Turn on location access so we can confirm you’re in \(AppConfig.serviceAreaDisplayName).",
                                 style: isCompact ? .subheadline : .body,
                                 color: .textSecondary

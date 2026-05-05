@@ -153,25 +153,28 @@ struct TaskCard: View {
                     }
                     
                     Text("$\(String(format: "%.0f", payment))")
-                        .font(.system(size: variant == .featured ? 30 : 26, weight: .bold, design: .rounded))
+                        .font(.system(size: variant == .featured ? 28 : 26, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.moneyGreen)
                         .shadow(color: Color.moneyGreen.opacity(0.3), radius: 5)
-                    
-                    Spacer()
-                    
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    Spacer(minLength: 8)
+
                     // Quick action hint
                     if variant == .featured {
-                        HStack(spacing: 6) {
-                            Text("View Details")
-                                .font(.caption.weight(.semibold))
+                        HStack(spacing: 4) {
+                            Text("Details")
+                                .font(.subheadline.weight(.semibold))
                             Image(systemName: "arrow.right")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.caption.weight(.bold))
                         }
                         .foregroundStyle(accentColor)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(accentColor.opacity(0.12))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(accentColor.opacity(0.15))
                         .clipShape(Capsule())
+                        .fixedSize()
                     }
                 }
                 

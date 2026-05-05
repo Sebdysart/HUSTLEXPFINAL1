@@ -599,8 +599,8 @@ struct SignupScreen: View {
                         await MainActor.run { HapticFeedback.success() }
                     } catch {
                         let msg = error.localizedDescription
-                        HXLogger.error("Signup: Apple Sign-In failed - \(error)", category: "Auth")
                         await MainActor.run {
+                            HXLogger.error("Signup: Apple Sign-In failed - \(error)", category: "Auth")
                             self.signupError = msg
                             HapticFeedback.error()
                         }
@@ -639,7 +639,7 @@ struct SignupScreen: View {
                                   userInfo: [NSLocalizedDescriptionKey: "Firebase client ID not found."])
                 }
 
-                guard let rootViewController = await UIWindowFinder.topViewController else {
+                guard let rootViewController = UIWindowFinder.topViewController else {
                     throw NSError(domain: "AuthService", code: -1,
                                   userInfo: [NSLocalizedDescriptionKey: "No active window found to present sign-in sheet."])
                 }

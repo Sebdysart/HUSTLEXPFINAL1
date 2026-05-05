@@ -67,21 +67,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         HXLogger.error("Failed to register for remote notifications: \(error.localizedDescription)", category: "Push")
     }
 
-    /// Handles incoming URLs — required for Google Sign-In OAuth callbacks.
-    /// SwiftUI's .onOpenURL doesn't reliably catch the OAuth callback URL on iOS 17+,
-    /// so the AppDelegate handler is the canonical entry point for Google's SDK.
-    /// Returns true if Google handled the URL; otherwise returns false so SwiftUI
-    /// .onOpenURL still gets a chance for deep links.
-    func application(
-        _ app: UIApplication,
-        open url: URL,
-        options: [UIApplication.OpenURLOptionsKey : Any] = [:]
-    ) -> Bool {
-        if GIDSignIn.sharedInstance.handle(url) {
-            return true
-        }
-        return false
-    }
 }
 
 // MARK: - Main App

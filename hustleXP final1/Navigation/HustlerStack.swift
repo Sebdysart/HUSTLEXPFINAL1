@@ -74,6 +74,9 @@ struct HustlerStack: View {
                         ConversationScreen(conversationId: taskId)
                     case .dispute(let taskId):
                         DisputeScreen(taskId: taskId)
+                    // v2.7.0 Saved Tasks
+                    case .savedTasks:
+                        SavedTasksScreen()
                     }
                 }
         }

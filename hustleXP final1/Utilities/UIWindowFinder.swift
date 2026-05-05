@@ -66,6 +66,11 @@ enum UIWindowFinder {
     /// Always returns a usable anchor (never nil) — Apple's API expects this.
     @MainActor
     static var presentationAnchor: ASPresentationAnchor {
-        keyWindow ?? ASPresentationAnchor()
+        if let window = keyWindow { return window }
+        // keyWindow already walks all connected scenes; reaching here means the app
+        // has no UIWindowScene at all, which is a fatal configuration error.
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }.first!
+        return UIWindow(windowScene: scene)
     }
 }

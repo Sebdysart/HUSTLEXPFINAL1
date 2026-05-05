@@ -394,18 +394,33 @@ struct SkillGridSelectionScreen: View {
     }
     
     // MARK: - Bottom Button
-    
+
     private var bottomButton: some View {
-        VStack(spacing: 12) {
-            // Stats
-            let verifiedCount = verifiedSkills.filter { $0.licenseVerified }.count
-            HStack(spacing: 20) {
-                statItem(value: "\(selectedSkills.count)", label: "Selected")
-                statItem(value: "\(verifiedSkills.count)", label: "Unlocked")
-                statItem(value: "\(verifiedCount)", label: "Licensed")
+        let verifiedCount = verifiedSkills.filter { $0.licenseVerified }.count
+
+        return VStack(spacing: 12) {
+            // Stats pill
+            HStack(spacing: 0) {
+                statItem(value: "\(selectedSkills.count)", label: "Selected", color: .brandPurple)
+
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 1, height: 32)
+
+                statItem(value: "\(verifiedSkills.count)", label: "Unlocked", color: .successGreen)
+
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 1, height: 32)
+
+                statItem(value: "\(verifiedCount)", label: "Licensed", color: .instantYellow)
             }
+            .padding(.vertical, 10)
+            .background(Color.surfaceElevated)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 1))
             .padding(.horizontal, 20)
-            
+
             // Save button
             Button {
                 saveAndContinue()
@@ -414,7 +429,7 @@ struct SkillGridSelectionScreen: View {
                     Text("Save Skills")
                         .font(.system(size: 17, weight: .semibold))
                         .minimumScaleFactor(0.7)
-                    
+
                     if selectedSkills.count > 0 {
                         Text("(\(selectedSkills.count))")
                             .font(.system(size: 15, weight: .medium))
@@ -440,17 +455,17 @@ struct SkillGridSelectionScreen: View {
             )
         )
     }
-    
-    private func statItem(value: String, label: String) -> some View {
-        VStack(spacing: 2) {
+
+    private func statItem(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 3) {
             Text(value)
-                .font(.system(size: 18, weight: .bold))
-                .minimumScaleFactor(0.7)
-                .foregroundStyle(Color.textPrimary)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(color)
             Text(label)
                 .font(.system(size: 11))
                 .foregroundStyle(Color.textMuted)
         }
+        .frame(maxWidth: .infinity)
     }
     
     // MARK: - Helpers

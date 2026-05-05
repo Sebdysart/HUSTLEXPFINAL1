@@ -8,9 +8,5 @@
 import Foundation
 
 enum LocationService {
-    #if targetEnvironment(simulator)
-    static var current: LocationServiceProtocol { MockLocationService.shared }
-    #else
     static var current: LocationServiceProtocol { RealLocationService.shared }
-    #endif
 }

@@ -507,6 +507,58 @@ final class TaskService: ObservableObject {
             userInfo: [NSLocalizedDescriptionKey: message]
         )
     }
+
+    // MARK: - Bookmarks
+
+    /// Bookmarks a task for the current user
+    func bookmarkTask(taskId: String) async throws {
+        struct Input: Codable { let taskId: String }
+        struct Response: Codable { let success: Bool }
+        let _: Response = try await trpc.call(
+            router: "task",
+            procedure: "bookmark",
+            input: Input(taskId: taskId)
+        )
+        HXLogger.info("TaskService: Bookmarked task \(taskId)", category: "Task")
+    }
+
+    /// Removes a bookmark for a task
+    func removeBookmark(taskId: String) async throws {
+        struct Input: Codable { let taskId: String }
+        struct Response: Codable { let success: Bool }
+        let _: Response = try await trpc.call(
+            router: "task",
+            procedure: "removeBookmark",
+            input: Input(taskId: taskId)
+        )
+        HXLogger.info("TaskService: Removed bookmark for task \(taskId)", category: "Task")
+    }
+
+    /// Fetches all tasks bookmarked by the current user
+    func getBookmarkedTasks() async throws -> [HXTask] {
+        struct EmptyInput: Codable {}
+        let tasks: [HXTask] = try await trpc.call(
+            router: "task",
+            procedure: "getBookmarkedTasks",
+            type: .query,
+            input: EmptyInput()
+        )
+        HXLogger.info("TaskService: Fetched \(tasks.count) bookmarked tasks", category: "Task")
+        return tasks
+    }
+
+    /// Checks whether a task is currently bookmarked by the current user
+    func isTaskBookmarked(taskId: String) async throws -> Bool {
+        struct Input: Codable { let taskId: String }
+        struct Response: Codable { let isBookmarked: Bool }
+        let response: Response = try await trpc.call(
+            router: "task",
+            procedure: "isBookmarked",
+            type: .query,
+            input: Input(taskId: taskId)
+        )
+        return response.isBookmarked
+    }
 }
 
 // MARK: - Task Discovery Service
@@ -750,6 +802,7 @@ final class TaskDiscoveryService: ObservableObject {
         HXLogger.info("TaskDiscovery: Executed saved search, returned \(tasks.count) tasks", category: "Task")
         return tasks
     }
+
 }
 
 // MARK: - Saved Search Model

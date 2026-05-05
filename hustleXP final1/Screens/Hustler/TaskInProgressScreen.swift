@@ -48,16 +48,19 @@ struct TaskInProgressScreen: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Status card
-                    statusCard(task)
+                    // Scrollable content — status card + progress steps
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            statusCard(task)
 
-                    // Progress steps
-                    progressSteps
-                        .padding(.top, 32)
+                            progressSteps
+                                .padding(.top, 32)
+                                .padding(.bottom, 16)
+                        }
+                    }
+                    .scrollIndicators(.hidden)
 
-                    Spacer()
-
-                    // Action buttons
+                    // Action buttons pinned at bottom
                     actionButtons(task)
                 }
 
@@ -469,8 +472,9 @@ struct TaskInProgressScreen: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
-        .padding(.bottom, 24)
+        .padding(.bottom, 32)
         .background(Color.brandBlack)
+        .shadow(color: .black.opacity(0.3), radius: 8, y: -4)
     }
 
     /// Handles the user's outcome from the PaymentVerificationSheet.

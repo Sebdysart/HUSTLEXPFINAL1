@@ -33,6 +33,10 @@ struct HustlerTaskDetailScreen: View {
     @State private var isApplying = false
     @State private var showApplySheet = false
     @State private var applicationMessage = ""
+    @State private var isSaved = false
+    @State private var isBookmarkLoading = false
+    @State private var showShareSheet = false
+    @State private var showReportSheet = false
 
     // v1.9.0 Spatial Intelligence
     @State private var userLocation: GPSCoordinates?
@@ -88,7 +92,30 @@ struct HustlerTaskDetailScreen: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {}) {
+                    Menu {
+                        Button {
+                            Task { await toggleBookmark() }
+                        } label: {
+                            Label(isSaved ? "Remove Bookmark" : "Save Task",
+                                  systemImage: isSaved ? "bookmark.slash" : "bookmark")
+                        }
+                        Button {
+                            router.navigateToHustler(.savedTasks)
+                        } label: {
+                            Label("View Saved Tasks", systemImage: "bookmark.fill")
+                        }
+                        Button {
+                            showShareSheet = true
+                        } label: {
+                            Label("Share Task", systemImage: "square.and.arrow.up")
+                        }
+                        Divider()
+                        Button(role: .destructive) {
+                            showReportSheet = true
+                        } label: {
+                            Label("Report Task", systemImage: "exclamationmark.triangle")
+                        }
+                    } label: {
                         Image(systemName: "ellipsis.circle.fill")
                             .font(.system(size: 22))
                             .foregroundStyle(Color.textSecondary)
@@ -110,8 +137,8 @@ struct HustlerTaskDetailScreen: View {
                 sseSubscription = nil
             }
             .task {
-                // v2.2.0: Load task from real API
                 await loadTaskFromAPI()
+                await loadBookmarkStatus()
             }
             // v2.5.0: Error alert for accept failures
             .alert("Couldn't Accept Task", isPresented: $showAcceptError) {
@@ -197,9 +224,29 @@ struct HustlerTaskDetailScreen: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $showReportSheet) {
+                ReportUserSheet(taskId: taskId, isPresented: $showReportSheet)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = URL(string: "https://hustlexp.app/task/\(taskId)") {
+                    ShareSheet(items: [url])
+                        .presentationDetents([.medium])
+                }
+            }
         } else {
             loadingOrErrorView
         }
+    }
+
+    // MARK: - Share Sheet (UIActivityViewController bridge)
+    private struct ShareSheet: UIViewControllerRepresentable {
+        let items: [Any]
+        func makeUIViewController(context: Context) -> UIActivityViewController {
+            UIActivityViewController(activityItems: items, applicationActivities: nil)
+        }
+        func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
     }
     
     // MARK: - Background
@@ -563,7 +610,9 @@ struct HustlerTaskDetailScreen: View {
                 
                 Spacer()
                 
-                Button(action: {}) {
+                Button(action: {
+                    router.navigateToHustler(.conversation(taskId: taskId))
+                }) {
                     Image(systemName: "message.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(Color.brandPurple)
@@ -692,25 +741,34 @@ struct HustlerTaskDetailScreen: View {
             .frame(height: 1)
 
             HStack(spacing: 14) {
-                // Save / bookmark button — refined glass pill with purple accent ring
+                // Save / bookmark button
                 Button(action: {
-                    let impact = UIImpactFeedbackGenerator(style: .light)
-                    impact.impactOccurred()
+                    Task { await toggleBookmark() }
                 }) {
-                    Image(systemName: "bookmark")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.brandPurple)
-                        .frame(width: 56, height: 56)
-                        .background(
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color.brandPurple.opacity(0.12))
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.brandPurple.opacity(0.35), lineWidth: 1)
-                            }
-                        )
+                    ZStack {
+                        if isBookmarkLoading {
+                            ProgressView()
+                                .tint(Color.brandPurple)
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(Color.brandPurple)
+                        }
+                    }
+                    .frame(width: 56, height: 56)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(isSaved ? Color.brandPurple.opacity(0.2) : Color.brandPurple.opacity(0.12))
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.brandPurple.opacity(isSaved ? 0.6 : 0.35), lineWidth: 1)
+                        }
+                    )
+                    .animation(.spring(response: 0.3), value: isSaved)
                 }
-                .accessibilityLabel("Save task")
+                .disabled(isBookmarkLoading)
+                .accessibilityLabel(isSaved ? "Remove bookmark" : "Save task")
                 
                 // Main action button
                 if task.state == .proofSubmitted {
@@ -1026,6 +1084,39 @@ struct HustlerTaskDetailScreen: View {
     }
 
     // v2.2.0: Load task from API
+    // MARK: - Bookmark
+
+    private func loadBookmarkStatus() async {
+        do {
+            isSaved = try await taskService.isTaskBookmarked(taskId: taskId)
+        } catch {
+            // Non-fatal — silently ignore; bookmark state defaults to false
+            HXLogger.error("TaskDetail: Could not load bookmark status - \(error.localizedDescription)", category: "Task")
+        }
+    }
+
+    private func toggleBookmark() async {
+        guard !isBookmarkLoading else { return }
+        let wasBookmarked = isSaved
+        isBookmarkLoading = true
+        // Optimistic update
+        isSaved = !wasBookmarked
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        do {
+            if wasBookmarked {
+                try await taskService.removeBookmark(taskId: taskId)
+            } else {
+                try await taskService.bookmarkTask(taskId: taskId)
+            }
+        } catch {
+            // Revert on failure
+            isSaved = wasBookmarked
+            ErrorToastManager.shared.show(wasBookmarked ? "Couldn't remove bookmark" : "Couldn't save task")
+            HXLogger.error("TaskDetail: Bookmark toggle failed - \(error.localizedDescription)", category: "Task")
+        }
+        isBookmarkLoading = false
+    }
+
     private func loadTaskFromAPI() async {
         HXLogger.info("TaskDetail: Loading task \(taskId) from API...", category: "Task")
         do {
