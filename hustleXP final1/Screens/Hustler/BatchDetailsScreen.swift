@@ -600,8 +600,8 @@ struct BatchTaskRow: View {
                 
                 Spacer()
                 
-                // Payment
-                Text(task.formattedPayment)
+                // Net earnings
+                Text(task.formattedHustlerNet)
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(Color.moneyGreen)
                 

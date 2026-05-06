@@ -589,6 +589,34 @@ private struct TRPCResponse<T: Decodable>: Decodable {
 
 private struct TRPCResult<T: Decodable>: Decodable {
     let data: T
+
+    private enum CodingKeys: String, CodingKey {
+        case data
+    }
+
+    private struct WrappedSuccessData<U: Decodable>: Decodable {
+        let success: Bool?
+        let data: U
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // Primary shape: { "result": { "data": <payload> } }
+        if let direct = try? container.decode(T.self, forKey: .data) {
+            self.data = direct
+            return
+        }
+
+        // Compatibility shape: { "result": { "data": { "success": true, "data": <payload> } } }
+        if let wrapped = try? container.decode(WrappedSuccessData<T>.self, forKey: .data) {
+            self.data = wrapped.data
+            return
+        }
+
+        // Preserve a useful decoding error context from the direct decode path.
+        self.data = try container.decode(T.self, forKey: .data)
+    }
 }
 
 // MARK: - tRPC Error Response

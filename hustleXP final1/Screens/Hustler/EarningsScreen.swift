@@ -235,7 +235,7 @@ struct EarningsTransactionRow: View {
             
             Spacer()
             
-            HXText("+$\(String(format: "%.0f", task.payment))", style: .headline, color: .successGreen)
+            HXText("+\(task.formattedHustlerNet)", style: .headline, color: .successGreen)
         }
         .padding(isCompact ? 12 : 16)
         .background(Color.surfaceElevated)

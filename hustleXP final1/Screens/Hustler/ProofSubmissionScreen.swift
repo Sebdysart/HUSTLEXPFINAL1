@@ -205,10 +205,10 @@ struct ProofSubmissionScreen: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("$\(Int(task.payment))")
+                Text(task.formattedHustlerNet)
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.moneyGreen)
-                Text("PAYOUT")
+                Text("YOU EARN")
                     .font(.system(size: 9, weight: .bold))
                     .tracking(1.2)
                     .foregroundStyle(Color.textTertiary)
@@ -851,7 +851,7 @@ struct ProofSubmissionScreen: View {
                             .font(.system(size: 11, weight: .heavy))
                             .tracking(1.5)
                             .foregroundStyle(Color.textSecondary)
-                        Text("$\(String(format: "%.2f", task.payment))")
+                        Text(task.formattedHustlerNet)
                             .font(.system(size: 38, weight: .heavy, design: .rounded))
                             .foregroundStyle(Color.successGreen)
                     }

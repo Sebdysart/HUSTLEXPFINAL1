@@ -55,7 +55,6 @@ struct EditTaskSheet: View {
     @State private var payment: String
     @State private var locationCity: String
     @State private var locationState: String
-    @State private var locationRadiusMiles: Int
     @State private var durationValue: String
     @State private var durationUnit: DurationUnit
     @State private var deadline: Date?
@@ -68,7 +67,6 @@ struct EditTaskSheet: View {
 
     private enum Field: Hashable { case title, description, payment, city, duration, requirements }
 
-    private static let radiusOptions = [25, 50, 75, 100]
 
     private static let usStates: [(code: String, name: String)] = [
         ("AL", "Alabama"), ("AK", "Alaska"), ("AZ", "Arizona"), ("AR", "Arkansas"),
@@ -114,7 +112,7 @@ struct EditTaskSheet: View {
             _locationCity = State(initialValue: task.location)
             _locationState = State(initialValue: "")
         }
-        _locationRadiusMiles = State(initialValue: 25)
+
     }
 
     private var isValid: Bool {
@@ -127,7 +125,7 @@ struct EditTaskSheet: View {
     private var locationDisplay: String {
         if locationCity == "Anywhere" { return "Anywhere" }
         if locationState.isEmpty { return locationCity }
-        return "\(locationCity), \(locationState) (\(locationRadiusMiles) mi)"
+        return "\(locationCity), \(locationState)"
     }
 
     var body: some View {
@@ -214,35 +212,6 @@ struct EditTaskSheet: View {
                             }
                         }
 
-                        // Distance radius
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Service Radius")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Color.textSecondary)
-
-                            HStack(spacing: 8) {
-                                ForEach(Self.radiusOptions, id: \.self) { miles in
-                                    Button {
-                                        locationRadiusMiles = miles
-                                    } label: {
-                                        Text("\(miles) mi")
-                                            .font(.subheadline.weight(.medium))
-                                            .foregroundStyle(locationRadiusMiles == miles ? .white : Color.textPrimary)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 10)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .fill(locationRadiusMiles == miles ? Color.brandPurple : Color.surfaceElevated)
-                                            )
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .stroke(locationRadiusMiles == miles ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
-                                            )
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
                     }
 
                     // Duration with unit picker

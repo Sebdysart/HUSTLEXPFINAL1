@@ -322,4 +322,11 @@ extension HXTask {
     var formattedPayment: String {
         "$\(String(format: "%.0f", payment))"
     }
+
+    /// Net amount a hustler receives after the 15% platform service fee.
+    var hustlerNet: Double { payment * 0.85 }
+
+    var formattedHustlerNet: String {
+        "$\(String(format: "%.0f", hustlerNet))"
+    }
 }

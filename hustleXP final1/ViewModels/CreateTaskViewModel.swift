@@ -35,7 +35,6 @@ final class CreateTaskViewModel {
     var payment: String = ""
     var locationCity: String = ""
     var locationState: String = ""
-    var locationRadiusMiles: Int = 25
     var durationValue: String = ""
     var durationUnit: DurationUnit = .hours
     var deadline: Date? = nil
@@ -46,7 +45,7 @@ final class CreateTaskViewModel {
     var locationDisplay: String {
         if locationCity == "Anywhere" || locationCity.isEmpty { return "Anywhere" }
         if locationState.isEmpty { return locationCity }
-        return "\(locationCity), \(locationState) (\(locationRadiusMiles) mi)"
+        return "\(locationCity), \(locationState)"
     }
 
     var hasLocation: Bool {
@@ -313,7 +312,6 @@ final class CreateTaskViewModel {
                     location: locationDisplay,
                     locationCity: locationCity,
                     locationState: locationState,
-                    locationRadiusMiles: locationRadiusMiles,
                     latitude: nil,
                     longitude: nil,
                     estimatedDuration: formattedDuration.isEmpty ? "1 hr" : formattedDuration,

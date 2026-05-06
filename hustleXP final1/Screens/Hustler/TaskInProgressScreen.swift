@@ -189,7 +189,7 @@ struct TaskInProgressScreen: View {
                 
                 Spacer()
                 
-                PriceDisplay(amount: task.payment, size: .small)
+                PriceDisplay(amount: task.hustlerNet, size: .small)
             }
             .padding()
             .background(Color.surfaceElevated)

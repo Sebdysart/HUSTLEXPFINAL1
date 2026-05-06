@@ -136,6 +136,12 @@ struct SkillGridSelectionScreen: View {
         // Load full catalog from API
         do {
             let all = try await skillService.getAllSkills()
+            if all.isEmpty {
+                HXLogger.info(
+                    "SkillGrid: Catalog API returned 0 skills — the server database likely has no rows in `skills` (ensure migration 006-seed-skills ran).",
+                    category: "Skill"
+                )
+            }
             // Group by category, preserving order
             var seen: [String] = []
             var map: [String: [APISkill]] = [:]

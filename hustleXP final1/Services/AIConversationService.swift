@@ -33,9 +33,10 @@ class AITaskDraft {
     var title: String = ""
     var description: String = ""
     var payment: Double?
+    var locationStreet: String = ""
     var locationCity: String = ""
     var locationState: String = ""
-    var locationRadiusMiles: Int = 25
+    var locationZip: String = ""
     var duration: String = ""
     var category: TaskCategory?
     var requiredTier: TrustTier = .rookie
@@ -47,11 +48,15 @@ class AITaskDraft {
     var flags: [String] = []
     var isReadyToPost: Bool = false
 
-    /// Display-friendly location string
+    /// Display-friendly location string — full address when available for precise heatmap pinning
     var locationDisplay: String {
         if locationCity == "Anywhere" || locationCity.isEmpty { return "Anywhere" }
-        if locationState.isEmpty { return locationCity }
-        return "\(locationCity), \(locationState) (\(locationRadiusMiles) mi)"
+        var parts: [String] = []
+        if !locationStreet.isEmpty { parts.append(locationStreet) }
+        parts.append(locationCity)
+        if !locationState.isEmpty { parts.append(locationState) }
+        if !locationZip.isEmpty { parts.append(locationZip) }
+        return parts.joined(separator: ", ")
     }
 
     var hasBasicInfo: Bool {
@@ -60,6 +65,10 @@ class AITaskDraft {
 
     var hasLocation: Bool {
         locationCity == "Anywhere" || (!locationCity.isEmpty && !locationState.isEmpty)
+    }
+
+    var hasFullAddress: Bool {
+        locationCity == "Anywhere" || (!locationStreet.isEmpty && !locationCity.isEmpty && !locationState.isEmpty)
     }
 
     var completionPercentage: Double {
@@ -102,9 +111,10 @@ class AITaskDraft {
             "title": title.isEmpty ? nil : title,
             "description": description.isEmpty ? nil : description,
             "suggestedPriceCents": payment.map { Int($0 * 100) },
+            "locationStreet": locationStreet.isEmpty ? nil : locationStreet,
             "locationCity": locationCity.isEmpty ? nil : locationCity,
             "locationState": locationState.isEmpty ? nil : locationState,
-            "locationRadiusMiles": locationRadiusMiles,
+            "locationZip": locationZip.isEmpty ? nil : locationZip,
             "estimatedDurationMinutes": durationToMinutes(),
             "difficulty": difficulty.isEmpty ? nil : difficulty,
             "category": category?.rawValue,
@@ -133,9 +143,10 @@ class AITaskDraft {
         if let t = draft.title { title = t }
         if let d = draft.description { description = d }
         if let p = draft.suggestedPriceCents { payment = Double(p) / 100.0 }
+        if let street = draft.locationStreet { locationStreet = street }
         if let city = draft.locationCity { locationCity = city }
         if let state = draft.locationState { locationState = state }
-        if let radius = draft.locationRadiusMiles { locationRadiusMiles = radius }
+        if let zip = draft.locationZip { locationZip = zip }
         // Always display duration in hours for consistency — backend AI returns
         // total committed minutes (sum of all sessions for recurring tasks).
         if let dur = draft.estimatedDurationMinutes, dur > 0 {
@@ -182,9 +193,10 @@ struct CurrentDraftInput: Codable {
     let title: String?
     let description: String?
     let suggestedPriceCents: Int?
+    let locationStreet: String?
     let locationCity: String?
     let locationState: String?
-    let locationRadiusMiles: Int?
+    let locationZip: String?
     let estimatedDurationMinutes: Int?
     let difficulty: String?
     let category: String?
@@ -205,9 +217,10 @@ struct AIConverseResponseDraft: Codable {
     let title: String?
     let description: String?
     let suggestedPriceCents: Int?
+    let locationStreet: String?
     let locationCity: String?
     let locationState: String?
-    let locationRadiusMiles: Int?
+    let locationZip: String?
     let estimatedDurationMinutes: Int?
     let difficulty: String?
     let category: String?
@@ -248,9 +261,10 @@ final class AIConversationService {
             title: draft.title.isEmpty ? nil : draft.title,
             description: draft.description.isEmpty ? nil : draft.description,
             suggestedPriceCents: draft.payment.map { Int($0 * 100) },
+            locationStreet: draft.locationStreet.isEmpty ? nil : draft.locationStreet,
             locationCity: draft.locationCity.isEmpty ? nil : draft.locationCity,
             locationState: draft.locationState.isEmpty ? nil : draft.locationState,
-            locationRadiusMiles: draft.locationRadiusMiles,
+            locationZip: draft.locationZip.isEmpty ? nil : draft.locationZip,
             estimatedDurationMinutes: draft.durationToMinutes(),
             difficulty: draft.difficulty.isEmpty ? nil : draft.difficulty,
             category: draft.category?.rawValue,

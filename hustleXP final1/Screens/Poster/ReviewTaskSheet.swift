@@ -16,18 +16,17 @@ struct ReviewTaskSheet: View {
     @State private var title: String
     @State private var description: String
     @State private var payment: String
+    @State private var locationStreet: String
     @State private var locationCity: String
     @State private var locationState: String
-    @State private var locationRadiusMiles: Int
+    @State private var locationZip: String
     @State private var durationValue: String
     @State private var durationUnit: DurationUnit
     @State private var deadline: Date?
     @State private var requirements: String
     @FocusState private var focusedField: Field?
 
-    private enum Field: Hashable { case title, description, payment, city, durationVal, requirements }
-
-    private static let radiusOptions = [25, 50, 75, 100]
+    private enum Field: Hashable { case title, description, payment, street, city, durationVal, requirements }
 
     private static let usStates: [(code: String, name: String)] = [
         ("AL", "Alabama"), ("AK", "Alaska"), ("AZ", "Arizona"), ("AR", "Arkansas"),
@@ -51,9 +50,10 @@ struct ReviewTaskSheet: View {
         _title = State(initialValue: draft.title)
         _description = State(initialValue: draft.description)
         _payment = State(initialValue: draft.payment.map { String(Int($0)) } ?? "")
+        _locationStreet = State(initialValue: draft.locationStreet)
         _locationCity = State(initialValue: draft.locationCity)
         _locationState = State(initialValue: draft.locationState)
-        _locationRadiusMiles = State(initialValue: draft.locationRadiusMiles)
+        _locationZip = State(initialValue: draft.locationZip)
         _requirements = State(initialValue: draft.requirements)
         let parsed = DurationUnit.parse(draft.duration)
         _durationValue = State(initialValue: parsed.value)
@@ -97,6 +97,12 @@ struct ReviewTaskSheet: View {
                         TextField("Amount", text: $payment)
                             .keyboardType(.numberPad)
                             .focused($focusedField, equals: .payment)
+                    }
+
+                    // Street Address
+                    fieldSection(label: "Street Address", field: .street) {
+                        TextField("123 Main St", text: $locationStreet)
+                            .focused($focusedField, equals: .street)
                     }
 
                     // City
@@ -162,34 +168,10 @@ struct ReviewTaskSheet: View {
                             }
                         }
 
-                        // Radius
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Service Radius")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Color.textSecondary)
-
-                            HStack(spacing: 8) {
-                                ForEach(Self.radiusOptions, id: \.self) { miles in
-                                    Button {
-                                        locationRadiusMiles = miles
-                                    } label: {
-                                        Text("\(miles) mi")
-                                            .font(.subheadline.weight(.medium))
-                                            .foregroundStyle(locationRadiusMiles == miles ? .white : Color.textPrimary)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 10)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .fill(locationRadiusMiles == miles ? Color.brandPurple : Color.surfaceElevated)
-                                            )
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .stroke(locationRadiusMiles == miles ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
-                                            )
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
+                        // ZIP Code
+                        fieldSection(label: "ZIP Code", field: .durationVal) {
+                            TextField("e.g. 77001", text: $locationZip)
+                                .keyboardType(.numberPad)
                         }
                     }
 
@@ -431,36 +413,45 @@ struct ReviewTaskSheet: View {
         }
     }
 
-    /// Fee breakdown card — shows the poster what they pay vs what hustler receives.
-    /// 15% platform fee.
+    /// Payment details card — shows the poster only what they are charged.
     private var feeBreakdownCard: some View {
         let amount = Double(payment) ?? 0
-        let fee = amount * 0.15
-        let hustlerReceives = amount - fee
-        return VStack(spacing: 10) {
+        return VStack(spacing: 12) {
             HStack {
-                Image(systemName: "info.circle.fill")
+                Image(systemName: "lock.shield.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.brandPurple)
-                Text("Payment Breakdown")
+                Text("Payment Details")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
                 Spacer()
+                Text("$\(String(format: "%.2f", amount))")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.moneyGreen)
             }
 
             Divider().background(Color.white.opacity(0.08))
 
-            feeRow(label: "Total task amount", value: amount, highlight: false)
-            feeRow(label: "Platform fee (15%)", value: -fee, highlight: false, color: .textSecondary)
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.infoBlue)
+                    .padding(.top, 1)
+                Text("Held in secure escrow. Released only after you approve the completed work.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-            Divider().background(Color.white.opacity(0.08))
-
-            feeRow(label: "Hustler receives", value: hustlerReceives, highlight: true, color: .successGreen)
-
-            Text("You'll be charged $\(String(format: "%.2f", amount)) when you post this task. Funds are held in escrow and released when you approve the work.")
-                .font(.system(size: 11))
-                .foregroundStyle(Color.textSecondary)
-                .padding(.top, 4)
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.successGreen)
+                    .padding(.top, 1)
+                Text("No hidden charges. You pay exactly what you set.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.textMuted)
+            }
         }
         .padding(14)
         .background(
@@ -471,18 +462,6 @@ struct ReviewTaskSheet: View {
                     .stroke(Color.brandPurple.opacity(0.2), lineWidth: 1)
             }
         )
-    }
-
-    private func feeRow(label: String, value: Double, highlight: Bool, color: Color = .textPrimary) -> some View {
-        HStack {
-            Text(label)
-                .font(.system(size: 13, weight: highlight ? .bold : .regular))
-                .foregroundStyle(highlight ? Color.textPrimary : Color.textSecondary)
-            Spacer()
-            Text("\(value < 0 ? "−" : "")$\(String(format: "%.2f", abs(value)))")
-                .font(.system(size: highlight ? 16 : 13, weight: highlight ? .bold : .semibold, design: .rounded))
-                .foregroundStyle(color)
-        }
     }
 
     private func fieldSection<Content: View>(label: String, field: Field, @ViewBuilder content: () -> Content) -> some View {
@@ -508,9 +487,10 @@ struct ReviewTaskSheet: View {
         draft.title = title.trimmingCharacters(in: .whitespaces)
         draft.description = description.trimmingCharacters(in: .whitespaces)
         draft.payment = Double(payment)
+        draft.locationStreet = locationStreet.trimmingCharacters(in: .whitespaces)
         draft.locationCity = locationCity
         draft.locationState = locationState
-        draft.locationRadiusMiles = locationRadiusMiles
+        draft.locationZip = locationZip.trimmingCharacters(in: .whitespaces)
         draft.duration = durationUnit.format(value: durationValue)
         draft.requirements = requirements.trimmingCharacters(in: .whitespaces)
         if let dl = deadline {

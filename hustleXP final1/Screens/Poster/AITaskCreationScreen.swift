@@ -542,7 +542,6 @@ struct AITaskCreationScreen: View {
                     location: taskDraft.locationDisplay,
                     locationCity: taskDraft.locationCity,
                     locationState: taskDraft.locationState,
-                    locationRadiusMiles: taskDraft.locationRadiusMiles,
                     latitude: taskLat,
                     longitude: taskLng,
                     estimatedDuration: taskDraft.duration.isEmpty ? "1 hr" : taskDraft.duration,

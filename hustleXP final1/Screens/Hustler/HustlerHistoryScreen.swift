@@ -121,7 +121,7 @@ struct CompletedTaskCard: View {
 
                 Spacer()
 
-                PriceDisplay(amount: task.payment, size: .small, color: .successGreen)
+                PriceDisplay(amount: task.hustlerNet, size: .small, color: .successGreen)
             }
 
             HXDivider()

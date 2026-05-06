@@ -324,13 +324,13 @@ struct HustlerTaskDetailScreen: View {
             
             // Price, duration, and tier row
             HStack(spacing: 0) {
-                // Payment
+                // Net earnings for hustler
                 statPill(
                     icon: "dollarsign",
                     iconColor: .moneyGreen,
-                    value: "$\(Int(task.payment))",
+                    value: task.formattedHustlerNet,
                     valueColor: .moneyGreen,
-                    label: "Payment"
+                    label: "You earn"
                 )
 
                 Spacer(minLength: 8)

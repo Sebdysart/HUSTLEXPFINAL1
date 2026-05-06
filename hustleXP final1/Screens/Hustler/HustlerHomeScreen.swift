@@ -631,7 +631,7 @@ struct HustlerHomeScreen: View {
                     ForEach(Array(dataService.availableTasks.prefix(3).enumerated()), id: \.element.id) { index, task in
                         TaskCard(
                             title: task.title,
-                            payment: task.payment,
+                            payment: task.hustlerNet,
                             location: task.location,
                             duration: task.estimatedDuration,
                             variant: index == 0 ? .featured : .compact,
@@ -766,9 +766,9 @@ struct ActiveTaskCard: View {
                     .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.leading)
                 
-                // Payment
+                // Net earnings
                 HStack {
-                    Text("$\(String(format: "%.0f", task.payment))")
+                    Text(task.formattedHustlerNet)
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.moneyGreen)
                         .lineLimit(1)

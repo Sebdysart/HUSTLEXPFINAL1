@@ -22,7 +22,6 @@ struct CreateTaskScreen: View {
         case title, description, payment, city, durationVal
     }
 
-    private static let radiusOptions = [25, 50, 75, 100]
     private static let usStates: [(code: String, name: String)] = [
         ("AL","Alabama"),("AK","Alaska"),("AZ","Arizona"),("AR","Arkansas"),
         ("CA","California"),("CO","Colorado"),("CT","Connecticut"),("DE","Delaware"),
@@ -394,29 +393,6 @@ struct CreateTaskScreen: View {
                         .overlay(fieldBorder(focused: false))
                     }
 
-                    // Radius pills
-                    HStack(spacing: 8) {
-                        ForEach(Self.radiusOptions, id: \.self) { mi in
-                            let sel = viewModel.locationRadiusMiles == mi
-                            Button {
-                                viewModel.locationRadiusMiles = mi
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            } label: {
-                                Text("\(mi) mi")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(sel ? 1 : 0.4))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 9)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(sel
-                                                  ? AnyShapeStyle(LinearGradient(colors: [.brandPurple, .pink.opacity(0.6)], startPoint: .top, endPoint: .bottom))
-                                                  : AnyShapeStyle(Color.white.opacity(0.04)))
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
                 }
 
                 // Duration

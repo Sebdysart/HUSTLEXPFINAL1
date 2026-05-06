@@ -623,7 +623,7 @@ struct HustlerFeedScreen: View {
                         
                         TaskCard(
                             title: featured.title,
-                            payment: featured.payment,
+                            payment: featured.hustlerNet,
                             location: featured.location,
                             duration: featured.estimatedDuration,
                             variant: .featured,
@@ -640,7 +640,7 @@ struct HustlerFeedScreen: View {
                 ForEach(filteredTasks) { task in
                     TaskCard(
                         title: task.title,
-                        payment: task.payment,
+                        payment: task.hustlerNet,
                         location: task.location,
                         duration: task.estimatedDuration,
                         variant: .expanded,

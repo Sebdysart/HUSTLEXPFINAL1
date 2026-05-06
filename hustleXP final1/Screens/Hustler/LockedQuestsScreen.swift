@@ -243,7 +243,7 @@ struct LockedQuestsScreen: View {
                             blockReason: blockReason,
                             unlockAction: blockReason == .licenseRequired ? nil : .selectSkill(skill),
                             distanceMeters: nil,
-                            potentialEarnings: task.payment
+                            potentialEarnings: task.hustlerNet
                         ))
                     }
                 } catch {

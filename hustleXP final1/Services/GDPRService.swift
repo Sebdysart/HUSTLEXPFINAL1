@@ -14,16 +14,16 @@ import Combine
 
 /// GDPR request type
 enum GDPRRequestType: String, Codable, CaseIterable {
-    case export = "EXPORT"
-    case deletion = "DELETION"
-    case rectification = "RECTIFICATION"
-    case restriction = "RESTRICTION"
+    case export = "export"
+    case deletion = "deletion"
+    case rectification = "rectification"
+    case restriction = "restriction"
 
     /// Safe decode — unknown values default to .export
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
-        self = GDPRRequestType(rawValue: raw) ?? .export
+        self = GDPRRequestType(rawValue: raw.lowercased()) ?? .export
     }
 
     var displayName: String {
@@ -47,17 +47,17 @@ enum GDPRRequestType: String, Codable, CaseIterable {
 
 /// GDPR request status
 enum GDPRRequestStatus: String, Codable {
-    case pending = "PENDING"
-    case processing = "PROCESSING"
-    case completed = "COMPLETED"
-    case cancelled = "CANCELLED"
-    case failed = "FAILED"
+    case pending = "pending"
+    case processing = "processing"
+    case completed = "completed"
+    case cancelled = "cancelled"
+    case failed = "failed"
 
     /// Safe decode — unknown values default to .pending
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
-        self = GDPRRequestStatus(rawValue: raw) ?? .pending
+        self = GDPRRequestStatus(rawValue: raw.lowercased()) ?? .pending
     }
 
     var displayName: String {
@@ -71,17 +71,17 @@ enum GDPRRequestStatus: String, Codable {
     }
 }
 
-/// GDPR request record
+/// GDPR request record — field names match backend snake_case via convertFromSnakeCase
 struct GDPRRequest: Codable, Identifiable {
     let id: String
     let userId: String
-    let type: GDPRRequestType
+    let requestType: GDPRRequestType   // backend: request_type
     let status: GDPRRequestStatus
-    let reason: String?
-    let createdAt: Date
+    let requestedAt: Date              // backend: requested_at
     let completedAt: Date?
-    let downloadUrl: String?
-    let expiresAt: Date?
+    let resultUrl: String?             // backend: result_url
+    let resultExpiresAt: Date?         // backend: result_expires_at
+    let deadline: Date?
 }
 
 // MARK: - Consent Types
@@ -154,14 +154,19 @@ final class GDPRService: ObservableObject {
         defer { isLoading = false }
 
         struct CreateRequestInput: Codable {
-            let type: String
-            let reason: String?
+            let requestType: String
+            let exportFormat: String?
+            let requestDetails: [String: String]?
         }
 
         let request: GDPRRequest = try await trpc.call(
             router: "gdpr",
             procedure: "createRequest",
-            input: CreateRequestInput(type: type.rawValue, reason: reason)
+            input: CreateRequestInput(
+                requestType: type.rawValue,
+                exportFormat: type == .export ? "json" : nil,
+                requestDetails: reason.map { ["reason": $0] }
+            )
         )
 
         // Refresh requests list

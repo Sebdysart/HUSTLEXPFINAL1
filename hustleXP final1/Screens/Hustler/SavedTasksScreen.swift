@@ -57,7 +57,7 @@ struct SavedTasksScreen: View {
                 ForEach(savedTasks) { task in
                     TaskCard(
                         title: task.title,
-                        payment: task.payment,
+                        payment: task.hustlerNet,
                         location: task.location,
                         duration: task.estimatedDuration,
                         status: task.badgeStatus,
