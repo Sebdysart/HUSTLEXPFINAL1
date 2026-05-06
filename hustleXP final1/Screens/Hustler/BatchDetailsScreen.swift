@@ -25,18 +25,19 @@ struct BatchDetailsScreen: View {
                     VStack(spacing: 20) {
                         // Header card with total earnings
                         batchHeaderCard(batch)
-                        
+
                         // Map showing all tasks
                         batchMapCard(batch)
-                        
+
                         // Savings breakdown
                         savingsBreakdownCard(batch)
-                        
+
                         // Task list
                         taskListSection(batch)
-                        
+
                         Spacer(minLength: 120)
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                 }

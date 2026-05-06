@@ -35,6 +35,7 @@ struct EarningsScreen: View {
                         // Recent earnings
                         recentEarnings(isCompact: isCompact)
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, isCompact ? 12 : 16)
                     .padding(.bottom, max(16, geometry.safeAreaInsets.bottom))
                 }

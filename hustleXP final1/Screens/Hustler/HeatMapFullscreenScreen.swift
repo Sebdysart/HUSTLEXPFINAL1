@@ -5,6 +5,7 @@
 //  Full-screen heat map view for v1.9.0 Spatial Intelligence
 //
 
+import MapKit
 import SwiftUI
 
 struct HeatMapFullscreenScreen: View {
@@ -154,7 +155,7 @@ struct HeatMapFullscreenScreen: View {
 struct HeatZoneDetailSheet: View {
     let zone: HeatZone
     let onDismiss: () -> Void
-    
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
@@ -219,28 +220,46 @@ struct HeatZoneDetailSheet: View {
                 }
                 .padding(.horizontal, 20)
                 
-                // Action button
-                Button(action: {
-                    // Would filter feed by this zone
-                    onDismiss()
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 14, weight: .bold))
-                        Text("View Tasks in \(zone.name)")
-                            .font(.headline.weight(.semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.brandPurple, Color.aiPurple],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                // Action buttons
+                HStack(spacing: 12) {
+                    // Navigate to zone in Apple Maps
+                    Button(action: { navigateToZone(zone) }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
+                                .font(.system(size: 14, weight: .bold))
+                            Text("Navigate")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(Color.brandPurple)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.brandPurple.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.brandPurple.opacity(0.3), lineWidth: 1)
                         )
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    Button(action: onDismiss) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 14, weight: .bold))
+                            Text("View Tasks")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.brandPurple, Color.aiPurple],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 30)
@@ -251,6 +270,15 @@ struct HeatZoneDetailSheet: View {
                     .ignoresSafeArea()
             )
         }
+    }
+
+    private func navigateToZone(_ zone: HeatZone) {
+        let mapItem = MKMapItem(
+            location: CLLocation(latitude: zone.centerLatitude, longitude: zone.centerLongitude),
+            address: nil
+        )
+        mapItem.name = zone.name
+        mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeWalking])
     }
 }
 

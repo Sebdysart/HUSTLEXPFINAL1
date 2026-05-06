@@ -6,6 +6,7 @@
 //  Premium task details with glassmorphism and rich visuals
 //
 
+import MapKit
 import SwiftUI
 import Combine
 
@@ -58,29 +59,30 @@ struct HustlerTaskDetailScreen: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Hero card with task info
                         taskHeroCard(task)
-                        
+
                         // Quick stats row
                         quickStatsRow(task)
-                        
+
                         // Description card
                         descriptionCard(task)
-                        
+
                         // Location card
                         locationCard(task)
-                        
+
                         // Poster card
                         posterCard(task)
-                        
+
                         // Eligibility check
                         if task.requiredTier.rawValue > appState.trustTier.rawValue {
                             eligibilityWarning(task)
                         }
-                        
+
                         // XP reward info
                         xpRewardCard(task)
-                        
+
                         Spacer(minLength: 120)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                 }
@@ -550,9 +552,16 @@ struct HustlerTaskDetailScreen: View {
     }
     
     private func openInMaps(_ task: HXTask) {
-        guard let lat = task.latitude, let lon = task.longitude else { return }
-        // In production, would open Apple Maps
-        HXLogger.debug("[Maps] Opening directions to \(lat), \(lon)", category: "Navigation")
+        if let lat = task.latitude, let lon = task.longitude {
+            let mapItem = MKMapItem(location: CLLocation(latitude: lat, longitude: lon), address: nil)
+            mapItem.name = task.location
+            mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeWalking])
+        } else if task.location.lowercased() != "anywhere",
+                  !task.location.trimmingCharacters(in: .whitespaces).isEmpty,
+                  let encoded = task.location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let url = URL(string: "maps://?q=\(encoded)") {
+            UIApplication.shared.open(url)
+        }
     }
     
     // MARK: - Poster Card
@@ -1138,7 +1147,8 @@ struct HustlerTaskDetailScreen: View {
             .sink { message in
                 let relevantEvents = [
                     "task_updated", "task_state_changed", "proof_submitted",
-                    "task_completed", "application_accepted", "application_rejected"
+                    "task_completed", "application_accepted", "application_rejected",
+                    "task_cancelled", "task_expired"
                 ]
                 guard relevantEvents.contains(message.event) else { return }
 

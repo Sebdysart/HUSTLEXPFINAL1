@@ -254,27 +254,25 @@ struct HustlerFeedScreen: View {
     // MARK: - v1.9.0 Map View Section
     
     private var mapViewSection: some View {
-        VStack(spacing: 0) {
+        ZStack(alignment: .bottomLeading) {
+            // Full-bleed live map
             HeatMapView(
                 heatZones: apiHeatZones ?? [],
                 tasks: filteredTasks,
                 userLocation: currentLocation,
                 onZoneTapped: { zone in
-                    // Could show zone details
+                    openHustlerRoute(.heatMapFullscreen)
                 },
                 onTaskTapped: { task in
                     openTaskDetail(task.id)
                 }
             )
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            
-            // Legend
+            .ignoresSafeArea(edges: .bottom)
+
+            // Legend overlay at bottom-left
             HeatMapLegend()
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            
-            Spacer()
+                .padding(.bottom, 96) // clear the map toggle FAB
         }
     }
     

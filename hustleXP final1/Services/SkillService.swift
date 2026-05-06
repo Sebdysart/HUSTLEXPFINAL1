@@ -10,31 +10,20 @@ import Foundation
 import UIKit
 import Combine
 
-/// Skill from backend (API response type)
+/// Skill from backend — matches `getSkills` response (snake_case decoded via .convertFromSnakeCase)
 struct APISkill: Codable, Identifiable, Hashable {
     let id: String
-    let name: String
-    let category: String
+    let name: String              // slug: "package_delivery"
+    let displayName: String       // "Package Delivery"
+    let categoryId: String
+    let categoryName: String      // "delivery"
+    let categoryDisplayName: String // "Delivery"
     let requiresLicense: Bool
-    let licenseType: String?
+    let iconName: String?
     let description: String?
-    let iconName: String?
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-
-    static func == (lhs: APISkill, rhs: APISkill) -> Bool {
-        lhs.id == rhs.id
-    }
-}
-
-/// Skill category from backend (API response type)
-struct APISkillCategory: Codable, Identifiable {
-    let id: String
-    let name: String
-    let iconName: String?
-    let skills: [APISkill]
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    static func == (lhs: APISkill, rhs: APISkill) -> Bool { lhs.id == rhs.id }
 }
 
 /// Worker's skill with level (API response type)
@@ -105,34 +94,29 @@ final class SkillService: ObservableObject {
 
     // MARK: - Skill Catalog
 
-    /// Gets all skill categories with skills
-    func getCategories() async throws -> [APISkillCategory] {
+    /// Gets all skills from the backend catalog (no category filter)
+    func getAllSkills() async throws -> [APISkill] {
         struct EmptyInput: Codable {}
-
-        let categories: [APISkillCategory] = try await trpc.call(
+        let skills: [APISkill] = try await trpc.call(
             router: "skills",
-            procedure: "getCategories",
+            procedure: "getSkills",
             type: .query,
             input: EmptyInput()
         )
-
-        HXLogger.info("SkillService: Fetched \(categories.count) skill categories", category: "Skill")
-        return categories
+        return skills
     }
 
-    /// Gets skills in a category
+    /// Gets skills filtered to a specific category UUID
     func getSkills(categoryId: String) async throws -> [APISkill] {
         struct GetSkillsInput: Codable {
             let categoryId: String
         }
-
         let skills: [APISkill] = try await trpc.call(
             router: "skills",
             procedure: "getSkills",
             type: .query,
             input: GetSkillsInput(categoryId: categoryId)
         )
-
         return skills
     }
 

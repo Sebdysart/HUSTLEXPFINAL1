@@ -23,13 +23,14 @@ struct XPBreakdownScreen: View {
                 VStack(spacing: 24) {
                     // XP hero
                     xpHero
-                    
+
                     // Tier progress
                     tierProgress
-                    
+
                     // XP sources guide
                     xpSourcesGuide
                 }
+                .frame(maxWidth: .infinity)
                 .padding(.vertical)
             }
         }

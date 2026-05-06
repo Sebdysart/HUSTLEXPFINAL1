@@ -75,9 +75,23 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
 
-        // Use continuation to bridge delegate callback to async/await
-        let result = await withCheckedContinuation { (continuation: CheckedContinuation<(coordinates: GPSCoordinates, accuracy: Double), Never>) in
-            self.locationContinuation = continuation
+        // Bridge delegate callback to async/await, with cancellation support so the
+        // continuation is always resumed (never leaks) when the calling Task is cancelled.
+        let result = await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<(coordinates: GPSCoordinates, accuracy: Double), Never>) in
+                self.locationContinuation = continuation
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let continuation = self.locationContinuation {
+                    self.locationContinuation = nil
+                    self.locationManager.stopUpdatingLocation()
+                    // Resume with best available location or a safe zero-value
+                    let fallback = self.currentLocation ?? GPSCoordinates(latitude: 0, longitude: 0)
+                    continuation.resume(returning: (coordinates: fallback, accuracy: -1))
+                }
+            }
         }
 
         isCapturing = false

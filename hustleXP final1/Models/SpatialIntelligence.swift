@@ -12,7 +12,7 @@ import SwiftUI
 // MARK: - Heat Zone
 
 /// Represents a geographic zone with task density information
-struct HeatZone: Identifiable, Codable {
+struct HeatZone: Identifiable, Codable, Equatable {
     let id: String
     let name: String
     let centerLatitude: Double
@@ -66,7 +66,7 @@ enum HeatIntensity: String, Codable, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .low: return "Low Activity"
+        case .low: return "Low"
         case .medium: return "Moderate"
         case .high: return "Busy"
         case .hot: return "Hot Zone"

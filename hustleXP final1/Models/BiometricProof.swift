@@ -10,7 +10,7 @@ import CoreLocation
 
 // MARK: - GPS Coordinates
 
-struct GPSCoordinates: Codable {
+struct GPSCoordinates: Codable, Equatable {
     let latitude: Double
     let longitude: Double
     let accuracyMeters: Double

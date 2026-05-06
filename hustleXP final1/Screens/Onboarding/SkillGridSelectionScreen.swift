@@ -2,10 +2,7 @@
 //  SkillGridSelectionScreen.swift
 //  hustleXP final1
 //
-//  100+ Skill Grid Selection
-//  - Organized by category
-//  - Visual distinction: Basic (unlocked), Experience (progress), Licensed (hard gate)
-//  - License verification upsell for trades
+//  Skill selection backed by the real API catalog (UUIDs throughout)
 //
 
 import SwiftUI
@@ -14,34 +11,29 @@ struct SkillGridSelectionScreen: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
-    
-    @State private var selectedSkills: Set<String> = []
-    @State private var expandedCategory: SkillCategory? = nil
+
+    @State private var selectedSkills: Set<String> = []       // API UUIDs
+    @State private var skillGroups: [SkillGroup] = []
+    @State private var expandedGroup: String? = nil            // group categoryName
     @State private var showLicensePrompt: Bool = false
-    @State private var selectedLicenseType: LicenseType? = nil
+    @State private var selectedLicenseSkill: APISkill? = nil
     @State private var searchText: String = ""
-    @State private var verifiedSkills: [WorkerSkillRecord] = []
-    @State private var isLoadingSkills: Bool = false
+    @State private var verifiedSkillIds: Set<String> = []     // API UUIDs of license-verified skills
+    @State private var isLoading: Bool = false
+    @State private var saveError: String? = nil
 
     private let skillService = SkillService.shared
-    
+
     var body: some View {
         ZStack {
-            // Premium dark background
             Color.brandBlack.ignoresSafeArea()
-            
-            // Animated gradient orbs for premium feel
+
+            // Ambient gradient orbs
             VStack {
                 HStack {
                     Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Color.brandPurple.opacity(0.15), Color.clear],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 150
-                            )
-                        )
+                        .fill(RadialGradient(colors: [Color.brandPurple.opacity(0.15), Color.clear],
+                                             center: .center, startRadius: 0, endRadius: 150))
                         .frame(width: 300, height: 300)
                         .blur(radius: 60)
                         .offset(x: -100, y: -80)
@@ -51,48 +43,55 @@ struct SkillGridSelectionScreen: View {
                 HStack {
                     Spacer()
                     Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Color.accentViolet.opacity(0.1), Color.clear],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 120
-                            )
-                        )
+                        .fill(RadialGradient(colors: [Color.accentViolet.opacity(0.1), Color.clear],
+                                             center: .center, startRadius: 0, endRadius: 120))
                         .frame(width: 250, height: 250)
                         .blur(radius: 50)
                         .offset(x: 80, y: 100)
                 }
             }
             .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
-                // Progress bar (shown during onboarding)
                 OnboardingProgressBar(
                     currentStep: OnboardingRoute.skillSelection.stepIndex,
                     totalSteps: OnboardingRoute.totalSteps
                 )
                 .padding(.top, 8)
 
-                // Header
                 header
 
-                // Search bar
                 searchBar
-                
-                // Category list
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(SkillCategory.allCases, id: \.self) { category in
-                            categorySection(category)
-                        }
+
+                if isLoading {
+                    Spacer()
+                    ProgressView()
+                        .tint(Color.brandPurple)
+                    Spacer()
+                } else if skillGroups.isEmpty {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                            .foregroundStyle(Color.textMuted)
+                        Text("Couldn't load skills")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.textMuted)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 100) // Space for button
+                    Spacer()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(skillGroups) { group in
+                                categorySection(group)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 100)
+                    }
                 }
             }
-            
-            // Bottom CTA
+
             VStack {
                 Spacer()
                 bottomButton
@@ -105,55 +104,80 @@ struct SkillGridSelectionScreen: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .sheet(isPresented: $showLicensePrompt) {
-            if let licenseType = selectedLicenseType {
-                LicensePromptSheet(
-                    licenseType: licenseType,
+            if let skill = selectedLicenseSkill {
+                APILicensePromptSheet(
+                    skillDisplayName: skill.displayName,
                     onVerifyNow: {
                         showLicensePrompt = false
-                        router.navigateToHustler(.licenseUpload(type: licenseType))
+                        // Navigate to verification settings
+                        router.navigateToSettings(.verification)
                     },
-                    onSkip: {
-                        showLicensePrompt = false
-                    }
+                    onSkip: { showLicensePrompt = false }
                 )
             }
         }
         .task {
-            // Load existing skills from real backend
-            isLoadingSkills = true
-            do {
-                let records = try await skillService.getMySkills()
-                verifiedSkills = records
-                // Pre-select skills the user already has
-                selectedSkills = Set(records.map { $0.skillId })
-                HXLogger.debug("SkillGrid: Loaded \(records.count) skills from backend", category: "Skill")
-            } catch {
-                HXLogger.debug("SkillGrid: Failed to load skills - \(error.localizedDescription)", category: "Skill")
-            }
-            isLoadingSkills = false
+            await loadSkills()
         }
     }
-    
+
+    // MARK: - Load
+
+    private func loadSkills() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        // Load user's existing skills first (for pre-selection)
+        if let records = try? await skillService.getMySkills() {
+            selectedSkills = Set(records.map { $0.skillId })
+            verifiedSkillIds = Set(records.filter { $0.licenseVerified }.map { $0.skillId })
+        }
+
+        // Load full catalog from API
+        do {
+            let all = try await skillService.getAllSkills()
+            // Group by category, preserving order
+            var seen: [String] = []
+            var map: [String: [APISkill]] = [:]
+            for skill in all {
+                if map[skill.categoryName] == nil {
+                    seen.append(skill.categoryName)
+                    map[skill.categoryName] = []
+                }
+                map[skill.categoryName]?.append(skill)
+            }
+            skillGroups = seen.compactMap { key in
+                guard let skills = map[key], !skills.isEmpty,
+                      let first = skills.first else { return nil }
+                return SkillGroup(
+                    categoryName: key,
+                    displayName: first.categoryDisplayName,
+                    skills: skills
+                )
+            }
+        } catch {
+            HXLogger.error("SkillGrid: Failed to load API skills — \(error.localizedDescription)", category: "Skill")
+        }
+    }
+
     // MARK: - Header
-    
+
     private var header: some View {
         VStack(spacing: 8) {
             HStack {
                 Spacer()
-                
                 Text("\(selectedSkills.count) selected")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.textSecondary)
                     .padding(.trailing, 16)
             }
             .padding(.top, 8)
-            
+
             VStack(spacing: 4) {
                 Text("What can you do?")
                     .font(.system(size: 28, weight: .bold))
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
-                
                 Text("Select skills to see matching quests")
                     .font(.system(size: 15))
                     .minimumScaleFactor(0.7)
@@ -162,14 +186,13 @@ struct SkillGridSelectionScreen: View {
             .padding(.vertical, 8)
         }
     }
-    
+
     // MARK: - Search Bar
-    
+
     private var searchBar: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Color.textMuted)
-            
             TextField("Search skills...", text: $searchText)
                 .font(.system(size: 16))
                 .foregroundStyle(Color.textPrimary)
@@ -181,48 +204,43 @@ struct SkillGridSelectionScreen: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
     }
-    
+
     // MARK: - Category Section
-    
-    private func categorySection(_ category: SkillCategory) -> some View {
-        let skills = filteredSkills(for: category)
-        let isExpanded = expandedCategory == category
-        
+
+    private func categorySection(_ group: SkillGroup) -> some View {
+        let skills = filteredSkills(for: group)
+        let isExpanded = expandedGroup == group.categoryName
+
         return VStack(spacing: 0) {
-            // Category header
             Button {
                 withAnimation(.spring(response: 0.3)) {
-                    expandedCategory = isExpanded ? nil : category
+                    expandedGroup = isExpanded ? nil : group.categoryName
                 }
             } label: {
                 HStack(spacing: 12) {
-                    // Icon
                     ZStack {
                         Circle()
-                            .fill(category.color.opacity(0.2))
+                            .fill(group.color.opacity(0.2))
                             .frame(width: 40, height: 40)
-                        
-                        Image(systemName: category.icon)
+                        Image(systemName: group.sfSymbol)
                             .font(.system(size: 18))
-                            .foregroundStyle(category.color)
+                            .foregroundStyle(group.color)
                     }
-                    
-                    // Title & count
+
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(category.rawValue)
+                        Text(group.displayName)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.textPrimary)
-                        
                         let selectedCount = skills.filter { selectedSkills.contains($0.id) }.count
                         Text("\(selectedCount)/\(skills.count) selected")
                             .font(.system(size: 13))
                             .foregroundStyle(Color.textMuted)
                     }
-                    
+
                     Spacer()
-                    
-                    // Licensed badge
-                    if category == .trades {
+
+                    // Licensed badge for groups that have licensed skills
+                    if skills.contains(where: { $0.requiresLicense }) {
                         Text("LICENSE")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(Color.instantYellow)
@@ -231,8 +249,7 @@ struct SkillGridSelectionScreen: View {
                             .background(Color.instantYellow.opacity(0.2))
                             .clipShape(Capsule())
                     }
-                    
-                    // Chevron
+
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.textMuted)
@@ -241,53 +258,48 @@ struct SkillGridSelectionScreen: View {
                 .background(Color.surfaceElevated)
                 .clipShape(RoundedRectangle(cornerRadius: isExpanded ? 16 : 12, style: .continuous))
             }
-            
-            // Skills grid
+
             if isExpanded && !skills.isEmpty {
-                skillsGrid(skills: skills)
+                skillsGrid(skills: skills, group: group)
                     .padding(.top, 1)
             }
         }
     }
-    
+
     // MARK: - Skills Grid
-    
-    private func skillsGrid(skills: [WorkerSkill]) -> some View {
+
+    private func skillsGrid(skills: [APISkill], group: SkillGroup) -> some View {
         LazyVGrid(columns: [
             GridItem(.flexible(), spacing: 10),
             GridItem(.flexible(), spacing: 10)
         ], spacing: 10) {
-            ForEach(skills, id: \.id) { skill in
-                skillCard(skill)
+            ForEach(skills) { skill in
+                skillCard(skill, group: group)
             }
         }
         .padding(12)
         .background(Color.surfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
-    
+
     // MARK: - Skill Card
-    
-    private func skillCard(_ skill: WorkerSkill) -> some View {
+
+    private func skillCard(_ skill: APISkill, group: SkillGroup) -> some View {
         let isSelected = selectedSkills.contains(skill.id)
-        let isUnlocked = isSkillUnlocked(skill.id)
-        let needsLicense = skill.type == .licensed && !isUnlocked
-        
+        let needsLicense = skill.requiresLicense && !verifiedSkillIds.contains(skill.id)
+
         return Button {
             handleSkillTap(skill)
         } label: {
             VStack(spacing: 8) {
-                // Icon with status
                 ZStack {
                     Circle()
-                        .fill(isSelected ? skill.category.color.opacity(0.3) : Color.surfaceElevated)
+                        .fill(isSelected ? group.color.opacity(0.3) : Color.surfaceElevated)
                         .frame(width: 44, height: 44)
-                    
-                    Image(systemName: skill.icon)
+                    Image(systemName: skill.iconName.flatMap { sfSymbolForSkillIcon($0) } ?? group.sfSymbol)
                         .font(.system(size: 20))
-                        .foregroundStyle(isSelected ? skill.category.color : .textMuted)
-                    
-                    // Lock badge for licensed
+                        .foregroundStyle(isSelected ? group.color : Color.textMuted)
+
                     if needsLicense {
                         VStack {
                             Spacer()
@@ -304,115 +316,66 @@ struct SkillGridSelectionScreen: View {
                         .frame(width: 44, height: 44)
                     }
                 }
-                
-                // Name
-                Text(skill.name)
+
+                Text(skill.displayName)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(isSelected ? Color.textPrimary : Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
                     .frame(height: 32)
-                
-                // Status indicator
-                statusBadge(for: skill, isSelected: isSelected)
+
+                // Status badge
+                if needsLicense {
+                    HStack(spacing: 3) {
+                        Image(systemName: "lock.fill").font(.system(size: 9))
+                        Text("License").font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundStyle(Color.instantYellow)
+                } else if isSelected {
+                    HStack(spacing: 3) {
+                        Image(systemName: "checkmark").font(.system(size: 9, weight: .bold))
+                        Text("Ready").font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundStyle(Color.successGreen)
+                } else {
+                    Text("Available")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.textMuted)
+                }
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? skill.category.color.opacity(0.1) : Color.surfaceElevated)
+                    .fill(isSelected ? group.color.opacity(0.1) : Color.surfaceElevated)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? skill.category.color : Color.clear, lineWidth: 2)
+                            .stroke(isSelected ? group.color : Color.clear, lineWidth: 2)
                     )
             )
         }
     }
-    
-    // MARK: - Status Badge
-    
-    @ViewBuilder
-    private func statusBadge(for skill: WorkerSkill, isSelected: Bool) -> some View {
-        let isUnlocked = isSkillUnlocked(skill.id)
-        
-        switch skill.type {
-        case .basic:
-            if isSelected {
-                HStack(spacing: 3) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .bold))
-                    Text("Ready")
-                        .font(.system(size: 10, weight: .medium))
-                }
-                .foregroundStyle(Color.successGreen)
-            } else {
-                Text("Available")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Color.textMuted)
-            }
-            
-        case .experienceBased:
-            if isUnlocked {
-                HStack(spacing: 3) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .bold))
-                    Text("Unlocked")
-                        .font(.system(size: 10, weight: .medium))
-                }
-                .foregroundStyle(Color.successGreen)
-            } else {
-                HStack(spacing: 3) {
-                    Image(systemName: "arrow.up.circle")
-                        .font(.system(size: 9))
-                    Text("Lvl \(skill.requiredLevel)")
-                        .font(.system(size: 10, weight: .medium))
-                }
-                .foregroundStyle(Color.warningOrange)
-            }
-            
-        case .licensed:
-            if isUnlocked {
-                HStack(spacing: 3) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 9))
-                    Text("Verified")
-                        .font(.system(size: 10, weight: .medium))
-                }
-                .foregroundStyle(Color.successGreen)
-            } else {
-                HStack(spacing: 3) {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 9))
-                    Text("License")
-                        .font(.system(size: 10, weight: .medium))
-                }
-                .foregroundStyle(Color.instantYellow)
-            }
-        }
-    }
-    
+
     // MARK: - Bottom Button
 
     private var bottomButton: some View {
-        let verifiedCount = verifiedSkills.filter { $0.licenseVerified }.count
+        let verifiedCount = verifiedSkillIds.count
 
         return VStack(spacing: 12) {
-            // Stats pill
+            if let error = saveError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(Color.errorRed)
+                    .padding(.horizontal, 20)
+            }
+
             HStack(spacing: 0) {
                 statItem(value: "\(selectedSkills.count)", label: "Selected", color: .brandPurple)
-
-                Rectangle()
-                    .fill(Color.white.opacity(0.08))
-                    .frame(width: 1, height: 32)
-
-                statItem(value: "\(verifiedSkills.count)", label: "Unlocked", color: .successGreen)
-
-                Rectangle()
-                    .fill(Color.white.opacity(0.08))
-                    .frame(width: 1, height: 32)
-
+                Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1, height: 32)
+                statItem(value: "\(verifiedSkillIds.count)", label: "Unlocked", color: .successGreen)
+                Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1, height: 32)
                 statItem(value: "\(verifiedCount)", label: "Licensed", color: .instantYellow)
             }
             .padding(.vertical, 10)
@@ -421,16 +384,12 @@ struct SkillGridSelectionScreen: View {
             .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 1))
             .padding(.horizontal, 20)
 
-            // Save button
-            Button {
-                saveAndContinue()
-            } label: {
+            Button { saveAndContinue() } label: {
                 HStack(spacing: 8) {
                     Text("Save Skills")
                         .font(.system(size: 17, weight: .semibold))
                         .minimumScaleFactor(0.7)
-
-                    if selectedSkills.count > 0 {
+                    if !selectedSkills.isEmpty {
                         Text("(\(selectedSkills.count))")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(.white.opacity(0.7))
@@ -458,138 +417,156 @@ struct SkillGridSelectionScreen: View {
 
     private func statItem(value: String, label: String, color: Color) -> some View {
         VStack(spacing: 3) {
-            Text(value)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(color)
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.textMuted)
+            Text(value).font(.system(size: 20, weight: .bold)).foregroundStyle(color)
+            Text(label).font(.system(size: 11)).foregroundStyle(Color.textMuted)
         }
         .frame(maxWidth: .infinity)
     }
-    
+
     // MARK: - Helpers
-    
-    private func filteredSkills(for category: SkillCategory) -> [WorkerSkill] {
-        var skills = SkillCatalog.skills(for: category)
-        
-        if !searchText.isEmpty {
-            skills = skills.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-        }
-        
-        return skills
+
+    private func filteredSkills(for group: SkillGroup) -> [APISkill] {
+        if searchText.isEmpty { return group.skills }
+        return group.skills.filter { $0.displayName.localizedCaseInsensitiveContains(searchText) }
     }
-    
-    private func handleSkillTap(_ skill: WorkerSkill) {
-        // Check if it's a licensed skill that needs verification
-        if skill.type == .licensed && !isSkillUnlocked(skill.id) {
-            selectedLicenseType = skill.licenseType
+
+    private func handleSkillTap(_ skill: APISkill) {
+        if skill.requiresLicense && !verifiedSkillIds.contains(skill.id) {
+            selectedLicenseSkill = skill
             showLicensePrompt = true
             return
         }
-
-        // Toggle selection (local state only; saved to backend on "Save Skills")
         if selectedSkills.contains(skill.id) {
             selectedSkills.remove(skill.id)
         } else {
             selectedSkills.insert(skill.id)
         }
     }
-    
+
     private func saveAndContinue() {
-        // Save selected skills to real backend
+        saveError = nil
         Task {
             do {
+                // selectedSkills are already API UUIDs — safe to send directly
                 let saved = try await skillService.addSkills(skillIds: Array(selectedSkills))
-                verifiedSkills = saved
-                HXLogger.debug("SkillGrid: \(saved.count) skills saved to backend", category: "Skill")
+                verifiedSkillIds = Set(saved.filter { $0.licenseVerified }.map { $0.skillId })
+                HXLogger.info("SkillGrid: Saved \(saved.count) skills", category: "Skill")
             } catch {
-                HXLogger.debug("SkillGrid: Backend save failed - \(error.localizedDescription)", category: "Skill")
+                await MainActor.run {
+                    saveError = "Couldn't save skills — try again"
+                }
+                HXLogger.error("SkillGrid: Save failed — \(error.localizedDescription)", category: "Skill")
+                return
             }
         }
-
-        // Navigate to onboarding complete (or dismiss if accessed from settings)
         router.navigateToOnboarding(.complete)
     }
 
-    // MARK: - Skill Unlock Check
-
-    /// Checks if a skill is unlocked using real backend data.
-    /// Basic skills are always considered unlocked.
-    /// Licensed/experience-based skills require backend verification.
-    private func isSkillUnlocked(_ skillId: String) -> Bool {
-        // Basic skills are always unlocked
-        if let skill = SkillCatalog.skill(byId: skillId), skill.type == .basic {
-            return true
+    // Lucide icon name → SF Symbol (backend seeds most skills without iconName, fallback to category icon)
+    private func sfSymbolForSkillIcon(_ name: String) -> String? {
+        switch name {
+        case "truck": return "truck.box"
+        case "package", "shippingbox": return "shippingbox.fill"
+        case "monitor", "laptop": return "desktopcomputer"
+        case "smartphone": return "iphone"
+        case "wrench": return "wrench.fill"
+        case "hammer": return "hammer.fill"
+        case "palette": return "paintpalette.fill"
+        case "camera": return "camera.fill"
+        case "scissors": return "scissors"
+        case "dog", "paw": return "pawprint.fill"
+        case "book": return "book.fill"
+        case "music": return "music.note"
+        case "car": return "car.fill"
+        case "home", "house": return "house.fill"
+        case "briefcase": return "briefcase.fill"
+        case "user", "person": return "person.fill"
+        case "zap", "bolt": return "bolt.fill"
+        default: return nil
         }
-        // Check real backend records for license/experience verification
-        return verifiedSkills.contains { $0.skillId == skillId && $0.licenseVerified }
     }
 }
 
-// MARK: - License Prompt Sheet
+// MARK: - SkillGroup (grouping model, not from API)
 
-struct LicensePromptSheet: View {
-    let licenseType: LicenseType
+struct SkillGroup: Identifiable {
+    let categoryName: String   // slug: "delivery"
+    let displayName: String    // "Delivery"
+    let skills: [APISkill]
+
+    var id: String { categoryName }
+
+    var sfSymbol: String {
+        switch categoryName {
+        case "general_labor": return "hammer.fill"
+        case "delivery": return "shippingbox.fill"
+        case "tech_help": return "desktopcomputer"
+        case "home_services": return "house.fill"
+        case "personal_services": return "person.fill"
+        case "professional": return "briefcase.fill"
+        case "creative": return "paintpalette.fill"
+        default: return "star.fill"
+        }
+    }
+
+    var color: Color {
+        switch categoryName {
+        case "general_labor": return .orange
+        case "delivery": return Color.brandPurple
+        case "tech_help": return .blue
+        case "home_services": return .green
+        case "personal_services": return .pink
+        case "professional": return .indigo
+        case "creative": return .yellow
+        default: return Color.brandPurple
+        }
+    }
+}
+
+// MARK: - License Prompt Sheet (for API skills — no LicenseType enum needed)
+
+struct APILicensePromptSheet: View {
+    let skillDisplayName: String
     let onVerifyNow: () -> Void
     let onSkip: () -> Void
-    
+
     var body: some View {
         VStack(spacing: 24) {
-            // Icon
             ZStack {
                 Circle()
                     .fill(Color.instantYellow.opacity(0.2))
                     .frame(width: 80, height: 80)
-                
-                Image(systemName: licenseType.icon)
+                Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 36))
                     .foregroundStyle(Color.instantYellow)
             }
             .padding(.top, 32)
-            
-            // Title
+
             VStack(spacing: 8) {
-                Text("\(licenseType.rawValue)")
+                Text(skillDisplayName)
                     .font(.system(size: 24, weight: .bold))
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(Color.textPrimary)
-                
-                Text("is a Regulated Trade")
+                    .multilineTextAlignment(.center)
+                Text("Requires Verification")
                     .font(.system(size: 17))
                     .foregroundStyle(Color.textSecondary)
             }
-            
-            // Description
-            Text("To see \(licenseType.rawValue) quests and earn premium rates, you'll need to verify your professional license.")
+            .padding(.horizontal, 24)
+
+            Text("To see \(skillDisplayName) tasks and earn premium rates, verify your license or credentials first.")
                 .font(.system(size: 15))
                 .foregroundStyle(Color.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
-            
-            // Fee info
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.shield.fill")
-                    .foregroundStyle(Color.successGreen)
-                Text("One-time verification: $\(String(format: "%.2f", licenseType.verificationFee))")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.textSecondary)
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 20)
-            .background(Color.surfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            
+
             Spacer()
-            
-            // Buttons
+
             VStack(spacing: 12) {
-                Button {
-                    onVerifyNow()
-                } label: {
+                Button(action: onVerifyNow) {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.seal.fill")
-                        Text("Verify License Now")
+                        Text("Verify Now")
                             .minimumScaleFactor(0.7)
                     }
                     .font(.system(size: 17, weight: .semibold))
@@ -600,11 +577,9 @@ struct LicensePromptSheet: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .accessibilityLabel("Verify your license now")
-                
-                Button {
-                    onSkip()
-                } label: {
-                    Text("Stick to General Labor")
+
+                Button(action: onSkip) {
+                    Text("Skip for now")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Color.textMuted)
                 }

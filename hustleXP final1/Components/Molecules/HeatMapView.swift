@@ -2,9 +2,10 @@
 //  HeatMapView.swift
 //  hustleXP final1
 //
-//  Mock Heat Map visualization for v1.9.0 - Shows task density zones
+//  Real MapKit heat map visualization for v1.9.0
 //
 
+import MapKit
 import SwiftUI
 
 struct HeatMapView: View {
@@ -16,130 +17,123 @@ struct HeatMapView: View {
     var onTaskTapped: ((HXTask) -> Void)? = nil
     var isCompact: Bool = false
 
-    @State private var selectedZone: HeatZone?
-    @State private var pulseAnimation: Bool = false
+    @State private var position: MapCameraPosition = .automatic
 
-    // Dynamic bounds from API or computed from zones/user location
-    private var minLat: Double {
-        if let b = mapBounds { return b.minLat }
-        let userLat = userLocation?.latitude ?? 37.7749
-        if heatZones.isEmpty { return userLat - 0.06 }
-        return min(heatZones.map(\.centerLatitude).min()!, userLat) - 0.01
-    }
-    private var maxLat: Double {
-        if let b = mapBounds { return b.maxLat }
-        let userLat = userLocation?.latitude ?? 37.7749
-        if heatZones.isEmpty { return userLat + 0.06 }
-        return max(heatZones.map(\.centerLatitude).max()!, userLat) + 0.01
-    }
-    private var minLon: Double {
-        if let b = mapBounds { return b.minLon }
-        let userLng = userLocation?.longitude ?? -122.4194
-        if heatZones.isEmpty { return userLng - 0.08 }
-        return min(heatZones.map(\.centerLongitude).min()!, userLng) - 0.01
-    }
-    private var maxLon: Double {
-        if let b = mapBounds { return b.maxLon }
-        let userLng = userLocation?.longitude ?? -122.4194
-        if heatZones.isEmpty { return userLng + 0.08 }
-        return max(heatZones.map(\.centerLongitude).max()!, userLng) + 0.01
-    }
-    
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Grid background
-                MapGridBackground()
-                
-                // Heat zone overlays
-                ForEach(heatZones) { zone in
-                    HeatZoneOverlay(
-                        zone: zone,
-                        size: geometry.size,
-                        minLat: minLat,
-                        maxLat: maxLat,
-                        minLon: minLon,
-                        maxLon: maxLon,
-                        isSelected: selectedZone?.id == zone.id
-                    )
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedZone = zone
+        Map(position: $position) {
+            // Heat zone circles + tappable annotation badges
+            ForEach(heatZones) { zone in
+                let coord = CLLocationCoordinate2D(
+                    latitude: zone.centerLatitude,
+                    longitude: zone.centerLongitude
+                )
+
+                MapCircle(center: coord, radius: CLLocationDistance(max(zone.radiusMeters, 200)))
+                    .foregroundStyle(zone.intensity.color.opacity(0.2))
+                    .stroke(zone.intensity.color.opacity(0.5), lineWidth: 2)
+
+                Annotation("", coordinate: coord) {
+                    Button(action: { onZoneTapped?(zone) }) {
+                        ZStack {
+                            Circle()
+                                .fill(zone.intensity.color.opacity(0.18))
+                                .frame(width: isCompact ? 40 : 52, height: isCompact ? 40 : 52)
+                            VStack(spacing: 1) {
+                                Text("\(zone.taskCount)")
+                                    .font(.system(size: isCompact ? 11 : 13, weight: .bold))
+                                    .foregroundStyle(zone.intensity.color)
+                                Image(systemName: "briefcase.fill")
+                                    .font(.system(size: isCompact ? 8 : 9))
+                                    .foregroundStyle(zone.intensity.color)
+                            }
                         }
-                        onZoneTapped?(zone)
                     }
-                }
-                
-                // Task markers
-                ForEach(tasks.filter { $0.hasCoordinates }) { task in
-                    TaskMapMarker(
-                        task: task,
-                        size: geometry.size,
-                        minLat: minLat,
-                        maxLat: maxLat,
-                        minLon: minLon,
-                        maxLon: maxLon
-                    )
-                    .onTapGesture {
-                        onTaskTapped?(task)
-                    }
-                }
-                
-                // User location marker
-                if let location = userLocation {
-                    UserLocationMarker(
-                        location: location,
-                        size: geometry.size,
-                        minLat: minLat,
-                        maxLat: maxLat,
-                        minLon: minLon,
-                        maxLon: maxLon,
-                        pulseAnimation: pulseAnimation
-                    )
-                }
-                
-                // Neighborhood labels
-                ForEach(heatZones) { zone in
-                    NeighborhoodLabel(
-                        zone: zone,
-                        size: geometry.size,
-                        minLat: minLat,
-                        maxLat: maxLat,
-                        minLon: minLon,
-                        maxLon: maxLon,
-                        isCompact: isCompact
-                    )
+                    .buttonStyle(.plain)
                 }
             }
+
+            // Task pin markers
+            ForEach(tasks.filter { $0.hasCoordinates }) { task in
+                if let lat = task.latitude, let lon = task.longitude {
+                    Annotation("", coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)) {
+                        Button(action: { onTaskTapped?(task) }) {
+                            ZStack {
+                                Circle()
+                                    .fill(.white)
+                                    .frame(width: 14, height: 14)
+                                Image(systemName: "mappin.circle.fill")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundStyle(Color.brandPurple)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            // Standard iOS blue user-location dot
+            UserAnnotation()
         }
-        .background(Color.brandBlack)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.brandPurple.opacity(0.3), lineWidth: 1)
-        )
-        .onAppear {
-            pulseAnimation = true
+        .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        .onAppear { applyInitialCamera() }
+        .onChange(of: userLocation) { _, _ in applyInitialCamera() }
+        .onChange(of: heatZones) { _, _ in applyZoneCamera() }
+    }
+
+    // MARK: - Camera helpers
+
+    private func applyInitialCamera() {
+        guard heatZones.isEmpty, let loc = userLocation else { return }
+        position = .region(MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude),
+            span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
+        ))
+    }
+
+    private func applyZoneCamera() {
+        guard !heatZones.isEmpty else { return }
+        if let b = mapBounds {
+            position = .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(
+                    latitude: (b.minLat + b.maxLat) / 2,
+                    longitude: (b.minLon + b.maxLon) / 2
+                ),
+                span: MKCoordinateSpan(
+                    latitudeDelta: (b.maxLat - b.minLat) * 1.3,
+                    longitudeDelta: (b.maxLon - b.minLon) * 1.3
+                )
+            ))
+        } else {
+            let lats = heatZones.map(\.centerLatitude)
+            let lons = heatZones.map(\.centerLongitude)
+            position = .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(
+                    latitude: (lats.min()! + lats.max()!) / 2,
+                    longitude: (lons.min()! + lons.max()!) / 2
+                ),
+                span: MKCoordinateSpan(
+                    latitudeDelta: max((lats.max()! - lats.min()!) * 1.5, 0.05),
+                    longitudeDelta: max((lons.max()! - lons.min()!) * 1.5, 0.05)
+                )
+            ))
         }
     }
 }
 
-// MARK: - Map Grid Background
+// MARK: - Map Grid Background (used by TaskMapView and BatchDetailsScreen)
 
 struct MapGridBackground: View {
     var body: some View {
         Canvas { context, size in
             let gridSpacing: CGFloat = 30
-            
-            // Vertical lines
+
             for x in stride(from: 0, to: size.width, by: gridSpacing) {
                 var path = Path()
                 path.move(to: CGPoint(x: x, y: 0))
                 path.addLine(to: CGPoint(x: x, y: size.height))
                 context.stroke(path, with: .color(Color.mapGrid), lineWidth: 0.5)
             }
-            
-            // Horizontal lines
+
             for y in stride(from: 0, to: size.height, by: gridSpacing) {
                 var path = Path()
                 path.move(to: CGPoint(x: 0, y: y))
@@ -150,204 +144,11 @@ struct MapGridBackground: View {
     }
 }
 
-// MARK: - Heat Zone Overlay
-
-struct HeatZoneOverlay: View {
-    let zone: HeatZone
-    let size: CGSize
-    let minLat: Double
-    let maxLat: Double
-    let minLon: Double
-    let maxLon: Double
-    var isSelected: Bool = false
-    
-    @State private var glowAnimation: Bool = false
-    
-    private var position: CGPoint {
-        let x = (zone.centerLongitude - minLon) / (maxLon - minLon) * size.width
-        let y = (1 - (zone.centerLatitude - minLat) / (maxLat - minLat)) * size.height
-        return CGPoint(x: x, y: y)
-    }
-    
-    private var zoneSize: CGFloat {
-        // Scale based on intensity
-        switch zone.intensity {
-        case .low: return 60
-        case .medium: return 75
-        case .high: return 90
-        case .hot: return 110
-        }
-    }
-    
-    var body: some View {
-        ZStack {
-            // Outer glow
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            zone.intensity.color.opacity(zone.intensity.glowOpacity),
-                            zone.intensity.color.opacity(0)
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: zoneSize / 2
-                    )
-                )
-                .frame(width: zoneSize * 1.5, height: zoneSize * 1.5)
-                .scaleEffect(glowAnimation ? 1.1 : 1.0)
-            
-            // Core circle
-            Circle()
-                .fill(zone.intensity.color.opacity(0.3))
-                .frame(width: zoneSize, height: zoneSize)
-            
-            // Inner highlight
-            Circle()
-                .fill(zone.intensity.color.opacity(0.6))
-                .frame(width: zoneSize * 0.5, height: zoneSize * 0.5)
-            
-            // Selection ring
-            if isSelected {
-                Circle()
-                    .stroke(Color.white, lineWidth: 2)
-                    .frame(width: zoneSize + 10, height: zoneSize + 10)
-            }
-        }
-        .position(position)
-        .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: glowAnimation)
-        .onAppear {
-            glowAnimation = true
-        }
-    }
-}
-
-// MARK: - Task Map Marker
-
-struct TaskMapMarker: View {
-    let task: HXTask
-    let size: CGSize
-    let minLat: Double
-    let maxLat: Double
-    let minLon: Double
-    let maxLon: Double
-    
-    private var position: CGPoint {
-        guard let lat = task.latitude, let lon = task.longitude else {
-            return .zero
-        }
-        let x = (lon - minLon) / (maxLon - minLon) * size.width
-        let y = (1 - (lat - minLat) / (maxLat - minLat)) * size.height
-        return CGPoint(x: x, y: y)
-    }
-    
-    var body: some View {
-        ZStack {
-            // Glow
-            Circle()
-                .fill(Color.brandPurple.opacity(0.3))
-                .frame(width: 24, height: 24)
-            
-            // Pin
-            Image(systemName: "mappin.circle.fill")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(Color.brandPurple)
-                .background(
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 12, height: 12)
-                )
-        }
-        .position(position)
-    }
-}
-
-// MARK: - User Location Marker
-
-struct UserLocationMarker: View {
-    let location: GPSCoordinates
-    let size: CGSize
-    let minLat: Double
-    let maxLat: Double
-    let minLon: Double
-    let maxLon: Double
-    let pulseAnimation: Bool
-    
-    private var position: CGPoint {
-        let x = (location.longitude - minLon) / (maxLon - minLon) * size.width
-        let y = (1 - (location.latitude - minLat) / (maxLat - minLat)) * size.height
-        return CGPoint(x: x, y: y)
-    }
-    
-    var body: some View {
-        ZStack {
-            // Pulse ring
-            Circle()
-                .stroke(Color.infoBlue.opacity(0.3), lineWidth: 2)
-                .frame(width: 40, height: 40)
-                .scaleEffect(pulseAnimation ? 1.3 : 1.0)
-                .opacity(pulseAnimation ? 0 : 1)
-                .animation(.easeOut(duration: 1.5).repeatForever(autoreverses: false), value: pulseAnimation)
-            
-            // Outer ring
-            Circle()
-                .stroke(Color.white, lineWidth: 2)
-                .frame(width: 20, height: 20)
-            
-            // Inner dot
-            Circle()
-                .fill(Color.infoBlue)
-                .frame(width: 14, height: 14)
-        }
-        .position(position)
-    }
-}
-
-// MARK: - Neighborhood Label
-
-struct NeighborhoodLabel: View {
-    let zone: HeatZone
-    let size: CGSize
-    let minLat: Double
-    let maxLat: Double
-    let minLon: Double
-    let maxLon: Double
-    var isCompact: Bool = false
-    
-    private var position: CGPoint {
-        let x = (zone.centerLongitude - minLon) / (maxLon - minLon) * size.width
-        let y = (1 - (zone.centerLatitude - minLat) / (maxLat - minLat)) * size.height
-        // Offset label below the zone
-        return CGPoint(x: x, y: y + (isCompact ? 35 : 45))
-    }
-    
-    var body: some View {
-        VStack(spacing: 2) {
-            Text(zone.name)
-                .font(.system(size: isCompact ? 9 : 10, weight: .semibold))
-                .foregroundStyle(Color.textPrimary)
-            
-            HStack(spacing: 4) {
-                Text("\(zone.taskCount)")
-                    .font(.system(size: isCompact ? 8 : 9, weight: .bold))
-                Image(systemName: "briefcase.fill")
-                    .font(.system(size: isCompact ? 7 : 8))
-            }
-            .foregroundStyle(zone.intensity.color)
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(Color.surfaceElevated.opacity(0.9))
-        .clipShape(Capsule())
-        .position(position)
-    }
-}
-
 // MARK: - Map Toggle Button
 
 struct MapToggleButton: View {
     @Binding var showMapView: Bool
-    
+
     var body: some View {
         Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -358,11 +159,11 @@ struct MapToggleButton: View {
                 Circle()
                     .fill(Color.surfaceElevated)
                     .frame(width: 56, height: 56)
-                
+
                 Circle()
                     .stroke(Color.brandPurple.opacity(0.5), lineWidth: 1)
                     .frame(width: 56, height: 56)
-                
+
                 Image(systemName: showMapView ? "list.bullet" : "map.fill")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(Color.brandPurple)
@@ -381,14 +182,14 @@ struct HeatMapLegend: View {
                 .font(.system(size: 10, weight: .heavy))
                 .tracking(1.5)
                 .foregroundStyle(Color.textMuted)
-            
+
             HStack(spacing: 12) {
                 ForEach(HeatIntensity.allCases, id: \.self) { intensity in
                     HStack(spacing: 4) {
                         Circle()
                             .fill(intensity.color)
                             .frame(width: 10, height: 10)
-                        
+
                         Text(intensity.displayName)
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(Color.textSecondary)
@@ -413,7 +214,7 @@ struct HeatMapLegend: View {
         )
         .frame(height: 300)
         .padding()
-        
+
         HeatMapLegend()
             .padding()
     }

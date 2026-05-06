@@ -68,9 +68,17 @@ struct PosterTaskDetailScreen: View {
                         
                         // Description section
                         VStack(alignment: .leading, spacing: 12) {
-                            HXText("Description", style: .headline)
-                            
-                            HXText(task.description, style: .body, color: .textSecondary)
+                            HStack(spacing: 8) {
+                                Image(systemName: "doc.text.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.brandPurple)
+                                HXText("Description", style: .headline)
+                            }
+
+                            Text(task.description)
+                                .font(.body)
+                                .foregroundStyle(Color.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(20)
                         .background(Color.surfaceElevated)
@@ -349,7 +357,8 @@ struct PosterTaskDetailScreen: View {
             .sink { message in
                 let relevantEvents = [
                     "task_updated", "task_state_changed", "proof_submitted",
-                    "task_completed", "worker_checkin", "worker_checkout"
+                    "task_completed", "worker_checkin", "worker_checkout",
+                    "task_cancelled", "task_expired"
                 ]
                 if relevantEvents.contains(message.event) {
                     if let json = try? JSONSerialization.jsonObject(with: message.data) as? [String: Any],
@@ -408,25 +417,33 @@ struct PosterTaskDetailScreen: View {
 // MARK: - Task Status Badge
 private struct TaskStatusBadge: View {
     let state: TaskState
-    
-    var color: Color {
+
+    private var config: (label: String, icon: String, color: Color) {
         switch state {
-        case .posted, .matching: return .infoBlue
-        case .claimed: return .warningOrange
-        case .inProgress: return .brandPurple
-        case .proofSubmitted: return .warningOrange
-        case .completed: return .successGreen
-        case .cancelled, .expired: return .errorRed
-        case .disputed: return .errorRed
+        case .posted:         return ("Open",             "clock.badge",                  .infoBlue)
+        case .matching:       return ("Matching",         "sparkles",                     .infoBlue)
+        case .claimed:        return ("Claimed",          "person.fill.checkmark",        .warningOrange)
+        case .inProgress:     return ("In Progress",      "bolt.fill",                    .brandPurple)
+        case .proofSubmitted: return ("Proof Submitted",  "photo.badge.checkmark",        .warningOrange)
+        case .completed:      return ("Completed",        "checkmark.seal.fill",          .successGreen)
+        case .cancelled:      return ("Cancelled",        "xmark.circle.fill",            .errorRed)
+        case .expired:        return ("Expired",          "clock.badge.xmark",            .errorRed)
+        case .disputed:       return ("Disputed",         "exclamationmark.triangle.fill",.errorRed)
         }
     }
-    
+
     var body: some View {
-        HXText(state.rawValue, style: .caption, color: color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(color.opacity(0.15))
-            .cornerRadius(8)
+        HStack(spacing: 5) {
+            Image(systemName: config.icon)
+                .font(.system(size: 11, weight: .semibold))
+            Text(config.label)
+                .font(.system(size: 12, weight: .semibold))
+        }
+        .foregroundStyle(config.color)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(config.color.opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -550,53 +567,108 @@ private struct ApplicantsSection: View {
 // MARK: - Task Timeline Section
 private struct TaskTimelineSection: View {
     let task: HXTask
-    
+
+    private static let dateFmt: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
+    private func fmt(_ date: Date?) -> String {
+        guard let d = date else { return "—" }
+        return Self.dateFmt.string(from: d)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HXText("Timeline", style: .headline)
-            
+            HStack(spacing: 8) {
+                Image(systemName: "list.bullet.clipboard.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.brandPurple)
+                HXText("Timeline", style: .headline)
+            }
+
             VStack(spacing: 0) {
+                // Task Posted — always first
                 TimelineRow(
+                    icon: "plus.circle.fill",
+                    iconColor: .infoBlue,
                     title: "Task Posted",
-                    subtitle: "Dec 15, 2024 at 2:30 PM",
+                    subtitle: fmt(task.createdAt),
                     isCompleted: true,
-                    isLast: false
+                    isLast: task.state == .posted && task.claimedAt == nil
                 )
-                
-                if task.state != .posted {
+
+                if task.state == .cancelled || task.state == .expired {
+                    // Show assignment step if a hustler was ever assigned before cancellation
+                    if let claimedAt = task.claimedAt {
+                        TimelineRow(
+                            icon: "person.fill.checkmark",
+                            iconColor: .warningOrange,
+                            title: "Hustler Assigned",
+                            subtitle: fmt(claimedAt),
+                            isCompleted: true,
+                            isLast: false
+                        )
+                    }
+                    // Terminal cancelled/expired step
                     TimelineRow(
-                        title: "Hustler Assigned",
-                        subtitle: "Dec 15, 2024 at 3:15 PM",
-                        isCompleted: true,
-                        isLast: false
-                    )
-                }
-                
-                if task.state == .inProgress || task.state == .proofSubmitted || task.state == .completed {
-                    TimelineRow(
-                        title: "Task Started",
-                        subtitle: "Dec 15, 2024 at 4:00 PM",
-                        isCompleted: true,
-                        isLast: task.state == .inProgress
-                    )
-                }
-                
-                if task.state == .proofSubmitted || task.state == .completed {
-                    TimelineRow(
-                        title: "Proof Submitted",
-                        subtitle: task.state == .completed ? "Dec 15, 2024 at 5:30 PM" : "Awaiting your review",
-                        isCompleted: task.state == .completed,
-                        isLast: task.state == .proofSubmitted
-                    )
-                }
-                
-                if task.state == .completed {
-                    TimelineRow(
-                        title: "Completed",
-                        subtitle: "Dec 15, 2024 at 6:00 PM",
-                        isCompleted: true,
+                        icon: task.state == .cancelled ? "xmark.circle.fill" : "clock.badge.xmark",
+                        iconColor: .errorRed,
+                        title: task.state == .cancelled ? "Cancelled" : "Expired",
+                        subtitle: task.state == .cancelled ? "Task was cancelled" : "Task window closed",
+                        isCompleted: false,
                         isLast: true
                     )
+                } else {
+                    // Hustler Assigned
+                    if task.state != .posted {
+                        TimelineRow(
+                            icon: "person.fill.checkmark",
+                            iconColor: .warningOrange,
+                            title: "Hustler Assigned",
+                            subtitle: fmt(task.claimedAt),
+                            isCompleted: true,
+                            isLast: task.state == .claimed
+                        )
+                    }
+
+                    // In Progress
+                    if task.state == .inProgress || task.state == .proofSubmitted || task.state == .completed {
+                        TimelineRow(
+                            icon: "bolt.fill",
+                            iconColor: .brandPurple,
+                            title: "In Progress",
+                            subtitle: task.claimedAt != nil ? "Hustler checked in" : "—",
+                            isCompleted: true,
+                            isLast: task.state == .inProgress
+                        )
+                    }
+
+                    // Proof Submitted
+                    if task.state == .proofSubmitted || task.state == .completed {
+                        TimelineRow(
+                            icon: "photo.badge.checkmark",
+                            iconColor: .warningOrange,
+                            title: "Proof Submitted",
+                            subtitle: task.state == .proofSubmitted ? "Awaiting your review" : fmt(task.completedAt),
+                            isCompleted: task.state == .completed,
+                            isLast: task.state == .proofSubmitted
+                        )
+                    }
+
+                    // Completed
+                    if task.state == .completed {
+                        TimelineRow(
+                            icon: "checkmark.seal.fill",
+                            iconColor: .successGreen,
+                            title: "Completed",
+                            subtitle: fmt(task.completedAt),
+                            isCompleted: true,
+                            isLast: true
+                        )
+                    }
                 }
             }
         }
@@ -608,34 +680,43 @@ private struct TaskTimelineSection: View {
 
 // MARK: - Timeline Row
 private struct TimelineRow: View {
+    let icon: String
+    let iconColor: Color
     let title: String
     let subtitle: String
     let isCompleted: Bool
     let isLast: Bool
-    
+
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: 14) {
+            // Icon + connector line
             VStack(spacing: 0) {
-                Circle()
-                    .fill(isCompleted ? Color.successGreen : Color.surfaceSecondary)
-                    .frame(width: 12, height: 12)
-                    .overlay(
-                        Circle()
-                            .stroke(isCompleted ? Color.successGreen : Color.borderSubtle, lineWidth: 2)
-                    )
-                
+                ZStack {
+                    Circle()
+                        .fill(isCompleted ? iconColor.opacity(0.15) : Color.surfaceSecondary)
+                        .frame(width: 28, height: 28)
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(isCompleted ? iconColor : Color.textMuted)
+                }
+
                 if !isLast {
                     Rectangle()
-                        .fill(isCompleted ? Color.successGreen.opacity(0.5) : Color.borderSubtle)
-                        .frame(width: 2, height: 40)
+                        .fill(isCompleted ? iconColor.opacity(0.3) : Color.borderSubtle)
+                        .frame(width: 2, height: 36)
                 }
             }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                HXText(title, style: .subheadline, color: isCompleted ? .textPrimary : .textSecondary)
-                HXText(subtitle, style: .caption, color: .textTertiary)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isCompleted ? Color.textPrimary : Color.textSecondary)
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.textTertiary)
             }
-            
+            .padding(.top, 4)
+
             Spacer()
         }
     }

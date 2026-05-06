@@ -74,10 +74,11 @@ struct HustlerProfileScreen: View {
                     
                     // Recent activity
                     RecentActivitySection()
-                    
+
                     // Achievements preview
                     AchievementsPreviewSection()
                 }
+                .frame(maxWidth: .infinity)
                 .padding(24)
             }
         }
