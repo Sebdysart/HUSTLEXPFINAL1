@@ -77,6 +77,11 @@ struct HXTask: Identifiable, Codable {
     var templateSlug: String? = nil
     var riskLevel: String? = nil
 
+    // v3.0.0 Smart Dispatch additions
+    var fulfillmentMode: String? = nil
+    var dispatchState: String? = nil
+    var waveNumber: Int? = nil
+
     var badgeStatus: HXBadgeVariant.StatusType {
         switch state {
         case .posted, .matching: return .active
@@ -96,6 +101,9 @@ struct HXTask: Identifiable, Codable {
         case claimedAt, completedAt, aiSuggestedPrice, paymentMethod
         case category, hasActiveClaim, deadline, templateSlug, riskLevel
         case template_slug, risk_level
+        // v3.0.0 Smart Dispatch
+        case fulfillmentMode, dispatchState, waveNumber
+        case fulfillment_mode, dispatch_state, wave_number
         // Backend snake_case aliases (decode-only)
         case poster_id, worker_id, worker_name, poster_name, poster_rating
         case created_at, accepted_at, completed_at, estimated_duration
@@ -218,6 +226,14 @@ struct HXTask: Identifiable, Codable {
             ?? c.decodeIfPresent(String.self, forKey: .template_slug)
         riskLevel = try c.decodeIfPresent(String.self, forKey: .riskLevel)
             ?? c.decodeIfPresent(String.self, forKey: .risk_level)
+
+        // v3.0.0 Smart Dispatch fields
+        fulfillmentMode = try c.decodeIfPresent(String.self, forKey: .fulfillmentMode)
+            ?? c.decodeIfPresent(String.self, forKey: .fulfillment_mode)
+        dispatchState = try c.decodeIfPresent(String.self, forKey: .dispatchState)
+            ?? c.decodeIfPresent(String.self, forKey: .dispatch_state)
+        waveNumber = try c.decodeIfPresent(Int.self, forKey: .waveNumber)
+            ?? c.decodeIfPresent(Int.self, forKey: .wave_number)
     }
 
     // Memberwise initializer for previews / mock data

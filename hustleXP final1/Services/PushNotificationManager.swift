@@ -187,6 +187,29 @@ final class PushNotificationManager: NSObject, ObservableObject {
                     )
                 }
 
+            case "dispatch_ping":
+                // Smart Dispatch ping — route to GoModeManager for LivePingView
+                if let taskId = data["taskId"] as? String {
+                    let taskTitle = data["taskTitle"] as? String ?? "New task available"
+                    let paymentCents = data["paymentCents"] as? Int
+                        ?? (data["payment"] as? Int).map { $0 * 100 }
+                        ?? 0
+                    let location = data["location"] as? String
+                    let waveNumber = data["waveNumber"] as? Int ?? 1
+                    HXLogger.info("[PushNotificationManager] Dispatch ping for task \(taskId) wave \(waveNumber)", category: "Push")
+                    NotificationCenter.default.post(
+                        name: .dispatchPingReceived,
+                        object: nil,
+                        userInfo: [
+                            "taskId": taskId,
+                            "taskTitle": taskTitle,
+                            "paymentCents": paymentCents,
+                            "location": location as Any,
+                            "waveNumber": waveNumber,
+                        ]
+                    )
+                }
+
             default:
                 HXLogger.info("[PushNotificationManager] Unhandled notification type: \(type)", category: "Push")
                 NotificationCenter.default.post(

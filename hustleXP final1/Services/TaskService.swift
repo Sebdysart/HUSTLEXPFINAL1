@@ -41,7 +41,8 @@ final class TaskService: ObservableObject {
         templateSlug: String? = nil,
         requiredTier: TrustTier = .rookie,
         requiredSkills: [String]? = nil,
-        deadline: Date? = nil
+        deadline: Date? = nil,
+        fulfillmentMode: String? = nil
     ) async throws -> HXTask {
         isLoading = true
         defer { isLoading = false }
@@ -63,6 +64,7 @@ final class TaskService: ObservableObject {
             let mode: String
             let requiresProof: Bool
             let instantMode: Bool
+            let fulfillmentMode: String?
         }
 
         let input = CreateTaskInput(
@@ -81,7 +83,8 @@ final class TaskService: ObservableObject {
             deadline: deadline.map { ISO8601DateFormatter().string(from: $0) },
             mode: "STANDARD",
             requiresProof: true,
-            instantMode: false
+            instantMode: false,
+            fulfillmentMode: fulfillmentMode
         )
 
         let task: HXTask = try await trpc.call(

@@ -83,6 +83,10 @@ final class CreateTaskViewModel {
     var aiSuggestion: AIPriceSuggestion?
     var taskWasAIPriced: Bool = false
 
+    // MARK: - Smart Dispatch (v3.0.0)
+
+    var useSmartDispatch: Bool = false
+
     // MARK: - Computed Properties
 
     var isValid: Bool {
@@ -319,7 +323,8 @@ final class CreateTaskViewModel {
                     templateSlug: templateSlug,
                     requiredTier: requiredTier,
                     requiredSkills: nil,
-                    deadline: deadline
+                    deadline: deadline,
+                    fulfillmentMode: useSmartDispatch ? "smart_dispatch" : "broadcast"
                 )
 
                 HXLogger.info("CreateTask: Task created via API - \(newTask.id)", category: "Task")

@@ -39,7 +39,11 @@ struct HustlerHomeScreen: View {
                         
                         // Quick stats grid
                         statsGrid(isCompact: isCompact)
-                        
+
+                        // Go Mode dispatch card
+                        GoModeView()
+                            .padding(.horizontal, isCompact ? 16 : 20)
+
                         // Active task section
                         activeTaskSection(isCompact: isCompact)
                         

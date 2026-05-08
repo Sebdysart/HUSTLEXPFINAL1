@@ -15,22 +15,35 @@ struct IDVerificationScreen: View {
 
     @State private var firstName = ""
     @State private var lastName = ""
-    @State private var dateOfBirth = ""
+    @State private var dobDate: Date = {
+        Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
+    }()
     @State private var workState = "CA"
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var checkrURL: URL?
     @State private var showCheckrWeb = false
-    @State private var checkStarted = false
     @FocusState private var focusedField: Field?
 
-    private enum Field: Hashable { case first, last, dob }
+    // Persisted across backgrounding so user can resume
+    @AppStorage("hx.checkrStarted") private var checkStarted = false
+    @AppStorage("hx.checkrURLString") private var checkrURLString = ""
+
+    private var checkrURL: URL? { URL(string: checkrURLString) }
+
+    private static let dobFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    private var dateOfBirth: String { Self.dobFormatter.string(from: dobDate) }
+
+    private enum Field: Hashable { case first, last }
 
     private var isValid: Bool {
         !firstName.trimmingCharacters(in: .whitespaces).isEmpty
         && !lastName.trimmingCharacters(in: .whitespaces).isEmpty
-        && dateOfBirth.count == 10
-        && dateOfBirth.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil
+        && dobDate < Date()
     }
 
     var body: some View {
@@ -158,17 +171,23 @@ struct IDVerificationScreen: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.textSecondary)
 
-                TextField("YYYY-MM-DD", text: $dateOfBirth)
-                    .font(.body)
-                    .foregroundStyle(Color.textPrimary)
-                    .padding(14)
-                    .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(focusedField == .dob ? Color.brandPurple : Color.borderSubtle, lineWidth: 1)
+                VStack(spacing: 0) {
+                    DatePicker(
+                        "",
+                        selection: $dobDate,
+                        in: ...Calendar.current.date(byAdding: .year, value: -18, to: Date())!,
+                        displayedComponents: .date
                     )
-                    .focused($focusedField, equals: .dob)
-                    .keyboardType(.numbersAndPunctuation)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                    .colorScheme(.dark)
+                }
+                .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.borderSubtle, lineWidth: 1)
+                )
             }
 
             // Work state
@@ -351,8 +370,8 @@ struct IDVerificationScreen: View {
                 isLoading = false
                 checkStarted = true
 
-                if let urlString = response.invitationUrl, let url = URL(string: urlString) {
-                    checkrURL = url
+                if let urlString = response.invitationUrl, URL(string: urlString) != nil {
+                    checkrURLString = urlString
                     showCheckrWeb = true
                 }
             } catch {

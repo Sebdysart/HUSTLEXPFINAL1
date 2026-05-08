@@ -32,12 +32,17 @@ struct TaskManagementScreen: View {
                     VStack(spacing: 20) {
                         // Task summary card
                         TaskSummaryCard(task: task)
-                        
+
+                        // Smart Dispatch status card (shown when task uses smart_dispatch)
+                        if task.fulfillmentMode == "smart_dispatch" {
+                            DispatchStatusCard(taskId: task.id)
+                        }
+
                         // Progress tracker
                         if task.state == .inProgress || task.state == .claimed {
                             TaskProgressCard(task: task, lastSSEUpdate: lastSSEUpdate)
                         }
-                        
+
                         // Hustler info card
                         HustlerInfoCard(task: task, router: router)
                         
@@ -604,6 +609,295 @@ private struct ReportIssueSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Dispatch Status Card
+
+private struct DispatchStatusCard: View {
+    let taskId: String
+
+    @State private var status: PosterDispatchStatus?
+    @State private var isLoading = true
+    @State private var pulseScale: CGFloat = 1.0
+    @State private var etaCountdown: Int = 0
+    @State private var countdownTimer: Timer?
+    @State private var sseSubscription: AnyCancellable?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(headerColor.opacity(0.15))
+                        .frame(width: 28, height: 28)
+                    Image(systemName: headerIcon)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(headerColor)
+                }
+                HXText("Smart Dispatch", style: .headline)
+                Spacer()
+                liveBadge
+            }
+
+            if isLoading {
+                HStack(spacing: 10) {
+                    ProgressView().tint(Color.successGreen)
+                    HXText("Loading dispatch status...", style: .subheadline, color: .textSecondary)
+                }
+            } else if let status {
+                // ETA banner — shown when hustler has been claimed and ETA is available
+                if status.isClaimed, let etaLabel = status.etaLabel {
+                    etaBanner(label: etaLabel, status: status)
+                }
+
+                // State row
+                HStack(spacing: 12) {
+                    stateOrb(for: status)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HXText(status.stateLabel, style: .subheadline)
+                        if status.waveNumber > 0 && !status.isClaimed {
+                            HXText("Wave \(status.waveNumber) of 3", style: .caption, color: .textSecondary)
+                        }
+                    }
+                    Spacer()
+                }
+
+                // Searching animation hint
+                if status.isSearching {
+                    HStack(spacing: 8) {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.successGreen.opacity(0.7))
+                        HXText("Pinging nearby hustlers in Go Mode…", style: .caption, color: .textSecondary)
+                    }
+                }
+
+                // Recent events
+                if !status.events.isEmpty {
+                    HXDivider()
+                    VStack(alignment: .leading, spacing: 8) {
+                        HXText("Recent Activity", style: .caption, color: .textMuted)
+                        ForEach(status.events.prefix(3), id: \.createdAt) { event in
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(eventColor(event.eventType))
+                                    .frame(width: 6, height: 6)
+                                HXText(eventLabel(event.eventType), style: .caption, color: .textSecondary)
+                                Spacer()
+                                HXText(relativeTime(event.createdAt), style: .caption, color: .textMuted)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.surfaceElevated)
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(headerColor.opacity(0.2), lineWidth: 1)
+            }
+        )
+        .task { await loadStatus() }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                pulseScale = 1.12
+            }
+            subscribeToSSE()
+        }
+        .onDisappear {
+            sseSubscription?.cancel()
+            countdownTimer?.invalidate()
+        }
+    }
+
+    // MARK: - ETA Banner
+
+    @ViewBuilder
+    private func etaBanner(label: String, status: PosterDispatchStatus) -> some View {
+        HStack(spacing: 14) {
+            // Animated car icon
+            ZStack {
+                Circle()
+                    .fill(Color.brandPurple.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "car.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.brandPurple)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Your hustler is on the way!")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(label)
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.brandPurple)
+
+                if let arrivalAt = status.estimatedArrivalAt {
+                    Text("Estimated arrival at \(arrivalAt, format: .dateTime.hour().minute())")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.textMuted)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.brandPurple.opacity(0.08))
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.brandPurple.opacity(0.25), lineWidth: 1)
+            }
+        )
+    }
+
+    // MARK: - Live Badge
+
+    @ViewBuilder
+    private var liveBadge: some View {
+        if let status {
+            if status.isSearching {
+                Text("LIVE")
+                    .font(.system(size: 9, weight: .heavy))
+                    .tracking(1)
+                    .foregroundStyle(Color.successGreen)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.successGreen.opacity(0.15))
+                    .clipShape(Capsule())
+                    .scaleEffect(pulseScale)
+            } else if status.isClaimed {
+                Text("ON THE WAY")
+                    .font(.system(size: 9, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundStyle(Color.brandPurple)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.brandPurple.opacity(0.15))
+                    .clipShape(Capsule())
+            }
+        }
+    }
+
+    // MARK: - Computed helpers
+
+    private var headerColor: Color {
+        guard let status else { return Color.successGreen }
+        if status.isClaimed { return Color.brandPurple }
+        if status.isSearching { return Color.successGreen }
+        return Color.textMuted
+    }
+
+    private var headerIcon: String {
+        guard let status else { return "bolt.fill" }
+        if status.isClaimed { return "car.fill" }
+        if status.isSearching { return "bolt.fill" }
+        return "bolt.fill"
+    }
+
+    // MARK: - Data Loading
+
+    private func loadStatus() async {
+        do {
+            status = try await DispatchServiceClient.shared.getPosterDispatchStatus(taskId: taskId)
+        } catch {
+            HXLogger.error("DispatchStatusCard: \(error.localizedDescription)", category: "Dispatch")
+        }
+        isLoading = false
+    }
+
+    // MARK: - SSE Subscription
+
+    private func subscribeToSSE() {
+        let refreshEvents: Set<String> = ["task.dispatch_claimed", "task.eta_updated",
+                                           "task.dispatch_claimed", "wave_dispatched"]
+        sseSubscription = RealtimeSSEClient.shared.messageReceived
+            .receive(on: DispatchQueue.main)
+            .sink { message in
+                guard refreshEvents.contains(message.event) else { return }
+                // Check event is for our task
+                if let json = try? JSONSerialization.jsonObject(with: message.data) as? [String: Any],
+                   let eventTaskId = json["taskId"] as? String,
+                   eventTaskId == taskId {
+                    Task { await loadStatus() }
+                }
+            }
+    }
+
+    // MARK: - Sub-views
+
+    @ViewBuilder
+    private func stateOrb(for status: PosterDispatchStatus) -> some View {
+        let color = stateColor(status.dispatchState)
+        ZStack {
+            Circle().fill(color.opacity(0.2)).frame(width: 36, height: 36)
+            Image(systemName: stateIcon(status.dispatchState))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(color)
+        }
+    }
+
+    private func stateColor(_ state: String) -> Color {
+        switch state {
+        case "broadcasting", "soft_hold_active": return Color.successGreen
+        case "claimed":                          return Color.brandPurple
+        case "in_progress":                      return Color.brandPurple
+        case "completed":                        return Color.moneyGreen
+        case "expired", "cancelled":             return Color.errorRed
+        default:                                 return Color.textMuted
+        }
+    }
+
+    private func stateIcon(_ state: String) -> String {
+        switch state {
+        case "broadcasting":     return "antenna.radiowaves.left.and.right"
+        case "soft_hold_active": return "timer"
+        case "claimed":          return "car.fill"
+        case "in_progress":      return "bolt.fill"
+        case "completed":        return "star.fill"
+        case "expired":          return "clock.badge.xmark"
+        case "cancelled":        return "xmark.circle"
+        default:                 return "hourglass"
+        }
+    }
+
+    private func eventColor(_ type: String) -> Color {
+        switch type {
+        case "wave_dispatched":      return Color.successGreen
+        case "ping_viewed":          return Color.infoBlue
+        case "ping_declined":        return Color.warningOrange
+        case "soft_hold_acquired":   return Color.brandPurple
+        case "claimed":              return Color.moneyGreen
+        case "dispatch_expired":     return Color.errorRed
+        default:                     return Color.textMuted
+        }
+    }
+
+    private func eventLabel(_ type: String) -> String {
+        switch type {
+        case "wave_dispatched":     return "Dispatch wave sent"
+        case "ping_viewed":         return "Hustler viewed ping"
+        case "ping_declined":       return "Hustler declined"
+        case "soft_hold_acquired":  return "Hustler is considering"
+        case "claimed":             return "Hustler accepted — on the way"
+        case "dispatch_expired":    return "No hustler found"
+        default:                    return type.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    private func relativeTime(_ date: Date) -> String {
+        let s = Int(-date.timeIntervalSinceNow)
+        if s < 60 { return "\(s)s ago" }
+        if s < 3600 { return "\(s / 60)m ago" }
+        return "\(s / 3600)h ago"
     }
 }
 

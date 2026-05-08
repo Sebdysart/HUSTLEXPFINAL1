@@ -12,6 +12,7 @@ import FirebaseMessaging
 import GoogleSignIn
 import UserNotifications
 import StripePaymentSheet
+import LocalAuthentication
 
 // MARK: - App Delegate for Firebase
 
@@ -83,10 +84,15 @@ struct hustleXP_final1App: App {
     @State private var dataService = LiveDataService.shared
     @State private var deepLinkManager = DeepLinkManager.shared
     @State private var serviceAreaManager = ServiceAreaManager.shared
+    @State private var goModeManager = GoModeManager.shared
     
     // Splash screen state - start as true so splash shows immediately
     @State private var isInitialized = false
     @State private var showSplash = true
+
+    // Biometric lock — set true when app backgrounds, cleared after successful Face ID
+    @State private var biometricLocked = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -111,11 +117,39 @@ struct hustleXP_final1App: App {
                         .transition(.opacity)
                         .zIndex(1)
                 }
+
+                // Biometric lock overlay
+                if biometricLocked && authService.isAuthenticated && isInitialized {
+                    BiometricLockView(onUnlock: evaluateBiometric)
+                        .transition(.opacity)
+                        .zIndex(2)
+                }
             }
             .environment(appState)
             .environment(router)
             .environment(dataService)
             .environment(serviceAreaManager)
+            .environment(goModeManager)
+            // LivePingView: presented as fullScreenCover whenever a dispatch ping arrives
+            .fullScreenCover(item: Binding(
+                get: { goModeManager.activePing },
+                set: { if $0 == nil { goModeManager.activePing = nil } }
+            )) { ping in
+                LivePingView(
+                    ping: ping,
+                    onAccept: {
+                        Task {
+                            if await goModeManager.acceptPing(ping) != nil {
+                                router.navigateToHustler(.taskDetail(taskId: ping.taskId))
+                            }
+                        }
+                    },
+                    onDecline: {
+                        goModeManager.declinePing(ping)
+                    }
+                )
+                .environment(goModeManager)
+            }
             .adaptiveLayout()  // Inject AdaptiveLayout for consistent responsive sizing
             .errorToast()      // Global error toast overlay
             .onAppear {
@@ -150,6 +184,8 @@ struct hustleXP_final1App: App {
                         RealtimeSSEClient.shared.connect(authToken: token)
                         dataService.subscribeToEarningsUpdates()
                         NotificationService.shared.subscribeToSSE()
+                        // Restore Go Mode state after app launch
+                        await goModeManager.loadStatus()
                     }
 
                     await MainActor.run {
@@ -159,6 +195,12 @@ struct hustleXP_final1App: App {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             showSplash = false
                         }
+                    }
+
+                    // Require biometric unlock on fresh launch if already authenticated
+                    if authService.isAuthenticated {
+                        await MainActor.run { biometricLocked = true }
+                        evaluateBiometric()
                     }
                 }
             }
@@ -188,6 +230,9 @@ struct hustleXP_final1App: App {
                         NotificationService.shared.subscribeToSSE()
                     }
 
+                    // Restore Go Mode state after login
+                    Task { await goModeManager.loadStatus() }
+
                     // Consume any pending deep link that arrived before authentication
                     if let destination = deepLinkManager.consumePendingDeepLink() {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -199,8 +244,76 @@ struct hustleXP_final1App: App {
                     RealtimeSSEClient.shared.disconnect()
                     dataService.unsubscribeFromEarningsUpdates()
                     NotificationService.shared.unsubscribeFromSSE()
+                    goModeManager.stopLocationUpdates()
+                    biometricLocked = false
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .background && authService.isAuthenticated {
+                    biometricLocked = true
+                } else if phase == .active && biometricLocked {
+                    evaluateBiometric()
                 }
             }
         }
+    }
+
+    private func evaluateBiometric() {
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
+            biometricLocked = false
+            return
+        }
+        context.evaluatePolicy(
+            .deviceOwnerAuthentication,
+            localizedReason: "Unlock HustleXP"
+        ) { success, _ in
+            if success {
+                DispatchQueue.main.async {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        biometricLocked = false
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Biometric Lock Screen
+
+private struct BiometricLockView: View {
+    let onUnlock: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.brandBlack.ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image(systemName: "faceid")
+                    .font(.system(size: 64))
+                    .foregroundStyle(Color.brandPurple)
+
+                VStack(spacing: 8) {
+                    Text("HustleXP")
+                        .font(.title.weight(.bold))
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Authenticate to continue")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.textSecondary)
+                }
+
+                Button(action: onUnlock) {
+                    Text("Unlock with Face ID")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.brandPurple))
+                }
+                .padding(.horizontal, 40)
+                .padding(.top, 8)
+            }
+        }
+        .onAppear { onUnlock() }
     }
 }

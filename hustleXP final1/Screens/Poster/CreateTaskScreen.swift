@@ -56,6 +56,9 @@ struct CreateTaskScreen: View {
                     // AI Pricing toggle
                     aiPricingToggle
 
+                    // Smart Dispatch toggle
+                    smartDispatchToggle
+
                     // 3. Location + Duration — Inline
                     locationDurationCard
 
@@ -327,6 +330,68 @@ struct CreateTaskScreen: View {
             }
         }
         .staggerIn(show: viewModel.showContent, delay: 0.05)
+    }
+
+    private var smartDispatchToggle: some View {
+        glassCard(glowColor: .successGreen) {
+            VStack(spacing: 0) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(
+                                colors: [Color.successGreen, Color.brandPurple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text("Smart Dispatch")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                            Text("NEW")
+                                .font(.system(size: 9, weight: .heavy))
+                                .tracking(0.8)
+                                .foregroundStyle(Color.successGreen)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.successGreen.opacity(0.15))
+                                .clipShape(Capsule())
+                        }
+                        Text("Auto-match the best nearby hustler instantly")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: Binding(
+                        get: { viewModel.useSmartDispatch },
+                        set: { viewModel.useSmartDispatch = $0 }
+                    ))
+                    .tint(Color.successGreen)
+                    .labelsHidden()
+                }
+
+                if viewModel.useSmartDispatch {
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.successGreen.opacity(0.7))
+                        Text("Hustlers in Go Mode will receive a 30-second ping. Up to 3 waves of candidates are tried automatically.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                    .padding(.top, 12)
+                }
+            }
+        }
+        .staggerIn(show: viewModel.showContent, delay: 0.07)
     }
 
     // =========================================================================

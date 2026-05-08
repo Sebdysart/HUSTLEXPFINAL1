@@ -77,6 +77,9 @@ enum HustlerRoute: Hashable {
     case dispute(taskId: String)
     // v2.7.0 Saved Tasks
     case savedTasks
+    // v3.0.0 Smart Dispatch
+    case dispatchPrefs
+    case livePing(taskId: String)
 }
 
 enum PosterRoute: Hashable {

@@ -77,6 +77,11 @@ struct HustlerStack: View {
                     // v2.7.0 Saved Tasks
                     case .savedTasks:
                         SavedTasksScreen()
+                    // v3.0.0 Smart Dispatch
+                    case .dispatchPrefs:
+                        DispatchPrefsSheet()
+                    case .livePing:
+                        EmptyView() // LivePingView is presented as fullScreenCover, not navigation push
                     }
                 }
         }

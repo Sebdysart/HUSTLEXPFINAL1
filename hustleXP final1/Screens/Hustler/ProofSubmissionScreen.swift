@@ -494,40 +494,6 @@ struct ProofSubmissionScreen: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Take photo for proof")
 
-                    PhotosPicker(
-                        selection: Binding(
-                            get: { viewModel.selectedPhotoItem },
-                            set: { viewModel.selectedPhotoItem = $0 }
-                        ),
-                        matching: .images,
-                        photoLibrary: .shared()
-                    ) {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.infoBlue.opacity(0.1))
-                                    .frame(width: 48, height: 48)
-
-                                Image(systemName: "photo.on.rectangle")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(Color.infoBlue)
-                            }
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                HXText("Choose from Library", style: .subheadline)
-                                HXText("Select existing photo", style: .caption, color: .textSecondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(Color.textSecondary)
-                        }
-                        .padding()
-                        .background(Color.surfaceElevated)
-                        .cornerRadius(12)
-                    }
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -562,10 +528,9 @@ struct ProofSubmissionScreen: View {
             get: { viewModel.cameraUnavailable },
             set: { viewModel.cameraUnavailable = $0 }
         )) {
-            Button("Use Photo Library") { viewModel.showPhotoPicker = true }
-            Button("Cancel", role: .cancel) {}
+            Button("OK", role: .cancel) {}
         } message: {
-            Text("Camera is not available on this device. Use the photo library instead.")
+            Text("A camera is required to submit proof. Please use a device with a camera.")
         }
     }
 
