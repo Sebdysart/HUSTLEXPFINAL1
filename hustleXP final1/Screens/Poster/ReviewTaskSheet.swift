@@ -24,6 +24,7 @@ struct ReviewTaskSheet: View {
     @State private var durationUnit: DurationUnit
     @State private var deadline: Date?
     @State private var requirements: String
+    @State private var useSmartDispatch: Bool = false
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable { case title, description, payment, street, city, durationVal, requirements }
@@ -365,6 +366,54 @@ struct ReviewTaskSheet: View {
                             .stroke(Color.brandPurple.opacity(0.2), lineWidth: 1)
                     )
 
+                    // Smart Dispatch toggle
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient(
+                                    colors: [Color.successGreen, Color.brandPurple],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text("Smart Dispatch")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                Text("NEW")
+                                    .font(.system(size: 9, weight: .heavy))
+                                    .tracking(0.8)
+                                    .foregroundStyle(Color.successGreen)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(Color.successGreen.opacity(0.15))
+                                    .clipShape(Capsule())
+                            }
+                            Text("Auto-match the best nearby hustler instantly")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white.opacity(0.4))
+                        }
+
+                        Spacer()
+
+                        Toggle("", isOn: $useSmartDispatch)
+                            .tint(Color.successGreen)
+                            .labelsHidden()
+                    }
+                    .padding(14)
+                    .background(Color.surfaceElevated)
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(useSmartDispatch ? Color.successGreen.opacity(0.4) : Color.borderSubtle, lineWidth: 1)
+                    )
+
                     // Fee breakdown — transparency before payment
                     feeBreakdownCard
 
@@ -493,6 +542,7 @@ struct ReviewTaskSheet: View {
         draft.locationZip = locationZip.trimmingCharacters(in: .whitespaces)
         draft.duration = durationUnit.format(value: durationValue)
         draft.requirements = requirements.trimmingCharacters(in: .whitespaces)
+        draft.fulfillmentMode = useSmartDispatch ? "smart_dispatch" : "broadcast"
         if let dl = deadline {
             draft.deadline = ISO8601DateFormatter().string(from: dl)
         } else {

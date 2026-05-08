@@ -47,6 +47,7 @@ class AITaskDraft {
     var deadline: String = ""
     var flags: [String] = []
     var isReadyToPost: Bool = false
+    var fulfillmentMode: String = "broadcast"
 
     /// Display-friendly location string — full address when available for precise heatmap pinning
     var locationDisplay: String {

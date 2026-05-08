@@ -548,7 +548,8 @@ struct AITaskCreationScreen: View {
                     category: taskDraft.category,
                     templateSlug: taskDraft.templateSlug,
                     requiredTier: taskDraft.requiredTier,
-                    deadline: deadlineDate
+                    deadline: deadlineDate,
+                    fulfillmentMode: taskDraft.fulfillmentMode
                 )
                 print("🟢 [PostTask] Task created successfully: id=\(task.id), title=\(task.title)")
                 HXLogger.info("AITaskCreation: Task created - \(task.id), funding escrow...", category: "Task")
