@@ -34,11 +34,17 @@ struct SettingsMainScreen: View {
                 SettingsListItem(icon: "person.fill", title: "Account Settings") {
                     router.navigateToSettings(.account)
                 }
-                
+
+                if appState.userRole == .hustler {
+                    SettingsListItem(icon: "star.fill", iconColor: .brandPurple, title: "My Skills") {
+                        router.navigateToSettings(.skills)
+                    }
+                }
+
                 SettingsListItem(icon: "bell.fill", iconColor: .warningOrange, title: "Notifications") {
                     router.navigateToSettings(.notifications)
                 }
-                
+
                 SettingsListItem(icon: "creditcard.fill", iconColor: .moneyGreen, title: "Payment Methods") {
                     router.navigateToSettings(.payments)
                 }

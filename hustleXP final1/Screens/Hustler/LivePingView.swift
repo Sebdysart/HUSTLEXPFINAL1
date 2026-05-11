@@ -22,231 +22,231 @@ struct LivePingView: View {
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ZStack {
-            // Darkened scrim
-            Color.black.opacity(0.92).ignoresSafeArea()
-
-            // Neon halo behind card
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.brandPurple.opacity(0.25), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 260
+        // Color is the layout root — fills exactly the full screen.
+        // Overlays are sized/positioned within that frame, so nothing
+        // can inflate the layout width (unlike ZStack with a 520pt Circle).
+        Color.black.opacity(0.92)
+            .ignoresSafeArea()
+            // ── Neon halo (decorative, no layout impact) ──────────────────
+            .overlay(alignment: .center) {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.brandPurple.opacity(0.30), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: 260
+                        )
                     )
-                )
-                .frame(width: 520, height: 520)
-                .scaleEffect(pulseScale)
-                .blur(radius: 40)
-                .ignoresSafeArea()
+                    .frame(width: 520, height: 520)
+                    .scaleEffect(pulseScale)
+                    .blur(radius: 50)
+                    .allowsHitTesting(false)
+            }
+            // ── Ping card ──────────────────────────────────────────────────
+            .overlay(alignment: .center) {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 60)
+                    cardView
+                    Spacer(minLength: 48)
+                }
+                .padding(.horizontal, 20)
+            }
+            .onAppear {
+                secondsLeft = ping.secondsRemaining
+                ringProgress = CGFloat(secondsLeft) / 30.0
+                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                    pulseScale = 1.08
+                }
+            }
+            .onReceive(timer) { _ in
+                let remaining = Int(ping.expiresAt.timeIntervalSinceNow)
+                secondsLeft = max(0, remaining)
+                ringProgress = CGFloat(secondsLeft) / 30.0
+            }
+    }
 
-            VStack(spacing: 0) {
+    // MARK: - Card
+
+    private var cardView: some View {
+        VStack(spacing: 24) {
+            countdownRing
+            titleSection
+            paymentRow
+            Divider().background(Color.white.opacity(0.08))
+            actionButtons
+        }
+        .padding(28)
+        .background(cardBackground)
+        .shadow(color: Color.brandPurple.opacity(0.3), radius: 40, y: 10)
+    }
+
+    // MARK: - Countdown ring
+
+    private var countdownRing: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.08), lineWidth: 6)
+                .frame(width: 100, height: 100)
+
+            Circle()
+                .trim(from: 0, to: ringProgress)
+                .stroke(
+                    AngularGradient(
+                        colors: [Color.brandPurple, Color.aiPurple, Color.brandPurpleLight],
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                )
+                .frame(width: 100, height: 100)
+                .rotationEffect(.degrees(-90))
+                .animation(.linear(duration: 1), value: ringProgress)
+
+            VStack(spacing: 2) {
+                Text("\(secondsLeft)")
+                    .font(.system(size: 32, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.textPrimary)
+                    .contentTransition(.numericText())
+                Text("sec")
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(1.2)
+                    .foregroundStyle(Color.textSecondary)
+            }
+        }
+    }
+
+    // MARK: - Wave badge + title
+
+    private var titleSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text("WAVE \(ping.waveNumber)")
+                    .font(.system(size: 10, weight: .heavy))
+                    .tracking(1.5)
+                    .foregroundStyle(Color.brandPurple)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.brandPurple.opacity(0.15))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.brandPurple.opacity(0.4), lineWidth: 1))
+
                 Spacer()
 
-                // ── Ping card ──────────────────────────────────────────────
-                VStack(spacing: 28) {
-                    // Wave badge + countdown ring
-                    ZStack {
-                        // Countdown ring track
-                        Circle()
-                            .stroke(Color.white.opacity(0.08), lineWidth: 6)
-                            .frame(width: 100, height: 100)
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.warningOrange)
+                    .shadow(color: Color.warningOrange, radius: 6)
+            }
 
-                        // Countdown ring fill
-                        Circle()
-                            .trim(from: 0, to: ringProgress)
-                            .stroke(
-                                AngularGradient(
-                                    colors: [Color.brandPurple, Color.aiPurple, Color.brandPurpleLight],
-                                    center: .center
-                                ),
-                                style: StrokeStyle(lineWidth: 6, lineCap: .round)
-                            )
-                            .frame(width: 100, height: 100)
-                            .rotationEffect(.degrees(-90))
-                            .animation(.linear(duration: 1), value: ringProgress)
+            Text(ping.taskTitle)
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                .foregroundStyle(Color.textPrimary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
 
-                        // Seconds remaining
-                        VStack(spacing: 2) {
-                            Text("\(secondsLeft)")
-                                .font(.system(size: 32, weight: .heavy, design: .rounded))
-                                .foregroundStyle(Color.textPrimary)
-                                .contentTransition(.numericText())
-                            Text("sec")
-                                .font(.system(size: 10, weight: .semibold))
-                                .tracking(1.2)
-                                .foregroundStyle(Color.textSecondary)
-                        }
-                    }
+    // MARK: - Payment + location
 
-                    // Title
-                    VStack(spacing: 8) {
-                        HStack(spacing: 8) {
-                            // Wave indicator
-                            Text("WAVE \(ping.waveNumber)")
-                                .font(.system(size: 10, weight: .heavy))
-                                .tracking(1.5)
-                                .foregroundStyle(Color.brandPurple)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Color.brandPurple.opacity(0.15))
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.brandPurple.opacity(0.4), lineWidth: 1)
-                                )
+    private var paymentRow: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("YOUR CUT")
+                    .font(.system(size: 9, weight: .heavy))
+                    .tracking(1.5)
+                    .foregroundStyle(Color.textMuted)
+                Text(ping.paymentFormatted)
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.moneyGreen)
+            }
 
-                            Spacer()
+            Spacer()
 
-                            Image(systemName: "bolt.fill")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Color.warningOrange)
-                                .shadow(color: Color.warningOrange, radius: 6)
-                        }
-
-                        Text(ping.taskTitle)
-                            .font(.system(size: 22, weight: .heavy, design: .rounded))
-                            .foregroundStyle(Color.textPrimary)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(3)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    // Payment + location row
-                    HStack(spacing: 16) {
-                        // Pay
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("YOUR CUT")
-                                .font(.system(size: 9, weight: .heavy))
-                                .tracking(1.5)
-                                .foregroundStyle(Color.textMuted)
-                            Text(ping.paymentFormatted)
-                                .font(.system(size: 30, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color.moneyGreen)
-                        }
-
-                        Spacer()
-
-                        // Location
-                        if let loc = ping.location {
-                            VStack(alignment: .trailing, spacing: 4) {
-                                Text("LOCATION")
-                                    .font(.system(size: 9, weight: .heavy))
-                                    .tracking(1.5)
-                                    .foregroundStyle(Color.textMuted)
-                                HStack(spacing: 4) {
-                                    Image(systemName: "location.fill")
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(Color.infoBlue)
-                                    Text(loc)
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(Color.textSecondary)
-                                        .lineLimit(2)
-                                        .multilineTextAlignment(.trailing)
-                                }
-                            }
-                            .frame(maxWidth: 160)
-                        }
-                    }
-
-                    Divider()
-                        .background(Color.white.opacity(0.08))
-
-                    // Action buttons
-                    HStack(spacing: 12) {
-                        // Decline
-                        Button(action: onDecline) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 14, weight: .bold))
-                                Text("Pass")
-                                    .font(.system(size: 16, weight: .bold))
-                            }
+            if let loc = ping.location, !loc.isEmpty {
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("LOCATION")
+                        .font(.system(size: 9, weight: .heavy))
+                        .tracking(1.5)
+                        .foregroundStyle(Color.textMuted)
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.infoBlue)
+                        Text(loc)
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(Color.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(Color.surfaceSecondary)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                            )
-                        }
-                        .disabled(isAccepting)
-
-                        // Accept
-                        Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                isAccepting = true
-                            }
-                            onAccept()
-                        } label: {
-                            ZStack {
-                                if isAccepting {
-                                    ProgressView()
-                                        .tint(.white)
-                                } else {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 14, weight: .bold))
-                                        Text("Accept")
-                                            .font(.system(size: 16, weight: .heavy))
-                                    }
-                                }
-                            }
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color.brandPurple, Color.aiPurple],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .shadow(color: Color.brandPurple.opacity(0.5), radius: 12, y: 4)
-                        }
-                        .disabled(isAccepting)
-                        .scaleEffect(isAccepting ? 0.97 : 1.0)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.trailing)
                     }
                 }
-                .padding(28)
-                .background(
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 32)
-                            .fill(Color.surfaceElevated)
-                        RoundedRectangle(cornerRadius: 32)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.brandPurple.opacity(0.5), Color.aiPurple.opacity(0.2)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.5
-                            )
+                .frame(maxWidth: 160)
+            }
+        }
+    }
+
+    // MARK: - Buttons
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            Button(action: onDecline) {
+                HStack(spacing: 8) {
+                    Image(systemName: "xmark").font(.system(size: 14, weight: .bold))
+                    Text("Pass").font(.system(size: 16, weight: .bold))
+                }
+                .foregroundStyle(Color.textSecondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(Color.surfaceSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.08), lineWidth: 1))
+            }
+            .disabled(isAccepting)
+
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { isAccepting = true }
+                onAccept()
+            } label: {
+                ZStack {
+                    if isAccepting {
+                        ProgressView().tint(.white)
+                    } else {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark").font(.system(size: 14, weight: .bold))
+                            Text("Accept").font(.system(size: 16, weight: .heavy))
+                        }
                     }
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(
+                    LinearGradient(
+                        colors: [Color.brandPurple, Color.aiPurple],
+                        startPoint: .leading, endPoint: .trailing
+                    )
                 )
-                .padding(.horizontal, 20)
-                .shadow(color: Color.brandPurple.opacity(0.3), radius: 40, y: 10)
-
-                Spacer()
-                    .frame(height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: Color.brandPurple.opacity(0.5), radius: 12, y: 4)
             }
+            .disabled(isAccepting)
+            .scaleEffect(isAccepting ? 0.97 : 1.0)
         }
-        .onAppear {
-            secondsLeft = ping.secondsRemaining
-            ringProgress = CGFloat(secondsLeft) / 30.0
+    }
 
-            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                pulseScale = 1.08
-            }
-        }
-        .onReceive(timer) { _ in
-            let remaining = Int(ping.expiresAt.timeIntervalSinceNow)
-            secondsLeft = max(0, remaining)
-            ringProgress = CGFloat(secondsLeft) / 30.0
+    // MARK: - Card background
+
+    private var cardBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 32).fill(Color.surfaceElevated)
+            RoundedRectangle(cornerRadius: 32)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.brandPurple.opacity(0.5), Color.aiPurple.opacity(0.2)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
+                )
         }
     }
 }
@@ -256,9 +256,9 @@ struct LivePingView: View {
         ping: IncomingPing(
             id: "preview",
             taskId: "task-123",
-            taskTitle: "Move furniture from storage unit",
-            paymentCents: 4500,
-            location: "123 Main St, Seattle",
+            taskTitle: "Dog Washing Service Needed",
+            paymentCents: 6500,
+            location: "Redmond, WA",
             waveNumber: 1,
             receivedAt: Date(),
             expiresAt: Date().addingTimeInterval(22)

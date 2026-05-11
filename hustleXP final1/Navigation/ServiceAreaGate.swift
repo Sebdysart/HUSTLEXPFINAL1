@@ -39,7 +39,9 @@ struct ServiceAreaGate<Content: View>: View {
             }
         }
         .task {
-            await serviceArea.refresh()
+            if serviceArea.phase != .allowed {
+                await serviceArea.refresh()
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active && serviceArea.phase != .allowed {

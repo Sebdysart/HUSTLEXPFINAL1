@@ -44,6 +44,8 @@ struct SettingsStack: View {
                         BetaDashboardScreen()
                     case .disputes:
                         MyDisputesScreen()
+                    case .skills:
+                        SkillGridSelectionScreen(isSettingsMode: true)
                     }
                 }
         }

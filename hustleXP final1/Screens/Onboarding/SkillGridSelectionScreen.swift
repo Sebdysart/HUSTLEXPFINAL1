@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct SkillGridSelectionScreen: View {
+    var isSettingsMode: Bool = false
+
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
@@ -53,11 +55,13 @@ struct SkillGridSelectionScreen: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                OnboardingProgressBar(
-                    currentStep: OnboardingRoute.skillSelection.stepIndex,
-                    totalSteps: OnboardingRoute.totalSteps
-                )
-                .padding(.top, 8)
+                if !isSettingsMode {
+                    OnboardingProgressBar(
+                        currentStep: OnboardingRoute.skillSelection.stepIndex,
+                        totalSteps: OnboardingRoute.totalSteps
+                    )
+                    .padding(.top, 8)
+                }
 
                 header
 
@@ -392,7 +396,7 @@ struct SkillGridSelectionScreen: View {
 
             Button { saveAndContinue() } label: {
                 HStack(spacing: 8) {
-                    Text("Save Skills")
+                    Text(isSettingsMode ? "Save Changes" : "Save Skills")
                         .font(.system(size: 17, weight: .semibold))
                         .minimumScaleFactor(0.7)
                     if !selectedSkills.isEmpty {
@@ -404,11 +408,11 @@ struct SkillGridSelectionScreen: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(selectedSkills.isEmpty ? Color.textMuted : Color.brandPurple)
+                .background((!isSettingsMode && selectedSkills.isEmpty) ? Color.textMuted : Color.brandPurple)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .accessibilityLabel("Save selected skills")
-            .disabled(selectedSkills.isEmpty)
+            .disabled(!isSettingsMode && selectedSkills.isEmpty)
             .padding(.horizontal, 20)
         }
         .padding(.vertical, 16)
@@ -457,15 +461,18 @@ struct SkillGridSelectionScreen: View {
                 let saved = try await skillService.addSkills(skillIds: Array(selectedSkills))
                 verifiedSkillIds = Set(saved.filter { $0.licenseVerified }.map { $0.skillId })
                 HXLogger.info("SkillGrid: Saved \(saved.count) skills", category: "Skill")
+                if isSettingsMode {
+                    await MainActor.run { dismiss() }
+                } else {
+                    await MainActor.run { router.navigateToOnboarding(.complete) }
+                }
             } catch {
                 await MainActor.run {
                     saveError = "Couldn't save skills — try again"
                 }
                 HXLogger.error("SkillGrid: Save failed — \(error.localizedDescription)", category: "Skill")
-                return
             }
         }
-        router.navigateToOnboarding(.complete)
     }
 
     // Lucide icon name → SF Symbol (backend seeds most skills without iconName, fallback to category icon)

@@ -29,6 +29,8 @@ final class ServiceAreaManager {
     static let shared = ServiceAreaManager()
 
     private(set) var phase: ServiceAreaGatePhase
+    private var lastChecked: Date?
+    private let checkCooldown: TimeInterval = 60  // skip re-check if allowed within last 60 s
 
     private init() {
         if AppConfig.isServiceAreaLimited {
@@ -45,7 +47,15 @@ final class ServiceAreaManager {
             return
         }
 
+        // Skip expensive GPS check if we already cleared the user recently.
+        if phase == .allowed,
+           let last = lastChecked,
+           Date().timeIntervalSince(last) < checkCooldown {
+            return
+        }
+
         phase = .checking
+        lastChecked = Date()
 
         let service = LocationService.current
 

@@ -137,87 +137,134 @@ final class PushNotificationManager: NSObject, ObservableObject {
     /// Processes an incoming notification payload for deep linking or data updates.
     /// - Parameter userInfo: The notification payload dictionary.
     func handleNotification(_ userInfo: [AnyHashable: Any]) {
-        HXLogger.info("[PushNotificationManager] Handling notification: \(userInfo)", category: "Push")
+        // Step 1: log raw payload so we can see exactly what FCM delivered
+        HXLogger.info("[Push][1] Raw userInfo keys: \(userInfo.keys.map { "\($0)" }.sorted())", category: "Push")
+        HXLogger.info("[Push][1] Raw userInfo: \(userInfo)", category: "Push")
 
-        // Parse the data payload for deep linking
-        guard let data = userInfo["data"] as? [String: Any] ?? userInfo as? [String: Any] else {
+        // Step 2: extract the data dict — FCM puts payload fields either under "data" key or flat
+        let data: [String: Any]
+        if let nested = userInfo["data"] as? [String: Any] {
+            HXLogger.info("[Push][2] Found nested 'data' dict with keys: \(nested.keys.sorted())", category: "Push")
+            data = nested
+        } else if let flat = userInfo as? [String: Any] {
+            HXLogger.info("[Push][2] No nested 'data' key — using flat userInfo, keys: \(flat.keys.sorted())", category: "Push")
+            data = flat
+        } else {
+            HXLogger.error("[Push][2] Cannot extract data dict from userInfo — dropping notification", category: "Push")
             return
         }
 
-        if let type = data["type"] as? String {
-            switch type {
-            case "task_assigned":
-                if let taskId = data["taskId"] as? String {
-                    HXLogger.info("[PushNotificationManager] Deep link -> task: \(taskId)", category: "Push")
-                    // Post notification for navigation handling
-                    NotificationCenter.default.post(
-                        name: .pushNotificationDeepLink,
-                        object: nil,
-                        userInfo: ["type": type, "taskId": taskId]
-                    )
-                }
+        // Step 3: check notification type
+        guard let type = data["type"] as? String else {
+            HXLogger.error("[Push][3] No 'type' field in data dict — dropping. data=\(data)", category: "Push")
+            return
+        }
+        HXLogger.info("[Push][3] Notification type='\(type)'", category: "Push")
 
-            case "escrow_released":
-                if let escrowId = data["escrowId"] as? String {
-                    HXLogger.info("[PushNotificationManager] Deep link -> escrow: \(escrowId)", category: "Push")
-                    NotificationCenter.default.post(
-                        name: .pushNotificationDeepLink,
-                        object: nil,
-                        userInfo: ["type": type, "escrowId": escrowId]
-                    )
-                }
-
-            case "dispute_update":
-                if let disputeId = data["disputeId"] as? String {
-                    HXLogger.info("[PushNotificationManager] Deep link -> dispute: \(disputeId)", category: "Push")
-                    NotificationCenter.default.post(
-                        name: .pushNotificationDeepLink,
-                        object: nil,
-                        userInfo: ["type": type, "disputeId": disputeId]
-                    )
-                }
-
-            case "xp_earned":
-                if let amount = data["amount"] as? Int {
-                    HXLogger.info("[PushNotificationManager] XP earned: \(amount)", category: "Push")
-                    NotificationCenter.default.post(
-                        name: .pushNotificationDeepLink,
-                        object: nil,
-                        userInfo: ["type": type, "amount": amount]
-                    )
-                }
-
-            case "dispatch_ping":
-                // Smart Dispatch ping — route to GoModeManager for LivePingView
-                if let taskId = data["taskId"] as? String {
-                    let taskTitle = data["taskTitle"] as? String ?? "New task available"
-                    let paymentCents = data["paymentCents"] as? Int
-                        ?? (data["payment"] as? Int).map { $0 * 100 }
-                        ?? 0
-                    let location = data["location"] as? String
-                    let waveNumber = data["waveNumber"] as? Int ?? 1
-                    HXLogger.info("[PushNotificationManager] Dispatch ping for task \(taskId) wave \(waveNumber)", category: "Push")
-                    NotificationCenter.default.post(
-                        name: .dispatchPingReceived,
-                        object: nil,
-                        userInfo: [
-                            "taskId": taskId,
-                            "taskTitle": taskTitle,
-                            "paymentCents": paymentCents,
-                            "location": location as Any,
-                            "waveNumber": waveNumber,
-                        ]
-                    )
-                }
-
-            default:
-                HXLogger.info("[PushNotificationManager] Unhandled notification type: \(type)", category: "Push")
+        switch type {
+        case "task_assigned":
+            if let taskId = data["taskId"] as? String {
+                HXLogger.info("[Push] Deep link -> task: \(taskId)", category: "Push")
                 NotificationCenter.default.post(
                     name: .pushNotificationDeepLink,
                     object: nil,
-                    userInfo: ["type": type]
+                    userInfo: ["type": type, "taskId": taskId]
                 )
             }
+
+        case "escrow_released":
+            if let escrowId = data["escrowId"] as? String {
+                HXLogger.info("[Push] Deep link -> escrow: \(escrowId)", category: "Push")
+                NotificationCenter.default.post(
+                    name: .pushNotificationDeepLink,
+                    object: nil,
+                    userInfo: ["type": type, "escrowId": escrowId]
+                )
+            }
+
+        case "dispute_update":
+            if let disputeId = data["disputeId"] as? String {
+                HXLogger.info("[Push] Deep link -> dispute: \(disputeId)", category: "Push")
+                NotificationCenter.default.post(
+                    name: .pushNotificationDeepLink,
+                    object: nil,
+                    userInfo: ["type": type, "disputeId": disputeId]
+                )
+            }
+
+        case "xp_earned":
+            let amount = data["amount"] as? Int ?? Int(data["amount"] as? String ?? "") ?? 0
+            HXLogger.info("[Push] XP earned: \(amount)", category: "Push")
+            NotificationCenter.default.post(
+                name: .pushNotificationDeepLink,
+                object: nil,
+                userInfo: ["type": type, "amount": amount]
+            )
+
+        case "dispatch_ping":
+            // Step 4: parse dispatch ping fields
+            // FCM data messages deliver ALL values as strings — must parse Int from String
+            HXLogger.info("[Push][4] Parsing dispatch_ping fields. Raw data=\(data)", category: "Push")
+
+            guard let taskId = data["taskId"] as? String, !taskId.isEmpty else {
+                HXLogger.error("[Push][4] dispatch_ping missing taskId — dropping. data=\(data)", category: "Push")
+                return
+            }
+
+            let taskTitle = data["taskTitle"] as? String ?? "New task available"
+
+            // paymentCents comes as String from FCM data messages
+            let paymentCents: Int
+            if let intVal = data["paymentCents"] as? Int {
+                paymentCents = intVal
+            } else if let strVal = data["paymentCents"] as? String, let parsed = Int(strVal) {
+                paymentCents = parsed
+            } else {
+                paymentCents = 0
+                HXLogger.error("[Push][4] paymentCents missing or unparseable: \(data["paymentCents"] as Any)", category: "Push")
+            }
+
+            // waveNumber comes as String from FCM data messages
+            let waveNumber: Int
+            if let intVal = data["waveNumber"] as? Int {
+                waveNumber = intVal
+            } else if let strVal = data["waveNumber"] as? String, let parsed = Int(strVal) {
+                waveNumber = parsed
+            } else {
+                waveNumber = 1
+                HXLogger.error("[Push][4] waveNumber missing or unparseable: \(data["waveNumber"] as Any) — defaulting to 1", category: "Push")
+            }
+
+            // location is "" (empty string) when backend has no location — convert to nil
+            let rawLocation = data["location"] as? String
+            let location: String? = (rawLocation?.isEmpty == false) ? rawLocation : nil
+
+            HXLogger.info(
+                "[Push][4] dispatch_ping parsed — taskId=\(taskId) title='\(taskTitle)' paymentCents=\(paymentCents) wave=\(waveNumber) location=\(location ?? "<none>")",
+                category: "Push"
+            )
+
+            // Step 5: post to NotificationCenter → GoModeManager picks it up
+            HXLogger.info("[Push][5] Posting .dispatchPingReceived to NotificationCenter", category: "Push")
+            NotificationCenter.default.post(
+                name: .dispatchPingReceived,
+                object: nil,
+                userInfo: [
+                    "taskId": taskId,
+                    "taskTitle": taskTitle,
+                    "paymentCents": paymentCents,
+                    "location": location as Any,
+                    "waveNumber": waveNumber,
+                ]
+            )
+
+        default:
+            HXLogger.info("[Push] Unhandled notification type: '\(type)'", category: "Push")
+            NotificationCenter.default.post(
+                name: .pushNotificationDeepLink,
+                object: nil,
+                userInfo: ["type": type]
+            )
         }
     }
 }
@@ -233,8 +280,18 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        let category = notification.request.content.categoryIdentifier
+        // Convert [AnyHashable: Any] → [String: Any] for Sendable crossing into Task
+        let sendableUserInfo = Dictionary(uniqueKeysWithValues:
+            notification.request.content.userInfo.compactMap { key, value -> (String, Any)? in
+                guard let stringKey = key as? String else { return nil }
+                return (stringKey, value)
+            }
+        )
         Task { @MainActor in
-            HXLogger.info("[PushNotificationManager] Foreground notification received", category: "Push")
+            HXLogger.info("[Push][FG] Foreground notification — category='\(category)' keys=\(sendableUserInfo.keys.sorted())", category: "Push")
+            // Run through handleNotification so dispatch_ping fires LivePingView in foreground
+            self.handleNotificationFromSendable(sendableUserInfo)
         }
 
         // Show as banner, play sound, and update badge even in foreground
@@ -248,6 +305,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
+        HXLogger.info("[Push][TAP] Notification tapped — actionId='\(response.actionIdentifier)'", category: "Push")
 
         // Convert to sendable dictionary for async capture
         let sendableUserInfo = Dictionary(uniqueKeysWithValues: userInfo.compactMap { key, value -> (String, Any)? in
@@ -255,7 +313,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
             return (stringKey, value)
         })
         Task { @MainActor in
-            HXLogger.info("[PushNotificationManager] Notification tapped", category: "Push")
+            HXLogger.info("[Push][TAP] Handling tapped notification", category: "Push")
             self.handleNotificationFromSendable(sendableUserInfo)
         }
 

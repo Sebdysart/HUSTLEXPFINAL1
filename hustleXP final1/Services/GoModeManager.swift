@@ -36,10 +36,14 @@ final class GoModeManager {
     private let service = DispatchServiceClient.shared
     private var locationTimer: Timer?
     private var pingExpiryTimer: Timer?
+    private var pingPollTimer: Timer?
     private var notificationObserver: NSObjectProtocol?
+    private var pollCount: Int = 0
 
     /// How often to push location to the backend (seconds) while Go Mode is on
     private let locationUpdateInterval: TimeInterval = 30
+    /// How often to poll for pending pings (seconds) — covers Simulator + FCM fallback
+    private let pingPollInterval: TimeInterval = 3
 
     private init() {
         subscribeToDispatchPingNotifications()
@@ -91,26 +95,172 @@ final class GoModeManager {
             }
         }
         HXLogger.debug("[GoModeManager] Location update timer started (\(Int(locationUpdateInterval))s interval)", category: "Dispatch")
+        startPingPolling()
     }
 
     func stopLocationUpdates() {
         locationTimer?.invalidate()
         locationTimer = nil
+        stopPingPolling()
+    }
+
+    // MARK: - Ping Polling (Simulator + FCM fallback)
+
+    private func startPingPolling() {
+        stopPingPolling()
+        HXLogger.info("[GoMode][POLL] Ping polling started (\(Int(pingPollInterval))s interval)", category: "Dispatch")
+        // Poll immediately, then on interval
+        Task { await pollForActivePing() }
+        pingPollTimer = Timer.scheduledTimer(withTimeInterval: pingPollInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.pollForActivePing()
+            }
+        }
+    }
+
+    private func stopPingPolling() {
+        pingPollTimer?.invalidate()
+        pingPollTimer = nil
+    }
+
+    private func pollForActivePing() async {
+        pollCount += 1
+        let cycle = pollCount
+
+        // Skip if a ping is already showing
+        if activePing != nil {
+            HXLogger.info("[GoMode][POLL #\(cycle)] Skipping — ping already active for task \(activePing!.taskId)", category: "Dispatch")
+            return
+        }
+        guard isGoModeEnabled else {
+            HXLogger.info("[GoMode][POLL #\(cycle)] Skipping — isGoModeEnabled=false", category: "Dispatch")
+            return
+        }
+
+        // Log debug state on first poll and every 5th poll
+        if cycle == 1 || cycle % 5 == 0 {
+            await logDebugState(cycle: cycle)
+        }
+
+        HXLogger.info("[GoMode][POLL #\(cycle)] Calling getActivePing... (isOnline=\(isOnline) isGoModeEnabled=\(isGoModeEnabled))", category: "Dispatch")
+
+        do {
+            let response = try await service.getActivePing()
+
+            if let response {
+                // Parse expiry to check it hasn't already expired
+                let iso = ISO8601DateFormatter()
+                iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                let expiresAt = iso.date(from: response.expiresAt)
+                    ?? ISO8601DateFormatter().date(from: response.expiresAt)
+                    ?? Date().addingTimeInterval(30)
+
+                let secsLeft = Int(expiresAt.timeIntervalSinceNow)
+                HXLogger.info(
+                    "[GoMode][POLL #\(cycle)] ✅ Active ping found — taskId=\(response.taskId) wave=\(response.waveNumber) paymentCents=\(response.paymentCents) expiresIn=\(secsLeft)s",
+                    category: "Dispatch"
+                )
+
+                guard secsLeft > 0 else {
+                    HXLogger.info("[GoMode][POLL #\(cycle)] Ping found but already expired (\(secsLeft)s) — skipping", category: "Dispatch")
+                    return
+                }
+
+                handleIncomingPing(
+                    taskId: response.taskId,
+                    taskTitle: response.taskTitle,
+                    paymentCents: response.paymentCents,
+                    location: response.location,
+                    waveNumber: response.waveNumber
+                )
+            } else {
+                HXLogger.info("[GoMode][POLL #\(cycle)] No active ping returned from backend", category: "Dispatch")
+            }
+
+        } catch {
+            HXLogger.error("[GoMode][POLL #\(cycle)] getActivePing error: \(error.localizedDescription)", category: "Dispatch")
+        }
+    }
+
+    private func logDebugState(cycle: Int) async {
+        do {
+            let state = try await service.getPingDebugState()
+
+            // Hustler eligibility
+            if let h = state.hustler {
+                HXLogger.info(
+                    "[GoMode][DEBUG #\(cycle)] Hustler — goMode=\(h.goMode) trustTier=\(h.trustTier) trustHold=\(h.trustHold) defaultMode=\(h.defaultMode) status=\(h.accountStatus) hasLocation=\(h.hasLocation) locationAge=\(h.locationAgeSeconds.map { "\($0)s" } ?? "never")",
+                    category: "Dispatch"
+                )
+            } else {
+                HXLogger.error("[GoMode][DEBUG #\(cycle)] Hustler row not found!", category: "Dispatch")
+            }
+
+            // Recent tasks
+            if state.recentSmartDispatchTasks.isEmpty {
+                HXLogger.info("[GoMode][DEBUG #\(cycle)] No smart_dispatch tasks in DB", category: "Dispatch")
+            } else {
+                for t in state.recentSmartDispatchTasks {
+                    HXLogger.info(
+                        "[GoMode][DEBUG #\(cycle)] Task — id=\(t.id.prefix(8))... '\(t.title)' state=\(t.state) dispatch=\(t.dispatchState) mode=\(t.fulfillmentMode) age=\(t.ageSeconds)s",
+                        category: "Dispatch"
+                    )
+                }
+            }
+
+            // Outbox events
+            if state.outboxEvents.isEmpty {
+                HXLogger.info("[GoMode][DEBUG #\(cycle)] No dispatch outbox events in last 10 min", category: "Dispatch")
+            } else {
+                for e in state.outboxEvents {
+                    HXLogger.info(
+                        "[GoMode][DEBUG #\(cycle)] Outbox — \(e.eventType) task=\(e.taskId.prefix(8))... status=\(e.status) attempts=\(e.attempts) age=\(e.ageSeconds)s error=\(e.error ?? "none")",
+                        category: "Dispatch"
+                    )
+                }
+            }
+
+            // My dispatch events
+            if state.myDispatchEvents.isEmpty {
+                HXLogger.info("[GoMode][DEBUG #\(cycle)] No dispatch_events for ME in last 10 min — wave was never fired for this hustler", category: "Dispatch")
+            } else {
+                for e in state.myDispatchEvents {
+                    HXLogger.info(
+                        "[GoMode][DEBUG #\(cycle)] DispatchEvent — \(e.eventType) task=\(e.taskId.prefix(8))... wave=\(e.waveNumber) age=\(e.ageSeconds)s",
+                        category: "Dispatch"
+                    )
+                }
+            }
+        } catch {
+            HXLogger.error("[GoMode][DEBUG #\(cycle)] getPingDebugState error: \(error.localizedDescription)", category: "Dispatch")
+        }
     }
 
     private func pushCurrentLocation() async {
         guard isGoModeEnabled else { return }
 
         let (coords, accuracy) = await LocationService.current.captureLocation()
-        guard accuracy >= 0 else { return }  // accuracy == -1 means cancelled/unavailable
+
+        // accuracy == -1 means GPS timed out (common on Simulator).
+        // Still push the coords — they may be the Simulator's set location or last known fix.
+        // Only skip if coords are exactly (0, 0) which means no location at all.
+        if accuracy < 0 {
+            HXLogger.info("[GoMode][LOC] GPS accuracy unavailable (accuracy=\(accuracy)) — using coords anyway if non-zero", category: "Dispatch")
+        }
+        guard coords.latitude != 0 || coords.longitude != 0 else {
+            HXLogger.error("[GoMode][LOC] Coords are (0,0) — skipping location push. Set a Simulator location via Features > Location in the Simulator menu.", category: "Dispatch")
+            return
+        }
+
+        HXLogger.info("[GoMode][LOC] Pushing location (\(String(format: "%.4f", coords.latitude)), \(String(format: "%.4f", coords.longitude))) accuracy=\(String(format: "%.1f", accuracy))m", category: "Dispatch")
 
         do {
             let status = try await service.updateLocation(lat: coords.latitude, lng: coords.longitude)
             isOnline = status.isOnline
             locationUpdatedAt = status.locationUpdatedAt
-            HXLogger.debug("[GoModeManager] Location pushed: (\(String(format: "%.4f", coords.latitude)), \(String(format: "%.4f", coords.longitude)))", category: "Dispatch")
+            HXLogger.info("[GoMode][LOC] Location pushed — isOnline=\(status.isOnline)", category: "Dispatch")
         } catch {
-            HXLogger.error("[GoModeManager] Location push failed: \(error.localizedDescription)", category: "Dispatch")
+            HXLogger.error("[GoMode][LOC] Location push failed: \(error.localizedDescription)", category: "Dispatch")
         }
     }
 
@@ -128,9 +278,9 @@ final class GoModeManager {
             }
 
             dispatchPrefs = try await service.getPrefs()
-            HXLogger.info("[GoModeManager] Status loaded — goMode=\(isGoModeEnabled), online=\(isOnline)", category: "Dispatch")
+            HXLogger.info("[GoMode][INIT] Status loaded — goMode=\(isGoModeEnabled) isOnline=\(isOnline) locationAge=\(locationUpdatedAt.map { "\(Int(-$0.timeIntervalSinceNow))s ago" } ?? "never")", category: "Dispatch")
         } catch {
-            HXLogger.debug("[GoModeManager] Status load skipped: \(error.localizedDescription)", category: "Dispatch")
+            HXLogger.error("[GoMode][INIT] Status load failed: \(error.localizedDescription)", category: "Dispatch")
         }
     }
 
@@ -143,6 +293,8 @@ final class GoModeManager {
         location: String?,
         waveNumber: Int
     ) {
+        HXLogger.info("[GoMode][7] handleIncomingPing — taskId=\(taskId) wave=\(waveNumber) isGoModeEnabled=\(isGoModeEnabled)", category: "Dispatch")
+
         let now = Date()
         let ping = IncomingPing(
             id: taskId,
@@ -154,6 +306,8 @@ final class GoModeManager {
             receivedAt: now,
             expiresAt: now.addingTimeInterval(30)
         )
+
+        HXLogger.info("[GoMode][7] Setting activePing — LivePingView should appear now", category: "Dispatch")
         activePing = ping
 
         // Record ping_viewed immediately
@@ -163,7 +317,7 @@ final class GoModeManager {
 
         // Auto-dismiss + record expired after countdown
         schedulePingExpiry(for: ping)
-        HXLogger.info("[GoModeManager] Incoming ping for task \(taskId) wave \(waveNumber)", category: "Dispatch")
+        HXLogger.info("[GoMode][7] Ping scheduled for expiry in 30s — activePing=\(activePing?.taskId ?? "nil")", category: "Dispatch")
     }
 
     /// Accepts an incoming ping.
@@ -239,19 +393,36 @@ final class GoModeManager {
     }
 
     private func subscribeToDispatchPingNotifications() {
+        HXLogger.info("[GoMode][SUB] Subscribing to .dispatchPingReceived notifications", category: "Dispatch")
         notificationObserver = NotificationCenter.default.addObserver(
             forName: .dispatchPingReceived,
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let self,
-                  let userInfo = notification.userInfo,
-                  let taskId = userInfo["taskId"] as? String else { return }
+            HXLogger.info("[GoMode][6] .dispatchPingReceived fired — userInfo=\(notification.userInfo as Any)", category: "Dispatch")
+
+            guard let self else {
+                HXLogger.error("[GoMode][6] self is nil — GoModeManager deallocated", category: "Dispatch")
+                return
+            }
+            guard let userInfo = notification.userInfo else {
+                HXLogger.error("[GoMode][6] userInfo is nil — dropping ping", category: "Dispatch")
+                return
+            }
+            guard let taskId = userInfo["taskId"] as? String else {
+                HXLogger.error("[GoMode][6] taskId missing from userInfo — dropping ping. userInfo=\(userInfo)", category: "Dispatch")
+                return
+            }
 
             let taskTitle = userInfo["taskTitle"] as? String ?? "New task available"
             let paymentCents = userInfo["paymentCents"] as? Int ?? 0
             let location = userInfo["location"] as? String
             let waveNumber = userInfo["waveNumber"] as? Int ?? 1
+
+            HXLogger.info(
+                "[GoMode][6] Ping fields — taskId=\(taskId) title='\(taskTitle)' paymentCents=\(paymentCents) wave=\(waveNumber) location=\(location ?? "<none>")",
+                category: "Dispatch"
+            )
 
             Task { @MainActor [weak self] in
                 self?.handleIncomingPing(
@@ -263,6 +434,7 @@ final class GoModeManager {
                 )
             }
         }
+        HXLogger.info("[GoMode][SUB] Observer registered for .dispatchPingReceived", category: "Dispatch")
     }
 
     private func requestAlwaysLocationIfNeeded() {

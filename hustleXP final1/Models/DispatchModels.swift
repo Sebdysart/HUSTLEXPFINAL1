@@ -140,3 +140,55 @@ struct IncomingPing: Identifiable {
         max(0, Int(expiresAt.timeIntervalSinceNow))
     }
 }
+
+// MARK: - Active Ping Poll Response
+
+struct ActivePingResponse: Codable {
+    let taskId: String
+    let taskTitle: String
+    let paymentCents: Int
+    let location: String?
+    let waveNumber: Int
+    let expiresAt: String
+}
+
+// MARK: - Ping Debug State
+
+struct PingDebugState: Codable {
+    struct HustlerInfo: Codable {
+        let goMode: Bool
+        let trustHold: Bool
+        let trustTier: Int
+        let defaultMode: String
+        let accountStatus: String
+        let hasLocation: Bool
+        let locationAgeSeconds: Int?
+    }
+    struct TaskInfo: Codable {
+        let id: String
+        let title: String
+        let state: String
+        let fulfillmentMode: String
+        let dispatchState: String
+        let ageSeconds: Int
+    }
+    struct OutboxEventInfo: Codable {
+        let eventType: String
+        let taskId: String
+        let status: String
+        let attempts: Int
+        let error: String?
+        let ageSeconds: Int
+    }
+    struct DispatchEventInfo: Codable {
+        let taskId: String
+        let eventType: String
+        let waveNumber: Int
+        let ageSeconds: Int
+    }
+
+    let hustler: HustlerInfo?
+    let recentSmartDispatchTasks: [TaskInfo]
+    let outboxEvents: [OutboxEventInfo]
+    let myDispatchEvents: [DispatchEventInfo]
+}

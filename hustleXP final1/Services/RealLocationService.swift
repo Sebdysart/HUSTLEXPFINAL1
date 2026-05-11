@@ -19,7 +19,9 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
     var isCapturing: Bool = false
     var captureTimestamp: Date?
 
-    private var locationContinuation: CheckedContinuation<(coordinates: GPSCoordinates, accuracy: Double), Never>?
+    // All concurrent callers share the same in-flight request and receive the same result.
+    private var pendingContinuations: [CheckedContinuation<(coordinates: GPSCoordinates, accuracy: Double), Never>] = []
+    private var captureTimeoutTask: Task<Void, Never>?
 
     // MARK: - Fallback Mock Locations (for getMockTaskLocation)
 
@@ -60,46 +62,52 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
     // MARK: - Capture Location (Async)
 
     func captureLocation() async -> (coordinates: GPSCoordinates, accuracy: Double) {
-        isCapturing = true
-
-        // If we already have a recent location (within 5 seconds), return it immediately
+        // Fast path: fresh cached fix (within 5 s) — no continuation needed.
         if let current = currentLocation,
            let timestamp = captureTimestamp,
            Date().timeIntervalSince(timestamp) < 5.0 {
-            isCapturing = false
             HXLogger.debug("[RealLocation] Using cached location (age: \(String(format: "%.1f", Date().timeIntervalSince(timestamp)))s)", category: "General")
             return (coordinates: current, accuracy: currentAccuracy)
         }
 
-        // Request a fresh location update
-        locationManager.requestWhenInUseAuthorization()
-        locationManager.startUpdatingLocation()
+        isCapturing = true
 
-        // Bridge delegate callback to async/await, with cancellation support so the
-        // continuation is always resumed (never leaks) when the calling Task is cancelled.
-        let result = await withTaskCancellationHandler {
-            await withCheckedContinuation { (continuation: CheckedContinuation<(coordinates: GPSCoordinates, accuracy: Double), Never>) in
-                self.locationContinuation = continuation
-            }
-        } onCancel: {
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                if let continuation = self.locationContinuation {
-                    self.locationContinuation = nil
-                    self.locationManager.stopUpdatingLocation()
-                    // Resume with best available location or a safe zero-value
-                    let fallback = self.currentLocation ?? GPSCoordinates(latitude: 0, longitude: 0)
-                    continuation.resume(returning: (coordinates: fallback, accuracy: -1))
-                }
+        // All concurrent callers queue into pendingContinuations and share
+        // the single in-flight CLLocationManager request. This prevents the
+        // "continuation leaked" warning that occurred when a second caller
+        // overwrote the single locationContinuation slot before it was resumed.
+        return await withCheckedContinuation { continuation in
+            pendingContinuations.append(continuation)
+
+            guard pendingContinuations.count == 1 else { return }  // others are already waiting
+
+            // Start a one-shot location request (auto-stops after first fix).
+            locationManager.requestWhenInUseAuthorization()
+            locationManager.requestLocation()
+
+            // Timeout: if the delegate never fires within 10 s, unblock all waiters.
+            captureTimeoutTask?.cancel()
+            captureTimeoutTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(10))
+                guard let self, !self.pendingContinuations.isEmpty else { return }
+                HXLogger.debug("[RealLocation] captureLocation timed out — using fallback", category: "General")
+                let fallback = self.currentLocation ?? GPSCoordinates(latitude: 0, longitude: 0)
+                self.resolveAllPending(coords: fallback, accuracy: -1)
             }
         }
+    }
 
+    /// Resumes every queued continuation with the same result and resets state.
+    private func resolveAllPending(coords: GPSCoordinates, accuracy: Double) {
+        captureTimeoutTask?.cancel()
+        captureTimeoutTask = nil
         isCapturing = false
-        locationManager.stopUpdatingLocation()
-
-        HXLogger.debug("[RealLocation] Captured: (\(String(format: "%.4f", result.coordinates.latitude)), \(String(format: "%.4f", result.coordinates.longitude))) (+-\(String(format: "%.1f", result.accuracy))m)", category: "General")
-
-        return result
+        let pending = pendingContinuations
+        pendingContinuations = []
+        HXLogger.debug("[RealLocation] Captured: (\(String(format: "%.4f", coords.latitude)), \(String(format: "%.4f", coords.longitude))) (±\(String(format: "%.1f", accuracy))m) — resolved \(pending.count) waiter(s)", category: "General")
+        for c in pending {
+            c.resume(returning: (coordinates: coords, accuracy: accuracy))
+        }
     }
 
     // MARK: - Synchronous Location
@@ -145,10 +153,8 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
             currentAccuracy = location.horizontalAccuracy
             captureTimestamp = location.timestamp
 
-            // Resolve any pending continuation
-            if let continuation = locationContinuation {
-                locationContinuation = nil
-                continuation.resume(returning: (coordinates: coords, accuracy: location.horizontalAccuracy))
+            if !pendingContinuations.isEmpty {
+                resolveAllPending(coords: coords, accuracy: location.horizontalAccuracy)
             }
         }
     }
@@ -156,20 +162,14 @@ final class RealLocationService: NSObject, LocationServiceProtocol, CLLocationMa
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         Task { @MainActor in
             HXLogger.debug("[RealLocation] Location error: \(error.localizedDescription)", category: "General")
-            isCapturing = false
-
-            // If there's a pending continuation, provide a fallback
-            if let continuation = locationContinuation {
-                locationContinuation = nil
-                // Use last known location or a default
-                let fallback = currentLocation ?? GPSCoordinates(
-                    latitude: 37.7749,
-                    longitude: -122.4194,
-                    accuracyMeters: 1000,
-                    timestamp: Date()
-                )
-                continuation.resume(returning: (coordinates: fallback, accuracy: fallback.accuracyMeters))
-            }
+            guard !pendingContinuations.isEmpty else { return }
+            let fallback = currentLocation ?? GPSCoordinates(
+                latitude: 37.7749,
+                longitude: -122.4194,
+                accuracyMeters: 1000,
+                timestamp: Date()
+            )
+            resolveAllPending(coords: fallback, accuracy: fallback.accuracyMeters)
         }
     }
 

@@ -163,14 +163,14 @@ struct PosterHomeScreen: View {
             ZStack {
                 Circle()
                     .fill(Color.brandPurple.opacity(0.2))
-                    .frame(width: 40, height: 40)
+                    .frame(width: 32, height: 32)
 
                 Circle()
                     .stroke(Color.brandPurple.opacity(0.5), lineWidth: 1)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 32, height: 32)
 
                 Image(systemName: "person.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.brandPurple)
             }
         }

@@ -136,6 +136,28 @@ final class DispatchServiceClient {
         )
     }
 
+    // MARK: - Active Ping Poll (Simulator + FCM fallback)
+
+    func getActivePing() async throws -> ActivePingResponse? {
+        struct EmptyInput: Codable {}
+        return try await trpc.call(
+            router: "dispatch",
+            procedure: "getActivePing",
+            type: .query,
+            input: EmptyInput()
+        )
+    }
+
+    func getPingDebugState() async throws -> PingDebugState {
+        struct EmptyInput: Codable {}
+        return try await trpc.call(
+            router: "dispatch",
+            procedure: "getPingDebugState",
+            type: .query,
+            input: EmptyInput()
+        )
+    }
+
     // MARK: - Poster: Dispatch Status
 
     func getPosterDispatchStatus(taskId: String) async throws -> PosterDispatchStatus {

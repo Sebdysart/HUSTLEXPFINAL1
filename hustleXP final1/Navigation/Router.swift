@@ -128,6 +128,7 @@ enum SettingsRoute: Hashable {
     case subscription
     case betaDashboard
     case disputes
+    case skills
 }
 
 // MARK: - Router

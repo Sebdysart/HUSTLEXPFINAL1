@@ -132,12 +132,18 @@ struct hustleXP_final1App: App {
             .environment(goModeManager)
             // LivePingView: presented as fullScreenCover whenever a dispatch ping arrives
             .fullScreenCover(item: Binding(
-                get: { goModeManager.activePing },
+                get: {
+                    if goModeManager.activePing != nil {
+                        HXLogger.info("[GoMode][8] fullScreenCover binding get — activePing=\(goModeManager.activePing?.taskId ?? "nil") — presenting LivePingView", category: "Dispatch")
+                    }
+                    return goModeManager.activePing
+                },
                 set: { if $0 == nil { goModeManager.activePing = nil } }
             )) { ping in
                 LivePingView(
                     ping: ping,
                     onAccept: {
+                        HXLogger.info("[GoMode][9] User tapped Accept on ping \(ping.taskId)", category: "Dispatch")
                         Task {
                             if await goModeManager.acceptPing(ping) != nil {
                                 router.navigateToHustler(.taskDetail(taskId: ping.taskId))
@@ -145,6 +151,7 @@ struct hustleXP_final1App: App {
                         }
                     },
                     onDecline: {
+                        HXLogger.info("[GoMode][9] User tapped Pass on ping \(ping.taskId)", category: "Dispatch")
                         goModeManager.declinePing(ping)
                     }
                 )
