@@ -186,9 +186,14 @@ struct PingDebugState: Codable {
         let waveNumber: Int
         let ageSeconds: Int
     }
+    struct FcmTokenInfo: Codable {
+        let activeCount: Int
+        let lastRegisteredAgeSeconds: Int?
+    }
 
     let hustler: HustlerInfo?
     let recentSmartDispatchTasks: [TaskInfo]
     let outboxEvents: [OutboxEventInfo]
     let myDispatchEvents: [DispatchEventInfo]
+    let fcmTokens: FcmTokenInfo?
 }

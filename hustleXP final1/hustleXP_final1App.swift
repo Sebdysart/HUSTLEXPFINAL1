@@ -49,15 +49,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         HXLogger.info("APNs device token registered with Firebase", category: "Push")
     }
 
-    /// When Firebase Messaging method swizzling is disabled (FirebaseAppDelegateProxyEnabled = NO),
-    /// forward remote notifications to FCM manually for analytics / delivery metrics.
+    /// Handles silent background pushes (content-available:1, no notification body).
+    /// Dispatch pings are sent as data-only FCM messages so the app wakes here in the
+    /// background and can show LivePingView before the user taps anything.
+    /// Also forwards to FCM for delivery analytics (required when swizzling is disabled).
     func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable : Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
+        // Required when FirebaseAppDelegateProxyEnabled = NO
         Messaging.messaging().appDidReceiveMessage(userInfo)
-        completionHandler(.noData)
+
+        // Route data payload to PushNotificationManager so dispatch pings processed
+        // in background fire GoModeManager.handleIncomingPing → activePing → LivePingView.
+        Task { @MainActor in
+            PushNotificationManager.shared.handleNotification(userInfo)
+        }
+
+        completionHandler(.newData)
     }
 
     /// Logs remote notification registration failures.

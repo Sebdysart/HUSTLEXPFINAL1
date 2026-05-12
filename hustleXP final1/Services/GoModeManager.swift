@@ -69,6 +69,9 @@ final class GoModeManager {
 
             if enabled {
                 startLocationUpdates()
+                // Ensure FCM token is registered every time Go Mode is enabled —
+                // guards against the case where token registration failed at login.
+                Task { await PushNotificationManager.shared.flushPendingToken() }
             } else {
                 stopLocationUpdates()
             }
@@ -231,6 +234,16 @@ final class GoModeManager {
                     )
                 }
             }
+
+            // FCM token status — CRITICAL: 0 tokens means push notifications can never deliver
+            if let fcm = state.fcmTokens {
+                if fcm.activeCount == 0 {
+                    HXLogger.error("[GoMode][DEBUG #\(cycle)] FCM — NO active tokens! Push delivery impossible. Re-login or reinstall may fix.", category: "Dispatch")
+                } else {
+                    let regAge = fcm.lastRegisteredAgeSeconds.map { "\($0)s ago" } ?? "unknown"
+                    HXLogger.info("[GoMode][DEBUG #\(cycle)] FCM — tokens=\(fcm.activeCount) lastRegistered=\(regAge)", category: "Dispatch")
+                }
+            }
         } catch {
             HXLogger.error("[GoMode][DEBUG #\(cycle)] getPingDebugState error: \(error.localizedDescription)", category: "Dispatch")
         }
@@ -295,6 +308,13 @@ final class GoModeManager {
     ) {
         HXLogger.info("[GoMode][7] handleIncomingPing — taskId=\(taskId) wave=\(waveNumber) isGoModeEnabled=\(isGoModeEnabled)", category: "Dispatch")
 
+        // Guard: ignore duplicate delivery for the same task (willPresent + didReceiveRemoteNotification
+        // can both fire when the app is in the foreground and content-available:1 is set).
+        if let existing = activePing, existing.taskId == taskId {
+            HXLogger.info("[GoMode][7] Duplicate ping for taskId=\(taskId) — already active, ignoring", category: "Dispatch")
+            return
+        }
+
         let now = Date()
         let ping = IncomingPing(
             id: taskId,
@@ -346,6 +366,14 @@ final class GoModeManager {
                 waveNumber: ping.waveNumber
             )
             activePing = nil
+            // Pause polling for 60s so the hustler isn't interrupted with a new ping
+            // while navigating to the task they just accepted.
+            stopPingPolling()
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(60))
+                guard let self, self.isGoModeEnabled else { return }
+                self.startPingPolling()
+            }
             HXLogger.info("[GoModeManager] Task \(ping.taskId) claimed — ETA \(claimResult.estimatedArrivalMinutes.map { "\($0) min" } ?? "unknown")", category: "Dispatch")
             return claimResult
 

@@ -85,17 +85,32 @@ final class PushNotificationManager: NSObject, ObservableObject {
         }
     }
 
-    /// Called after every successful login. Flushes any pending FCM token to the backend.
+    /// Called after every successful login (and when Go Mode is enabled).
+    /// Flushes the FCM token to the backend, asking Firebase directly as a last resort
+    /// so we never end up with 0 active tokens in device_tokens.
     func flushPendingToken() async {
-        guard let token = fcmToken ?? UserDefaults.standard.string(forKey: Self.pendingTokenKey)
-        else { return }
+        // 1. Use in-memory token if available
+        // 2. Fall back to UserDefaults pending token
+        // 3. Last resort: ask Firebase for the current token directly
+        var token = fcmToken ?? UserDefaults.standard.string(forKey: Self.pendingTokenKey)
+        if token == nil {
+            token = try? await Messaging.messaging().token()
+            if let t = token {
+                self.fcmToken = t
+                HXLogger.info("[PushNotificationManager] FCM token retrieved from Firebase directly: \(t.prefix(20))...", category: "Push")
+            }
+        }
+        guard let token else {
+            HXLogger.error("[PushNotificationManager] No FCM token available — cannot register device", category: "Push")
+            return
+        }
 
         do {
             try await registerToken(token)
             UserDefaults.standard.removeObject(forKey: Self.pendingTokenKey)
-            HXLogger.info("[PushNotificationManager] Pending FCM token flushed after login", category: "Push")
+            HXLogger.info("[PushNotificationManager] FCM token registered with backend", category: "Push")
         } catch {
-            HXLogger.error("[PushNotificationManager] Pending token flush failed: \(error.localizedDescription)", category: "Push")
+            HXLogger.error("[PushNotificationManager] Token flush failed: \(error.localizedDescription)", category: "Push")
         }
     }
 
