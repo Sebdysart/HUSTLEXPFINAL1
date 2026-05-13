@@ -45,25 +45,29 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
+        let tokenHex = deviceToken.map { String(format: "%02x", $0) }.joined()
+        HXLogger.info("[Push][APNS] APNs token received — length=\(deviceToken.count) prefix=\(String(tokenHex.prefix(20)))...", category: "Push")
         Messaging.messaging().apnsToken = deviceToken
-        HXLogger.info("APNs device token registered with Firebase", category: "Push")
+        HXLogger.info("[Push][APNS] APNs token handed to Firebase — FCM token will follow via MessagingDelegate", category: "Push")
     }
 
-    /// Handles silent background pushes (content-available:1, no notification body).
-    /// Dispatch pings are sent as data-only FCM messages so the app wakes here in the
-    /// background and can show LivePingView before the user taps anything.
-    /// Also forwards to FCM for delivery analytics (required when swizzling is disabled).
+    /// Called when a push arrives while the app is in the background (content-available:1).
+    /// Dispatch pings use urgentWakeup=true so iOS wakes the app here before user taps.
     func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable : Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
+        let keys = userInfo.keys.map { "\($0)" }.sorted()
+        HXLogger.info("[Push][BG] didReceiveRemoteNotification — keys=\(keys)", category: "Push")
+
         // Required when FirebaseAppDelegateProxyEnabled = NO
         Messaging.messaging().appDidReceiveMessage(userInfo)
 
         // Route data payload to PushNotificationManager so dispatch pings processed
         // in background fire GoModeManager.handleIncomingPing → activePing → LivePingView.
         Task { @MainActor in
+            HXLogger.info("[Push][BG] Routing to PushNotificationManager.handleNotification", category: "Push")
             PushNotificationManager.shared.handleNotification(userInfo)
         }
 
@@ -75,7 +79,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        HXLogger.error("Failed to register for remote notifications: \(error.localizedDescription)", category: "Push")
+        HXLogger.error("[Push][APNS] FAILED to register for remote notifications: \(error.localizedDescription)", category: "Push")
+        HXLogger.error("[Push][APNS] This means FCM cannot deliver push notifications on this device", category: "Push")
     }
 
 }
@@ -140,9 +145,15 @@ struct hustleXP_final1App: App {
             .environment(dataService)
             .environment(serviceAreaManager)
             .environment(goModeManager)
-            // LivePingView: presented as fullScreenCover whenever a dispatch ping arrives
+            // LivePingView: only for hustlers — posters must never see dispatch pings
             .fullScreenCover(item: Binding(
                 get: {
+                    guard appState.userRole == .hustler else {
+                        if goModeManager.activePing != nil {
+                            HXLogger.info("[GoMode][8] Suppressing LivePingView — user is not a hustler (role=\(String(describing: appState.userRole)))", category: "Dispatch")
+                        }
+                        return nil
+                    }
                     if goModeManager.activePing != nil {
                         HXLogger.info("[GoMode][8] fullScreenCover binding get — activePing=\(goModeManager.activePing?.taskId ?? "nil") — presenting LivePingView", category: "Dispatch")
                     }

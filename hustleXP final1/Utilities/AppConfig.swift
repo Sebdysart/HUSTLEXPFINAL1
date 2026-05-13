@@ -20,13 +20,8 @@ enum AppConfig {
     /// Railway backend base URL.
     /// Debug: staging environment. Release: production environment.
     static var backendBaseURL: URL {
-        #if DEBUG
-        // swiftlint:disable:next force_unwrapping
-        URL(string: "https://hustlexp-ai-backend-staging-production.up.railway.app")!
-        #else
         // swiftlint:disable:next force_unwrapping
         URL(string: "https://hustlexp-ai-backend-production.up.railway.app")!
-        #endif
     }
 
     // MARK: - Stripe

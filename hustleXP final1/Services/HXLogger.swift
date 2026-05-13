@@ -28,6 +28,7 @@ enum HXLogger {
     /// Quick debug log — only prints in DEBUG builds
     static func debug(_ message: String, category: String = "General") {
         #if DEBUG
+        print("[HX][\(category)] \(message)")
         let logger = Logger(subsystem: subsystem, category: category)
         logger.debug("\(message, privacy: .public)")
         #endif
@@ -35,12 +36,18 @@ enum HXLogger {
 
     /// Info level
     static func info(_ message: String, category: String = "General") {
+        #if DEBUG
+        print("[HX][\(category)] \(message)")
+        #endif
         let logger = Logger(subsystem: subsystem, category: category)
         logger.info("\(message, privacy: .public)")
     }
 
     /// Error level — always logs
     static func error(_ message: String, category: String = "General") {
+        #if DEBUG
+        print("[HX][ERROR][\(category)] \(message)")
+        #endif
         let logger = Logger(subsystem: subsystem, category: category)
         logger.error("\(message, privacy: .public)")
     }

@@ -296,6 +296,8 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         let category = notification.request.content.categoryIdentifier
+        let title = notification.request.content.title
+        let body = notification.request.content.body
         // Convert [AnyHashable: Any] → [String: Any] for Sendable crossing into Task
         let sendableUserInfo = Dictionary(uniqueKeysWithValues:
             notification.request.content.userInfo.compactMap { key, value -> (String, Any)? in
@@ -304,8 +306,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
             }
         )
         Task { @MainActor in
-            HXLogger.info("[Push][FG] Foreground notification — category='\(category)' keys=\(sendableUserInfo.keys.sorted())", category: "Push")
-            // Run through handleNotification so dispatch_ping fires LivePingView in foreground
+            HXLogger.info("[Push][FG] ✅ Foreground notification arrived — title='\(title)' body='\(body)' category='\(category)' keys=\(sendableUserInfo.keys.sorted())", category: "Push")
             self.handleNotificationFromSendable(sendableUserInfo)
         }
 
@@ -320,7 +321,8 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        HXLogger.info("[Push][TAP] Notification tapped — actionId='\(response.actionIdentifier)'", category: "Push")
+        let title = response.notification.request.content.title
+        HXLogger.info("[Push][TAP] User tapped notification — title='\(title)' actionId='\(response.actionIdentifier)'", category: "Push")
 
         // Convert to sendable dictionary for async capture
         let sendableUserInfo = Dictionary(uniqueKeysWithValues: userInfo.compactMap { key, value -> (String, Any)? in
@@ -328,7 +330,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
             return (stringKey, value)
         })
         Task { @MainActor in
-            HXLogger.info("[Push][TAP] Handling tapped notification", category: "Push")
+            HXLogger.info("[Push][TAP] Routing tapped notification to handler — keys=\(sendableUserInfo.keys.sorted())", category: "Push")
             self.handleNotificationFromSendable(sendableUserInfo)
         }
 
