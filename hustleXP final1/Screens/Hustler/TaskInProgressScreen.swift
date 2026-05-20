@@ -206,6 +206,12 @@ struct TaskInProgressScreen: View {
         userLocation = coords
 
         // v2.2.0: Check proximity via real GeofenceService
+        // Backend requires task to be ACCEPTED/TRAVELING/WORKING — skip for POSTED tasks
+        let activeStates: Set<TaskState> = [.claimed, .inProgress]
+        guard activeStates.contains(task.state) else {
+            HXLogger.info("TaskInProgress: Skipping geofence check — task not yet active (state=\(task.state.rawValue))", category: "Task")
+            return
+        }
         do {
             let proximity = try await GeofenceService.shared.checkProximity(
                 taskId: task.id,

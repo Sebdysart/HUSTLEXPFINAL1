@@ -184,17 +184,26 @@ final class PushNotificationManager: NSObject, ObservableObject {
         HXLogger.info("[Push][1] Raw userInfo keys: \(userInfo.keys.map { "\($0)" }.sorted())", category: "Push")
         HXLogger.info("[Push][1] Raw userInfo: \(userInfo)", category: "Push")
 
-        // Step 2: extract the data dict — FCM puts payload fields either under "data" key or flat
+        // Step 2: extract the data dict — FCM puts payload fields either under "data" key or flat.
+        // NOTE: [AnyHashable: Any] cannot be cast to [String: Any] in Swift even when all keys are
+        // strings — the cast silently fails. We always extract key-by-key using AnyHashable lookup.
         let data: [String: Any]
         if let nested = userInfo["data"] as? [String: Any] {
             HXLogger.info("[Push][2] Found nested 'data' dict with keys: \(nested.keys.sorted())", category: "Push")
             data = nested
-        } else if let flat = userInfo as? [String: Any] {
-            HXLogger.info("[Push][2] No nested 'data' key — using flat userInfo, keys: \(flat.keys.sorted())", category: "Push")
-            data = flat
         } else {
-            HXLogger.error("[Push][2] Cannot extract data dict from userInfo — dropping notification", category: "Push")
-            return
+            // Flatten AnyHashable-keyed dict into [String: Any] safely
+            let flat = Dictionary(uniqueKeysWithValues: userInfo.compactMap { key, value -> (String, Any)? in
+                if let stringKey = key as? String { return (stringKey, value) }
+                if let stringKey = key.base as? String { return (stringKey, value) }
+                return nil
+            })
+            guard !flat.isEmpty else {
+                HXLogger.error("[Push][2] Cannot extract data dict from userInfo — dropping notification", category: "Push")
+                return
+            }
+            HXLogger.info("[Push][2] Flat userInfo extracted, keys: \(flat.keys.sorted())", category: "Push")
+            data = flat
         }
 
         // Step 3: check notification type
