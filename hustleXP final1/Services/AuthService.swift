@@ -457,34 +457,40 @@ final class AuthService: ObservableObject {
 
     /// Signs out the current user and clears all stored credentials
     func signOut() {
-        // Deregister push token before clearing credentials
-        Task { await PushNotificationManager.shared.deregisterCurrentToken() }
+        Task {
+            // Deregister push token BEFORE clearing auth — the tRPC call needs a valid token
+            await PushNotificationManager.shared.deregisterCurrentToken()
 
-        // Demo mode - just clear state
-        if Self.isDemoMode {
-            currentUser = nil
-            isAuthenticated = false
-            appState?.logout()
-            HXLogger.info("Auth [DEMO]: User signed out successfully", category: "Auth")
-            return
-        }
+            // Demo mode - just clear state
+            if Self.isDemoMode {
+                await MainActor.run {
+                    currentUser = nil
+                    isAuthenticated = false
+                    appState?.logout()
+                }
+                HXLogger.info("Auth [DEMO]: User signed out successfully", category: "Auth")
+                return
+            }
 
-        do {
-            try Auth.auth().signOut()
-            TRPCClient.shared.clearAuthToken()
-            KeychainManager.shared.delete(forKey: KeychainManager.Key.authToken)
-            KeychainManager.shared.delete(forKey: KeychainManager.Key.firebaseUid)
-            KeychainManager.shared.delete(forKey: KeychainManager.Key.userId)
+            do {
+                try Auth.auth().signOut()
+                TRPCClient.shared.clearAuthToken()
+                KeychainManager.shared.delete(forKey: KeychainManager.Key.authToken)
+                KeychainManager.shared.delete(forKey: KeychainManager.Key.firebaseUid)
+                KeychainManager.shared.delete(forKey: KeychainManager.Key.userId)
 
-            currentUser = nil
-            isAuthenticated = false
-            appState?.logout()
+                await MainActor.run {
+                    currentUser = nil
+                    isAuthenticated = false
+                    appState?.logout()
+                }
 
-            HXLogger.info("Auth: User signed out successfully", category: "Auth")
-            AnalyticsService.shared.track(.signOut)
-            Task { await AnalyticsService.shared.flush() }
-        } catch {
-            HXLogger.error("Auth: Sign out error - \(error.localizedDescription)", category: "Auth")
+                HXLogger.info("Auth: User signed out successfully", category: "Auth")
+                AnalyticsService.shared.track(.signOut)
+                await AnalyticsService.shared.flush()
+            } catch {
+                HXLogger.error("Auth: Sign out error - \(error.localizedDescription)", category: "Auth")
+            }
         }
     }
 
