@@ -183,7 +183,7 @@ struct PingDebugState: Codable {
     struct DispatchEventInfo: Codable {
         let taskId: String
         let eventType: String
-        let waveNumber: Int
+        let waveNumber: Int?
         let ageSeconds: Int
     }
     struct FcmTokenInfo: Codable {

@@ -33,6 +33,34 @@ final class PushNotificationManager: NSObject, ObservableObject {
         super.init()
     }
 
+    // MARK: - Diagnostics
+
+    /// Call this after app launch to print the full push notification setup status to Xcode console.
+    func logDiagnostics() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        let authStatus: String
+        switch settings.authorizationStatus {
+        case .authorized:    authStatus = "authorized"
+        case .denied:        authStatus = "DENIED — user blocked notifications"
+        case .notDetermined: authStatus = "notDetermined — never asked yet"
+        case .provisional:   authStatus = "provisional"
+        case .ephemeral:     authStatus = "ephemeral"
+        @unknown default:    authStatus = "unknown(\(settings.authorizationStatus.rawValue))"
+        }
+
+        let currentFCMToken = try? await Messaging.messaging().token()
+        let dbToken = fcmToken
+
+        HXLogger.info("========== PUSH NOTIFICATION DIAGNOSTICS ==========", category: "Push")
+        HXLogger.info("[Diag] Authorization status : \(authStatus)", category: "Push")
+        HXLogger.info("[Diag] Alert setting        : \(settings.alertSetting == .enabled ? "enabled" : "DISABLED")", category: "Push")
+        HXLogger.info("[Diag] Sound setting        : \(settings.soundSetting == .enabled ? "enabled" : "DISABLED")", category: "Push")
+        HXLogger.info("[Diag] FCM token (memory)   : \(dbToken ?? "NIL — not yet received")", category: "Push")
+        HXLogger.info("[Diag] FCM token (Firebase) : \(currentFCMToken ?? "NIL — Firebase returned nil")", category: "Push")
+        HXLogger.info("[Diag] Tokens match         : \(dbToken == currentFCMToken ? "YES" : "NO — mismatch!")", category: "Push")
+        HXLogger.info("====================================================", category: "Push")
+    }
+
     // MARK: - Authorization
 
     /// Requests notification authorization from the user.
@@ -362,7 +390,7 @@ extension PushNotificationManager: MessagingDelegate {
         }
 
         Task { @MainActor in
-            HXLogger.info("[PushNotificationManager] FCM token refreshed", category: "Push")
+            HXLogger.info("[Push][FCM] Token refreshed — FULL TOKEN: \(token)", category: "Push")
             await handleFCMToken(token)
         }
     }

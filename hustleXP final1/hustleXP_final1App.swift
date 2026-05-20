@@ -146,8 +146,8 @@ struct hustleXP_final1App: App {
             .environment(serviceAreaManager)
             .environment(goModeManager)
             // LivePingView: only for hustlers — posters must never see dispatch pings
-            .fullScreenCover(item: Binding(
-                get: {
+            .fullScreenCover(item: Binding<IncomingPing?>(
+                get: { () -> IncomingPing? in
                     guard appState.userRole == .hustler else {
                         if goModeManager.activePing != nil {
                             HXLogger.info("[GoMode][8] Suppressing LivePingView — user is not a hustler (role=\(String(describing: appState.userRole)))", category: "Dispatch")
@@ -159,8 +159,8 @@ struct hustleXP_final1App: App {
                     }
                     return goModeManager.activePing
                 },
-                set: { if $0 == nil { goModeManager.activePing = nil } }
-            )) { ping in
+                set: { (newValue: IncomingPing?, _) in if newValue == nil { goModeManager.activePing = nil } }
+            )) { (ping: IncomingPing) in
                 LivePingView(
                     ping: ping,
                     onAccept: {
@@ -224,6 +224,9 @@ struct hustleXP_final1App: App {
                             showSplash = false
                         }
                     }
+
+                    // Log full push notification diagnostic on every launch
+                    await PushNotificationManager.shared.logDiagnostics()
 
                     // Require biometric unlock on fresh launch if already authenticated
                     if authService.isAuthenticated {

@@ -156,7 +156,7 @@ final class GoModeManager {
                 iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                 let expiresAt = iso.date(from: response.expiresAt)
                     ?? ISO8601DateFormatter().date(from: response.expiresAt)
-                    ?? Date().addingTimeInterval(30)
+                    ?? Date().addingTimeInterval(90)
 
                 let secsLeft = Int(expiresAt.timeIntervalSinceNow)
                 HXLogger.info(
@@ -229,7 +229,7 @@ final class GoModeManager {
             } else {
                 for e in state.myDispatchEvents {
                     HXLogger.info(
-                        "[GoMode][DEBUG #\(cycle)] DispatchEvent — \(e.eventType) task=\(e.taskId.prefix(8))... wave=\(e.waveNumber) age=\(e.ageSeconds)s",
+                        "[GoMode][DEBUG #\(cycle)] DispatchEvent — \(e.eventType) task=\(e.taskId.prefix(8))... wave=\(e.waveNumber ?? 0) age=\(e.ageSeconds)s",
                         category: "Dispatch"
                     )
                 }
@@ -324,7 +324,7 @@ final class GoModeManager {
             location: location,
             waveNumber: waveNumber,
             receivedAt: now,
-            expiresAt: now.addingTimeInterval(30)
+            expiresAt: now.addingTimeInterval(90)
         )
 
         HXLogger.info("[GoMode][7] Setting activePing — LivePingView should appear now", category: "Dispatch")
@@ -337,7 +337,7 @@ final class GoModeManager {
 
         // Auto-dismiss + record expired after countdown
         schedulePingExpiry(for: ping)
-        HXLogger.info("[GoMode][7] Ping scheduled for expiry in 30s — activePing=\(activePing?.taskId ?? "nil")", category: "Dispatch")
+        HXLogger.info("[GoMode][7] Ping scheduled for expiry in 90s — activePing=\(activePing?.taskId ?? "nil")", category: "Dispatch")
     }
 
     /// Accepts an incoming ping.

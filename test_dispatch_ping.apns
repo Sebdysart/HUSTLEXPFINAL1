@@ -1,0 +1,19 @@
+{
+  "Simulator Target Bundle": "taskme.hustleXP-final1",
+  "aps": {
+    "alert": {
+      "title": "New Task Available!",
+      "body": "$25.00 — Test Dispatch Ping"
+    },
+    "sound": "default",
+    "content-available": 1
+  },
+  "data": {
+    "type": "dispatch_ping",
+    "taskId": "test-task-simulator-001",
+    "taskTitle": "Test Dispatch Ping",
+    "paymentCents": "2500",
+    "waveNumber": "1",
+    "location": ""
+  }
+}
