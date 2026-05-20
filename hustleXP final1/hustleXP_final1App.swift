@@ -225,6 +225,14 @@ struct hustleXP_final1App: App {
                         }
                     }
 
+                    // Request notification permission on every launch — shows dialog on first
+                    // install, silently succeeds afterwards. Must be called before FCM can
+                    // show banners on devices that skipped the onboarding permissions screen.
+                    let granted = await PushNotificationManager.shared.requestAuthorization()
+                    if granted {
+                        PushNotificationManager.shared.registerForRemoteNotifications()
+                    }
+
                     // Log full push notification diagnostic on every launch
                     await PushNotificationManager.shared.logDiagnostics()
 

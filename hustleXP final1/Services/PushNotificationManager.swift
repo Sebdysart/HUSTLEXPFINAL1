@@ -359,7 +359,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
     ) {
         let userInfo = response.notification.request.content.userInfo
         let title = response.notification.request.content.title
-        HXLogger.info("[Push][TAP] User tapped notification — title='\(title)' actionId='\(response.actionIdentifier)'", category: "Push")
+        let actionId = response.actionIdentifier
 
         // Convert to sendable dictionary for async capture
         let sendableUserInfo = Dictionary(uniqueKeysWithValues: userInfo.compactMap { key, value -> (String, Any)? in
@@ -367,6 +367,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
             return (stringKey, value)
         })
         Task { @MainActor in
+            HXLogger.info("[Push][TAP] User tapped notification — title='\(title)' actionId='\(actionId)'", category: "Push")
             HXLogger.info("[Push][TAP] Routing tapped notification to handler — keys=\(sendableUserInfo.keys.sorted())", category: "Push")
             self.handleNotificationFromSendable(sendableUserInfo)
         }

@@ -212,6 +212,11 @@ struct TaskInProgressScreen: View {
             HXLogger.info("TaskInProgress: Skipping geofence check — task not yet active (state=\(task.state.rawValue))", category: "Task")
             return
         }
+        // Backend requires GPS coordinates — skip if task only has a city/state string
+        guard task.latitude != nil else {
+            HXLogger.info("TaskInProgress: Skipping geofence check — task has no GPS coordinates", category: "Task")
+            return
+        }
         do {
             let proximity = try await GeofenceService.shared.checkProximity(
                 taskId: task.id,
