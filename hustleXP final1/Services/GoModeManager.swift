@@ -15,6 +15,7 @@
 import Foundation
 import CoreLocation
 import Combine
+import UserNotifications
 
 @MainActor
 @Observable
@@ -30,6 +31,8 @@ final class GoModeManager {
     var dispatchPrefs: DispatchPrefs = .defaults
     var isLoading: Bool = false
     var errorMessage: String? = nil
+    /// Non-nil when notification alerts are disabled — pings arrive silently without a banner.
+    var notificationAlertWarning: String? = nil
 
     // MARK: - Private
 
@@ -73,11 +76,12 @@ final class GoModeManager {
 
             if enabled {
                 startLocationUpdates()
-                // Ensure FCM token is registered every time Go Mode is enabled —
-                // guards against the case where token registration failed at login.
-                Task { await PushNotificationManager.shared.flushPendingToken() }
+                Task {
+                    await checkNotificationAlerts()
+                }
             } else {
                 stopLocationUpdates()
+                notificationAlertWarning = nil
             }
 
             HXLogger.info("[GoModeManager] Go Mode \(enabled ? "enabled" : "disabled"), online=\(isOnline)", category: "Dispatch")
@@ -130,6 +134,26 @@ final class GoModeManager {
     private func stopTokenRefresh() {
         tokenRefreshTimer?.invalidate()
         tokenRefreshTimer = nil
+    }
+
+    // MARK: - Notification Alert Check
+
+    /// Checks whether iOS will actually display notification banners for this app.
+    /// content-available:1 wakes the app regardless, so pings arrive silently when
+    /// alerts are off — users see the LivePingView but never hear/see the banner.
+    private func checkNotificationAlerts() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        let alertsEnabled = settings.authorizationStatus == .authorized
+            && settings.alertSetting == .enabled
+
+        if alertsEnabled {
+            notificationAlertWarning = nil
+            HXLogger.info("[GoMode][NOTIF] Notification alerts enabled — pings will banner correctly", category: "Dispatch")
+        } else {
+            let warning = "Enable notifications for HustleXP in Settings so you hear incoming pings."
+            notificationAlertWarning = warning
+            HXLogger.error("[GoMode][NOTIF] ⚠️ Notification alerts DISABLED — pings arrive silently (content-available wakes app but no banner). authStatus=\(settings.authorizationStatus.rawValue) alertSetting=\(settings.alertSetting.rawValue)", category: "Dispatch")
+        }
     }
 
     // MARK: - Ping Polling (Simulator + FCM fallback)

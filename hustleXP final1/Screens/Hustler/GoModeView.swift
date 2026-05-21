@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct GoModeView: View {
     @Environment(GoModeManager.self) private var goModeManager
@@ -144,6 +145,33 @@ struct GoModeView: View {
                         .foregroundStyle(Color.errorRed)
                         .padding(.horizontal, 20)
                         .padding(.top, 8)
+                }
+
+                // ── Notification alert warning ────────────────────────────
+                if let warning = goModeManager.notificationAlertWarning {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bell.slash.fill")
+                            .font(.caption)
+                            .foregroundStyle(Color.yellow)
+                        Text(warning)
+                            .font(.caption)
+                            .foregroundStyle(Color.yellow)
+                        Spacer()
+                        Button {
+                            if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text("Fix")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.brandBlack)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color.yellow, in: Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
                 }
 
                 // ── Prefs summary chips ───────────────────────────────────
