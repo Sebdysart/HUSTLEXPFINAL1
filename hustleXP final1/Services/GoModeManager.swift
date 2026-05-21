@@ -37,6 +37,7 @@ final class GoModeManager {
     private var locationTimer: Timer?
     private var pingExpiryTimer: Timer?
     private var pingPollTimer: Timer?
+    private var tokenRefreshTimer: Timer?
     private var notificationObserver: NSObjectProtocol?
     private var pollCount: Int = 0
 
@@ -44,6 +45,9 @@ final class GoModeManager {
     private let locationUpdateInterval: TimeInterval = 30
     /// How often to poll for pending pings (seconds) — covers Simulator + FCM fallback
     private let pingPollInterval: TimeInterval = 3
+    /// How often to re-register the FCM token while in Go Mode (seconds)
+    /// Keeps lastRegistered fresh and catches silently-rotated Firebase tokens.
+    private let tokenRefreshInterval: TimeInterval = 6 * 3600
 
     private init() {
         subscribeToDispatchPingNotifications()
@@ -99,12 +103,33 @@ final class GoModeManager {
         }
         HXLogger.debug("[GoModeManager] Location update timer started (\(Int(locationUpdateInterval))s interval)", category: "Dispatch")
         startPingPolling()
+        startTokenRefresh()
     }
 
     func stopLocationUpdates() {
         locationTimer?.invalidate()
         locationTimer = nil
         stopPingPolling()
+        stopTokenRefresh()
+    }
+
+    // MARK: - Periodic FCM Token Refresh
+
+    private func startTokenRefresh() {
+        stopTokenRefresh()
+        // Refresh immediately on Go Mode start, then every tokenRefreshInterval
+        Task { await PushNotificationManager.shared.flushPendingToken() }
+        tokenRefreshTimer = Timer.scheduledTimer(withTimeInterval: tokenRefreshInterval, repeats: true) { [weak self] _ in
+            guard self != nil else { return }
+            HXLogger.info("[GoMode][TOKEN] Periodic FCM token refresh — keeping backend registration fresh", category: "Dispatch")
+            Task { await PushNotificationManager.shared.flushPendingToken() }
+        }
+        HXLogger.debug("[GoModeManager] Token refresh timer started (\(Int(tokenRefreshInterval / 3600))h interval)", category: "Dispatch")
+    }
+
+    private func stopTokenRefresh() {
+        tokenRefreshTimer?.invalidate()
+        tokenRefreshTimer = nil
     }
 
     // MARK: - Ping Polling (Simulator + FCM fallback)

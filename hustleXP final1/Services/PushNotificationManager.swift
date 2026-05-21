@@ -342,13 +342,19 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
                 return (stringKey, value)
             }
         )
+        let notifType = sendableUserInfo["type"] as? String
         Task { @MainActor in
             HXLogger.info("[Push][FG] ✅ Foreground notification arrived — title='\(title)' body='\(body)' category='\(category)' keys=\(sendableUserInfo.keys.sorted())", category: "Push")
             self.handleNotificationFromSendable(sendableUserInfo)
         }
 
-        // Show as banner, play sound, and update badge even in foreground
-        completionHandler([.banner, .sound, .badge])
+        // dispatch_ping: suppress banner — LivePingView is the UX, banner would overlap it
+        // and prompt the user to dismiss it, hiding the ping countdown entirely.
+        if notifType == "dispatch_ping" {
+            completionHandler([.sound])
+        } else {
+            completionHandler([.banner, .sound, .badge])
+        }
     }
 
     /// Called when the user taps on a notification to open the app.
