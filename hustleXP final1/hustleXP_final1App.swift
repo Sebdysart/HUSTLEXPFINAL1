@@ -33,6 +33,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Register for remote notifications
         application.registerForRemoteNotifications()
 
+        // Register notification categories (must be before first notification delivery)
+        PushNotificationManager.registerNotificationCategories()
+
         // Initialize Stripe
         StripePaymentManager.shared.configure()
         HXLogger.info("Stripe configured successfully", category: "Payment")

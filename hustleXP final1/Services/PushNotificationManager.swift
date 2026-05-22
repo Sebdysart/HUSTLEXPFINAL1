@@ -321,6 +321,33 @@ final class PushNotificationManager: NSObject, ObservableObject {
     }
 }
 
+// MARK: - Notification Categories
+
+extension PushNotificationManager {
+    /// Registers the DISPATCH_PING notification category with Accept / Decline action buttons.
+    /// Must be called once at app launch before the first notification is delivered.
+    static func registerNotificationCategories() {
+        let acceptAction = UNNotificationAction(
+            identifier: "DISPATCH_PING_ACCEPT",
+            title: "Accept",
+            options: [.foreground]
+        )
+        let declineAction = UNNotificationAction(
+            identifier: "DISPATCH_PING_DECLINE",
+            title: "Decline",
+            options: [.destructive]
+        )
+        let pingCategory = UNNotificationCategory(
+            identifier: "DISPATCH_PING",
+            actions: [acceptAction, declineAction],
+            intentIdentifiers: [],
+            options: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([pingCategory])
+        HXLogger.info("[Push] Registered DISPATCH_PING notification category with Accept/Decline actions", category: "Push")
+    }
+}
+
 // MARK: - UNUserNotificationCenterDelegate
 
 extension PushNotificationManager: UNUserNotificationCenterDelegate {
@@ -348,16 +375,14 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
             self.handleNotificationFromSendable(sendableUserInfo)
         }
 
-        // dispatch_ping: suppress banner — LivePingView is the UX, banner would overlap it
-        // and prompt the user to dismiss it, hiding the ping countdown entirely.
         if notifType == "dispatch_ping" {
-            completionHandler([.sound])
+            completionHandler([.banner, .sound])
         } else {
             completionHandler([.banner, .sound, .badge])
         }
     }
 
-    /// Called when the user taps on a notification to open the app.
+    /// Called when the user taps a notification or taps an action button on a notification banner.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -373,9 +398,22 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
             return (stringKey, value)
         })
         Task { @MainActor in
-            HXLogger.info("[Push][TAP] User tapped notification — title='\(title)' actionId='\(actionId)'", category: "Push")
-            HXLogger.info("[Push][TAP] Routing tapped notification to handler — keys=\(sendableUserInfo.keys.sorted())", category: "Push")
-            self.handleNotificationFromSendable(sendableUserInfo)
+            HXLogger.info("[Push][TAP] Notification response — title='\(title)' actionId='\(actionId)'", category: "Push")
+
+            if actionId == "DISPATCH_PING_DECLINE" {
+                // Decline without opening the app.
+                // Do NOT call handleNotificationFromSendable — that schedules a Task { @MainActor }
+                // to set activePing, which would re-appear LivePingView after declinePing clears it.
+                let data = (sendableUserInfo["data"] as? [String: Any]) ?? sendableUserInfo
+                guard let taskId = data["taskId"] as? String, !taskId.isEmpty else { return }
+                let waveNumber = (data["waveNumber"] as? Int) ?? Int(data["waveNumber"] as? String ?? "") ?? 1
+                HXLogger.info("[Push][ACTION] DISPATCH_PING_DECLINE — taskId=\(taskId)", category: "Push")
+                GoModeManager.shared.declinePingById(taskId: taskId, waveNumber: waveNumber)
+            } else {
+                // Regular tap or DISPATCH_PING_ACCEPT (.foreground opens app → LivePingView handles it)
+                HXLogger.info("[Push][TAP] Routing to handler — keys=\(sendableUserInfo.keys.sorted())", category: "Push")
+                self.handleNotificationFromSendable(sendableUserInfo)
+            }
         }
 
         completionHandler()

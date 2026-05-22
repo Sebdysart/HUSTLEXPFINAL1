@@ -444,6 +444,19 @@ final class GoModeManager {
         HXLogger.info("[GoModeManager] Ping declined for task \(ping.taskId)", category: "Dispatch")
     }
 
+    /// Called from the DISPATCH_PING_DECLINE notification action button.
+    /// Declines without setting activePing so LivePingView never appears.
+    func declinePingById(taskId: String, waveNumber: Int) {
+        if let existing = activePing, existing.taskId == taskId {
+            declinePing(existing)
+        } else {
+            Task {
+                try? await service.recordPingEvent(taskId: taskId, eventType: "ping_declined", waveNumber: waveNumber)
+            }
+            HXLogger.info("[GoModeManager] Ping declined (bg action) for task \(taskId)", category: "Dispatch")
+        }
+    }
+
     // MARK: - Private Helpers
 
     private func schedulePingExpiry(for ping: IncomingPing) {
