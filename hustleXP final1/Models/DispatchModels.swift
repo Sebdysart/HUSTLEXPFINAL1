@@ -121,7 +121,7 @@ struct ConfirmClaimResult: Codable {
 
 // MARK: - Incoming Ping (from push notification)
 
-struct IncomingPing: Identifiable {
+struct IncomingPing: Identifiable, Equatable {
     let id: String          // taskId
     let taskId: String
     let taskTitle: String
