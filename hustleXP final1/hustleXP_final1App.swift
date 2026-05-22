@@ -104,6 +104,9 @@ struct hustleXP_final1App: App {
     // Splash screen state - start as true so splash shows immediately
     @State private var isInitialized = false
     @State private var showSplash = true
+    // Ping presentation state — bridged from goModeManager.activePing via onChange
+    // so SwiftUI's @Observable tracking works correctly (Binding closures are not tracked).
+    @State private var livePingItem: IncomingPing? = nil
 
     // Biometric lock — set true when app backgrounds, cleared after successful Face ID
     @State private var biometricLocked = false
@@ -145,22 +148,30 @@ struct hustleXP_final1App: App {
             .environment(dataService)
             .environment(serviceAreaManager)
             .environment(goModeManager)
-            // LivePingView: only for hustlers — posters must never see dispatch pings
-            .fullScreenCover(item: Binding<IncomingPing?>(
-                get: { () -> IncomingPing? in
-                    guard appState.userRole == .hustler else {
-                        if goModeManager.activePing != nil {
-                            HXLogger.info("[GoMode][8] Suppressing LivePingView — user is not a hustler (role=\(String(describing: appState.userRole)))", category: "Dispatch")
-                        }
-                        return nil
+            // LivePingView: only for hustlers — posters must never see dispatch pings.
+            // onChange bridges @Observable changes into @State so SwiftUI's fullScreenCover
+            // receives proper state updates (Binding(get:set:) closures are NOT observation-tracked).
+            .onChange(of: goModeManager.activePing) { _, newPing in
+                guard appState.userRole == .hustler else {
+                    if newPing != nil {
+                        HXLogger.info("[GoMode][8] Suppressing LivePingView — user is not a hustler (role=\(String(describing: appState.userRole)))", category: "Dispatch")
                     }
-                    if goModeManager.activePing != nil {
-                        HXLogger.info("[GoMode][8] fullScreenCover binding get — activePing=\(goModeManager.activePing?.taskId ?? "nil") — presenting LivePingView", category: "Dispatch")
-                    }
-                    return goModeManager.activePing
-                },
-                set: { (newValue: IncomingPing?, _) in if newValue == nil { goModeManager.activePing = nil } }
-            )) { (ping: IncomingPing) in
+                    return
+                }
+                if let ping = newPing {
+                    HXLogger.info("[GoMode][8] Bridging activePing → livePingItem for taskId=\(ping.taskId)", category: "Dispatch")
+                } else {
+                    HXLogger.info("[GoMode][8] activePing cleared — dismissing LivePingView", category: "Dispatch")
+                }
+                livePingItem = newPing
+            }
+            .onChange(of: livePingItem) { _, newItem in
+                // Sync dismissal back to GoModeManager (e.g. system swipe-dismiss)
+                if newItem == nil && goModeManager.activePing != nil {
+                    goModeManager.activePing = nil
+                }
+            }
+            .fullScreenCover(item: $livePingItem) { ping in
                 LivePingView(
                     ping: ping,
                     onAccept: {
