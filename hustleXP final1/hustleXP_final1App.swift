@@ -305,7 +305,7 @@ struct hustleXP_final1App: App {
                 if phase == .background && authService.isAuthenticated {
                     biometricLocked = true
                 } else if phase == .active {
-                    UIApplication.shared.applicationIconBadgeNumber = 0
+                    UNUserNotificationCenter.current().setBadgeCount(0)
                     if biometricLocked { evaluateBiometric() }
                 }
             }
