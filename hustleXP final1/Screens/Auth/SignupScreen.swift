@@ -19,6 +19,7 @@ struct SignupScreen: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
+    @State private var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
     @State private var acceptedTerms: Bool = false
     @State private var isLoading: Bool = false
     @State private var showContent = false
@@ -26,10 +27,26 @@ struct SignupScreen: View {
     @State private var signupError: String?
     @State private var isSocialLoading = false
     @State private var appleSignInDelegate: AppleSignInDelegateSignup?
+    @State private var showDOBSheet = false
+    @State private var pendingSocialProvider: SocialProvider? = nil
     @FocusState private var focusedField: Field?
+
+    private enum SocialProvider { case apple, google }
 
     enum Field: Hashable {
         case name, email, password, confirmPassword
+    }
+
+    private var dobPickerRange: ClosedRange<Date> {
+        let max = Calendar.current.date(byAdding: .year, value: -13, to: Date()) ?? Date()
+        let min = Calendar.current.date(byAdding: .year, value: -100, to: Date()) ?? Date()
+        return min...max
+    }
+
+    private var dateOfBirthString: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: dateOfBirth)
     }
 
     private var isValid: Bool {
@@ -82,6 +99,19 @@ struct SignupScreen: View {
         }
         .navigationBarBackButtonHidden(false)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .sheet(isPresented: $showDOBSheet) {
+            DOBPickerSheet(dateOfBirth: $dateOfBirth, dobRange: dobPickerRange) {
+                showDOBSheet = false
+                switch pendingSocialProvider {
+                case .apple:  proceedWithAppleSignIn()
+                case .google: proceedWithGoogleSignIn()
+                case nil: break
+                }
+            } onCancel: {
+                showDOBSheet = false
+                pendingSocialProvider = nil
+            }
+        }
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) {
                 showContent = true
@@ -216,7 +246,32 @@ struct SignupScreen: View {
             .onChange(of: confirmPassword) { _, newValue in
                 validateConfirmPassword(newValue)
             }
-            
+
+            // Date of Birth picker
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Date of Birth")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.textSecondary)
+
+                HStack(spacing: 10) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.textMuted)
+                        .frame(width: 18)
+
+                    DatePicker("", selection: $dateOfBirth, in: dobPickerRange, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                        .colorScheme(.dark)
+                        .accentColor(Color.brandPurple)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceElevated))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 1))
+            }
+
             // Password requirements
             if !password.isEmpty {
                 passwordRequirements
@@ -550,7 +605,8 @@ struct SignupScreen: View {
                     email: email,
                     password: password,
                     fullName: name,
-                    defaultMode: .hustler // Default to hustler mode, can make this a selection later
+                    defaultMode: .hustler,
+                    dateOfBirth: dateOfBirthString
                 )
 
                 // Success! AuthService will set isAuthenticated = true
@@ -579,6 +635,11 @@ struct SignupScreen: View {
     // MARK: - Apple Sign-In
 
     private func handleAppleSignIn() {
+        pendingSocialProvider = .apple
+        showDOBSheet = true
+    }
+
+    private func proceedWithAppleSignIn() {
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
 
@@ -586,16 +647,15 @@ struct SignupScreen: View {
         authService.prepareAppleSignInRequest(request)
 
         let controller = ASAuthorizationController(authorizationRequests: [request])
-        let authService = self.authService  // Strong reference for the detached task
+        let authService = self.authService
+        let dob = dateOfBirthString
         let delegate = AppleSignInDelegateSignup { result in
-            // Use Task.detached so the sign-in continues even if the view dismounts
-            // when the Apple sheet closes — otherwise URLSession requests get cancelled.
             Task.detached {
                 switch result {
                 case .success(let authorization):
                     await MainActor.run { self.isSocialLoading = true; self.signupError = nil }
                     do {
-                        try await authService.signInWithApple(authorization: authorization)
+                        try await authService.signInWithApple(authorization: authorization, dateOfBirth: dob)
                         await MainActor.run { HapticFeedback.success() }
                     } catch {
                         let msg = error.localizedDescription
@@ -626,11 +686,17 @@ struct SignupScreen: View {
     // MARK: - Google Sign-In
 
     private func handleGoogleSignIn() {
+        pendingSocialProvider = .google
+        showDOBSheet = true
+    }
+
+    private func proceedWithGoogleSignIn() {
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
 
         isSocialLoading = true
         signupError = nil
+        let dob = dateOfBirthString
 
         Task {
             do {
@@ -651,7 +717,8 @@ struct SignupScreen: View {
 
                 try await authService.signInWithGoogle(
                     idToken: result.idToken,
-                    accessToken: result.accessToken
+                    accessToken: result.accessToken,
+                    dateOfBirth: dob
                 )
                 HapticFeedback.success()
             } catch {
@@ -663,6 +730,66 @@ struct SignupScreen: View {
             }
             isSocialLoading = false
         }
+    }
+}
+
+// MARK: - DOB Picker Sheet
+
+private struct DOBPickerSheet: View {
+    @Binding var dateOfBirth: Date
+    let dobRange: ClosedRange<Date>
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.brandBlack.ignoresSafeArea()
+
+                VStack(spacing: 24) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "birthday.cake.fill")
+                            .font(.system(size: 40))
+                            .foregroundStyle(Color.brandPurple)
+
+                        Text("One more thing")
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(Color.textPrimary)
+
+                        Text("We need your date of birth for age verification.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 16)
+
+                    DatePicker("Date of Birth", selection: $dateOfBirth, in: dobRange, displayedComponents: .date)
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                        .colorScheme(.dark)
+                        .accentColor(Color.brandPurple)
+                        .frame(maxWidth: .infinity)
+
+                    Spacer()
+
+                    HXButton("Continue", icon: "arrow.right", variant: .primary) {
+                        onConfirm()
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
+                }
+                .padding(.horizontal, 24)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel", action: onCancel)
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
 }
 

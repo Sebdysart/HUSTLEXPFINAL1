@@ -304,8 +304,71 @@ struct hustleXP_final1App: App {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .background && authService.isAuthenticated {
                     biometricLocked = true
-                } else if phase == .active && biometricLocked {
-                    evaluateBiometric()
+                } else if phase == .active {
+                    UIApplication.shared.applicationIconBadgeNumber = 0
+                    if biometricLocked { evaluateBiometric() }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .pushNotificationDeepLink)) { notification in
+                guard isInitialized, authService.isAuthenticated,
+                      let userInfo = notification.userInfo,
+                      let type = userInfo["type"] as? String else { return }
+                let taskId = userInfo["taskId"] as? String
+                let role = appState.userRole
+                switch type {
+                case "task_assigned":
+                    guard let taskId else { return }
+                    role == .poster
+                        ? router.navigateToPoster(.taskDetail(taskId: taskId))
+                        : router.navigateToHustler(.taskDetail(taskId: taskId))
+                case "proof_submitted":
+                    if let taskId, role == .poster {
+                        router.navigateToPoster(.proofReview(taskId: taskId))
+                    }
+                case "proof_rejected":
+                    if let taskId, role == .hustler {
+                        router.navigateToHustler(.proofSubmission(taskId: taskId))
+                    }
+                case "proof_approved":
+                    if let taskId, role == .hustler {
+                        router.navigateToHustler(.taskDetail(taskId: taskId))
+                    }
+                case "escrow_released", "payment_confirmed":
+                    if role == .hustler {
+                        router.navigateToHustler(.earnings)
+                    } else if let taskId {
+                        router.navigateToPoster(.taskDetail(taskId: taskId))
+                    }
+                case "payment_failed", "transfer_failed":
+                    if role == .hustler {
+                        router.navigateToHustler(.earnings)
+                    } else if let taskId {
+                        router.navigateToPoster(.taskManagement(taskId: taskId))
+                    }
+                case "payout_failed":
+                    if role == .hustler { router.navigateToHustler(.earnings) }
+                case "dispute_update":
+                    if let taskId {
+                        role == .poster
+                            ? router.navigateToPoster(.dispute(taskId: taskId))
+                            : router.navigateToHustler(.dispute(taskId: taskId))
+                    }
+                case "tier_up", "badge_earned", "xp_earned":
+                    if role == .hustler { router.navigateToHustler(.xpBreakdown) }
+                case "message_received":
+                    if let taskId {
+                        role == .poster
+                            ? router.navigateToPoster(.conversation(taskId: taskId))
+                            : router.navigateToHustler(.conversation(taskId: taskId))
+                    }
+                case "task_cancelled", "task_expired":
+                    if let taskId {
+                        role == .poster
+                            ? router.navigateToPoster(.taskDetail(taskId: taskId))
+                            : router.navigateToHustler(.taskDetail(taskId: taskId))
+                    }
+                default:
+                    break
                 }
             }
         }

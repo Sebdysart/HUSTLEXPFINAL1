@@ -36,11 +36,10 @@ enum CertificatePins {
     /// Primary pin (Railway TLS leaf certificate SHA-256)
     /// REPLACE before enabling pinning in production release builds.
     /// Generate with the openssl command in the header comment.
-    static let primary = "PLACEHOLDER_PRIMARY_PIN_SHA256"
+    static let primary = "d5417bbb6ac5fe032dfdec60d2fcadc08ed8d6587a8ad0cf08aa2fc871fc0e4d"
 
-    /// Backup pin (intermediate CA -- survives leaf rotation)
-    /// REPLACE before enabling pinning in production release builds.
-    static let backup = "PLACEHOLDER_BACKUP_PIN_SHA256"
+    /// Backup pin (Let's Encrypt intermediate CA — survives Railway leaf rotation every ~90 days)
+    static let backup = "ae489edc871d44a06fdaa2e560740478c29c00801076b40d9b9ff4109ab702a1"
 
     /// Bundled pins shipped with this binary (fallback if remote unavailable)
     static let bundledPins: [String] = [primary, backup]

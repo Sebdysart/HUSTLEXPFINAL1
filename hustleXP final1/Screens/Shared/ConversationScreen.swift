@@ -27,7 +27,6 @@ struct ConversationScreen: View {
     @State private var showReportSheet = false
     @State private var showPhotosPicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var showCallAlert = false
     @State private var pendingMessage: String?
     @State private var showOffPlatformWarning = false
     @State private var sseSubscription: AnyCancellable?
@@ -133,9 +132,6 @@ struct ConversationScreen: View {
                     Button(action: viewProfile) {
                         Label("View Profile", systemImage: "person.circle")
                     }
-                    Button(action: initiateCall) {
-                        Label("Call", systemImage: "phone")
-                    }
                     Divider()
                     Button(role: .destructive, action: { showReportSheet = true }) {
                         Label("Report", systemImage: "exclamationmark.triangle")
@@ -149,15 +145,6 @@ struct ConversationScreen: View {
         }
         .sheet(isPresented: $showReportSheet) {
             ReportUserSheet(taskId: conversationId, isPresented: $showReportSheet)
-        }
-        .alert("Call User", isPresented: $showCallAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Call via Phone") {
-                // In a real app, this would use tel: URL scheme
-                HXLogger.debug("[Conversation] Initiating call for task \(conversationId)", category: "General")
-            }
-        } message: {
-            Text("In-app calling is coming soon. Would you like to call via your phone app?")
         }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
@@ -398,10 +385,6 @@ struct ConversationScreen: View {
         // Navigate to user profile - in a real app this would use the other user's ID
         HXLogger.debug("[Conversation] View profile for task \(conversationId)", category: "General")
         // For now, show an alert or navigate to profile
-    }
-    
-    private func initiateCall() {
-        showCallAlert = true
     }
     
     private func sendPhotoMessage(imageData: Data) {

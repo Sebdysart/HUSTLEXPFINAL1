@@ -71,7 +71,8 @@ final class AuthService: ObservableObject {
         email: String,
         password: String,
         fullName: String,
-        defaultMode: UserRole
+        defaultMode: UserRole,
+        dateOfBirth: String
     ) async throws {
         isLoading = true
         defer { isLoading = false }
@@ -138,7 +139,7 @@ final class AuthService: ObservableObject {
                 email: email,
                 fullName: fullName,
                 defaultMode: defaultMode.rawValue,
-                dateOfBirth: "2000-01-01" // TODO: collect from user in sign-up screen
+                dateOfBirth: dateOfBirth
             )
 
             let user: HXUser = try await trpc.call(
@@ -263,9 +264,9 @@ final class AuthService: ObservableObject {
     /// Signs in or registers a user with Apple credentials.
     /// - Parameter defaultMode: Role to register the user as if they don't exist yet.
     ///   Defaults to .hustler — caller can override (e.g. signup screen with role picker).
-    /// Note: Apple doesn't provide DOB, so new users default to 18+ (born 2000-01-01).
+    /// Note: Apple doesn't provide DOB — pass `dateOfBirth` from the signup screen's DOB picker. Nil is safe for returning users (registration path skipped).
     /// They can update this later in settings if/when we add age-gated features.
-    func signInWithApple(authorization: ASAuthorization, defaultMode: UserRole = .hustler) async throws {
+    func signInWithApple(authorization: ASAuthorization, defaultMode: UserRole = .hustler, dateOfBirth: String? = nil) async throws {
         HXLogger.info("🍎 [AppleSignIn] STEP 1: Started — extracting credential", category: "Auth")
         isLoading = true
         defer {
@@ -339,10 +340,7 @@ final class AuthService: ObservableObject {
                 email: authResult.user.email ?? "",
                 fullName: displayName,
                 defaultMode: defaultMode.rawValue,
-                // Apple doesn't return DOB. Default to a 18+ value so the user
-                // can immediately use age-gated features. They can update DOB
-                // later in their profile if/when we ask for it.
-                dateOfBirth: "2000-01-01"
+                dateOfBirth: dateOfBirth ?? "2000-01-01"
             )
 
             HXLogger.info("🍎 [AppleSignIn] STEP 7: Calling user.register (email=\(input.email), name=\(input.fullName), mode=\(input.defaultMode))", category: "Auth")
@@ -386,7 +384,7 @@ final class AuthService: ObservableObject {
     // MARK: - Sign In with Google
 
     /// Signs in or registers a user with Google credentials via Firebase
-    func signInWithGoogle(idToken: String, accessToken: String) async throws {
+    func signInWithGoogle(idToken: String, accessToken: String, dateOfBirth: String? = nil) async throws {
         isLoading = true
         defer { isLoading = false }
 
@@ -426,7 +424,7 @@ final class AuthService: ObservableObject {
                 email: authResult.user.email ?? "",
                 fullName: authResult.user.displayName ?? "HustleXP User",
                 defaultMode: UserRole.hustler.rawValue,
-                dateOfBirth: "2000-01-01" // TODO: collect from user in sign-up screen
+                dateOfBirth: dateOfBirth ?? "2000-01-01"
             )
 
             HXLogger.info("Auth: Registering new Google user - uid: \(authResult.user.uid), email: \(authResult.user.email ?? "nil")", category: "Auth")

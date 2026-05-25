@@ -216,7 +216,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
         switch type {
         case "task_assigned":
             if let taskId = data["taskId"] as? String {
-                HXLogger.info("[Push] Deep link -> task: \(taskId)", category: "Push")
+                HXLogger.info("[Push] task_assigned → taskId=\(taskId)", category: "Push")
                 NotificationCenter.default.post(
                     name: .pushNotificationDeepLink,
                     object: nil,
@@ -224,34 +224,110 @@ final class PushNotificationManager: NSObject, ObservableObject {
                 )
             }
 
-        case "escrow_released":
-            if let escrowId = data["escrowId"] as? String {
-                HXLogger.info("[Push] Deep link -> escrow: \(escrowId)", category: "Push")
+        case "proof_submitted":
+            if let taskId = data["taskId"] as? String {
+                HXLogger.info("[Push] proof_submitted → taskId=\(taskId)", category: "Push")
                 NotificationCenter.default.post(
                     name: .pushNotificationDeepLink,
                     object: nil,
-                    userInfo: ["type": type, "escrowId": escrowId]
+                    userInfo: ["type": type, "taskId": taskId]
                 )
             }
 
-        case "dispute_update":
-            if let disputeId = data["disputeId"] as? String {
-                HXLogger.info("[Push] Deep link -> dispute: \(disputeId)", category: "Push")
+        case "proof_rejected":
+            if let taskId = data["taskId"] as? String {
+                HXLogger.info("[Push] proof_rejected → taskId=\(taskId)", category: "Push")
                 NotificationCenter.default.post(
                     name: .pushNotificationDeepLink,
                     object: nil,
-                    userInfo: ["type": type, "disputeId": disputeId]
+                    userInfo: ["type": type, "taskId": taskId]
                 )
             }
+
+        case "escrow_released", "payment_confirmed":
+            if let taskId = data["taskId"] as? String {
+                HXLogger.info("[Push] payment → taskId=\(taskId)", category: "Push")
+                NotificationCenter.default.post(
+                    name: .pushNotificationDeepLink,
+                    object: nil,
+                    userInfo: ["type": type, "taskId": taskId]
+                )
+            }
+
+        case "payment_failed", "transfer_failed", "payout_failed":
+            HXLogger.info("[Push] payment failure → screen=\(data["screen"] as? String ?? "earnings")", category: "Push")
+            NotificationCenter.default.post(
+                name: .pushNotificationDeepLink,
+                object: nil,
+                userInfo: ["type": type, "screen": data["screen"] as? String ?? "earnings"]
+            )
+
+        case "dispute_update":
+            if let taskId = data["taskId"] as? String {
+                HXLogger.info("[Push] dispute_update → taskId=\(taskId)", category: "Push")
+                NotificationCenter.default.post(
+                    name: .pushNotificationDeepLink,
+                    object: nil,
+                    userInfo: ["type": type, "taskId": taskId]
+                )
+            }
+
+        case "tier_up":
+            let newTier = data["newTier"] as? String ?? ""
+            HXLogger.info("[Push] tier_up → newTier=\(newTier)", category: "Push")
+            NotificationCenter.default.post(
+                name: .pushNotificationDeepLink,
+                object: nil,
+                userInfo: ["type": type, "newTier": newTier]
+            )
+
+        case "badge_earned":
+            let badgeType = data["badgeType"] as? String ?? ""
+            HXLogger.info("[Push] badge_earned → badgeType=\(badgeType)", category: "Push")
+            NotificationCenter.default.post(
+                name: .pushNotificationDeepLink,
+                object: nil,
+                userInfo: ["type": type, "badgeType": badgeType]
+            )
 
         case "xp_earned":
             let amount = data["amount"] as? Int ?? Int(data["amount"] as? String ?? "") ?? 0
-            HXLogger.info("[Push] XP earned: \(amount)", category: "Push")
+            HXLogger.info("[Push] xp_earned → amount=\(amount)", category: "Push")
             NotificationCenter.default.post(
                 name: .pushNotificationDeepLink,
                 object: nil,
                 userInfo: ["type": type, "amount": amount]
             )
+
+        case "message_received":
+            if let taskId = data["taskId"] as? String {
+                HXLogger.info("[Push] message_received → taskId=\(taskId)", category: "Push")
+                NotificationCenter.default.post(
+                    name: .pushNotificationDeepLink,
+                    object: nil,
+                    userInfo: ["type": type, "taskId": taskId]
+                )
+            }
+
+        case "task_cancelled", "task_expired":
+            if let taskId = data["taskId"] as? String {
+                HXLogger.info("[Push] \(type) → taskId=\(taskId)", category: "Push")
+                NotificationCenter.default.post(
+                    name: .pushNotificationDeepLink,
+                    object: nil,
+                    userInfo: ["type": type, "taskId": taskId]
+                )
+            }
+
+        case "proof_approved":
+            if let taskId = data["taskId"] as? String {
+                HXLogger.info("[Push] proof_approved → taskId=\(taskId)", category: "Push")
+                NotificationCenter.default.post(
+                    name: .pushNotificationDeepLink,
+                    object: nil,
+                    userInfo: ["type": type, "taskId": taskId]
+                )
+            }
 
         case "dispatch_ping":
             // Step 4: parse dispatch ping fields
@@ -327,24 +403,104 @@ extension PushNotificationManager {
     /// Registers the DISPATCH_PING notification category with Accept / Decline action buttons.
     /// Must be called once at app launch before the first notification is delivered.
     static func registerNotificationCategories() {
-        let acceptAction = UNNotificationAction(
-            identifier: "DISPATCH_PING_ACCEPT",
-            title: "Accept",
-            options: [.foreground]
-        )
-        let declineAction = UNNotificationAction(
-            identifier: "DISPATCH_PING_DECLINE",
-            title: "Decline",
-            options: [.destructive]
-        )
+        // DISPATCH_PING — hustler receives task ping
         let pingCategory = UNNotificationCategory(
             identifier: "DISPATCH_PING",
-            actions: [acceptAction, declineAction],
-            intentIdentifiers: [],
-            options: []
+            actions: [
+                UNNotificationAction(identifier: "DISPATCH_PING_ACCEPT", title: "Accept ✅", options: [.foreground]),
+                UNNotificationAction(identifier: "DISPATCH_PING_DECLINE", title: "Pass", options: [.destructive]),
+            ],
+            intentIdentifiers: [], options: []
         )
-        UNUserNotificationCenter.current().setNotificationCategories([pingCategory])
-        HXLogger.info("[Push] Registered DISPATCH_PING notification category with Accept/Decline actions", category: "Push")
+
+        // PROOF_SUBMITTED — poster needs to review hustler's proof
+        let proofCategory = UNNotificationCategory(
+            identifier: "PROOF_SUBMITTED",
+            actions: [
+                UNNotificationAction(identifier: "PROOF_APPROVE", title: "Approve & Pay 💸", options: [.foreground]),
+                UNNotificationAction(identifier: "PROOF_DISPUTE", title: "Dispute", options: [.foreground, .destructive]),
+            ],
+            intentIdentifiers: [], options: []
+        )
+
+        // PROOF_REJECTED — hustler needs to resubmit
+        let proofRejectedCategory = UNNotificationCategory(
+            identifier: "PROOF_REJECTED",
+            actions: [
+                UNNotificationAction(identifier: "PROOF_RESUBMIT", title: "Resubmit 📸", options: [.foreground]),
+            ],
+            intentIdentifiers: [], options: []
+        )
+
+        // TASK_ASSIGNED — both roles notified on assignment
+        let taskAssignedCategory = UNNotificationCategory(
+            identifier: "TASK_ASSIGNED",
+            actions: [
+                UNNotificationAction(identifier: "TASK_VIEW", title: "View Task", options: [.foreground]),
+            ],
+            intentIdentifiers: [], options: []
+        )
+
+        // PAYMENT_RECEIVED — payment notifications
+        let paymentCategory = UNNotificationCategory(
+            identifier: "PAYMENT_RECEIVED",
+            actions: [
+                UNNotificationAction(identifier: "PAYMENT_VIEW_EARNINGS", title: "View Earnings 💰", options: [.foreground]),
+            ],
+            intentIdentifiers: [], options: []
+        )
+
+        // DISPUTE_UPDATE — dispute status change
+        let disputeCategory = UNNotificationCategory(
+            identifier: "DISPUTE_UPDATE",
+            actions: [
+                UNNotificationAction(identifier: "DISPUTE_VIEW", title: "View Dispute ⚖️", options: [.foreground]),
+            ],
+            intentIdentifiers: [], options: []
+        )
+
+        // TIER_UP — trust tier promotion
+        let tierUpCategory = UNNotificationCategory(
+            identifier: "TIER_UP",
+            actions: [
+                UNNotificationAction(identifier: "TIER_VIEW_PROFILE", title: "View Profile 🚀", options: [.foreground]),
+            ],
+            intentIdentifiers: [], options: []
+        )
+
+        // BADGE_EARNED — badge awarded
+        let badgeCategory = UNNotificationCategory(
+            identifier: "BADGE_EARNED",
+            actions: [
+                UNNotificationAction(identifier: "BADGE_VIEW", title: "View Badge 🏆", options: [.foreground]),
+            ],
+            intentIdentifiers: [], options: []
+        )
+
+        // XP_EARNED — XP awarded after task completion
+        let xpCategory = UNNotificationCategory(
+            identifier: "XP_EARNED",
+            actions: [
+                UNNotificationAction(identifier: "XP_VIEW_BREAKDOWN", title: "View XP ⚡", options: [.foreground]),
+            ],
+            intentIdentifiers: [], options: []
+        )
+
+        // MESSAGE_RECEIVED — new chat message
+        let messageCategory = UNNotificationCategory(
+            identifier: "MESSAGE_RECEIVED",
+            actions: [
+                UNNotificationAction(identifier: "MESSAGE_REPLY", title: "Reply 💬", options: [.foreground]),
+            ],
+            intentIdentifiers: [], options: []
+        )
+
+        UNUserNotificationCenter.current().setNotificationCategories([
+            pingCategory, proofCategory, proofRejectedCategory,
+            taskAssignedCategory, paymentCategory, disputeCategory,
+            tierUpCategory, badgeCategory, xpCategory, messageCategory,
+        ])
+        HXLogger.info("[Push] Registered 10 notification categories", category: "Push")
     }
 }
 
@@ -410,8 +566,8 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
                 HXLogger.info("[Push][ACTION] DISPATCH_PING_DECLINE — taskId=\(taskId)", category: "Push")
                 GoModeManager.shared.declinePingById(taskId: taskId, waveNumber: waveNumber)
             } else {
-                // Regular tap or DISPATCH_PING_ACCEPT (.foreground opens app → LivePingView handles it)
-                HXLogger.info("[Push][TAP] Routing to handler — keys=\(sendableUserInfo.keys.sorted())", category: "Push")
+                // All other taps and action buttons open the app — route the payload for deep linking.
+                HXLogger.info("[Push][TAP] Routing to handler — actionId='\(actionId)' keys=\(sendableUserInfo.keys.sorted())", category: "Push")
                 self.handleNotificationFromSendable(sendableUserInfo)
             }
         }
