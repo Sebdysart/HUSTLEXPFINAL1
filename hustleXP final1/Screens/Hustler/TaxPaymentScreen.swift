@@ -305,29 +305,23 @@ struct TaxPaymentScreen: View {
                     do {
                         let taxResult = try await taxService.payTax(paymentIntentId: paymentIntent.paymentIntentId)
                         HXLogger.info("TaxPayment: Tax payment confirmed, released \(taxResult.xpReleased) XP", category: "Payment")
-
-                        // Also update mock data for consistency
-                        let mockResult = dataService.payTax()
-                        _ = mockResult // Keep mock data in sync
-
                         stripeManager.reset()
                         isProcessingPayment = false
-
                         withAnimation(.spring(response: 0.4)) {
                             paymentResult = taxResult
                             showSuccess = true
                         }
                     } catch {
-                        HXLogger.error("TaxPayment: Backend confirm failed - \(error.localizedDescription)", category: "Payment")
-                        // Payment went through but backend confirm failed
-                        // Webhook will reconcile; show success with mock data
-                        let mockResult = dataService.payTax()
-
+                        // Stripe charge succeeded but backend confirm call failed.
+                        // The Stripe webhook will reconcile this automatically.
+                        // Show success — the XP release will arrive via push notification.
+                        HXLogger.error("TaxPayment: Backend confirm failed (webhook will reconcile) — \(error.localizedDescription)", category: "Payment")
                         stripeManager.reset()
                         isProcessingPayment = false
-
                         withAnimation(.spring(response: 0.4)) {
-                            paymentResult = mockResult
+                            // Show success with 0 XP released — webhook will push the real update
+                            let pending = TaxStatus(unpaidTaxCents: 0, xpHeldBack: 0, blocked: false, lastPaymentAt: Date())
+                            paymentResult = TaxPaymentResult(success: true, xpReleased: 0, newTaxStatus: pending)
                             showSuccess = true
                         }
                     }

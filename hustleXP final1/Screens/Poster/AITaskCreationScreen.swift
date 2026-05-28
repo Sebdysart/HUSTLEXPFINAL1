@@ -512,7 +512,7 @@ struct AITaskCreationScreen: View {
 
         Task {
             do {
-                print("🟢 [PostTask] Creating task: \(taskDraft.title), payment: \(taskDraft.payment ?? 0), location: \(taskDraft.locationDisplay)")
+                HXLogger.info("AITaskCreation: Creating task '\(taskDraft.title)' payment=\(taskDraft.payment ?? 0)", category: "Task")
                 let deadlineDate: Date? = {
                     guard !taskDraft.deadline.isEmpty else { return nil }
                     let fmt = ISO8601DateFormatter()
@@ -531,7 +531,7 @@ struct AITaskCreationScreen: View {
                        let item = response.mapItems.first {
                         taskLat = item.location.coordinate.latitude
                         taskLng = item.location.coordinate.longitude
-                        print("🟢 [PostTask] Geocoded: \(taskDraft.locationDisplay) → \(taskLat!), \(taskLng!)")
+                        HXLogger.info("AITaskCreation: Geocoded '\(taskDraft.locationDisplay)' → \(taskLat!), \(taskLng!)", category: "Task")
                     }
                 }
 
@@ -551,8 +551,7 @@ struct AITaskCreationScreen: View {
                     deadline: deadlineDate,
                     fulfillmentMode: taskDraft.fulfillmentMode
                 )
-                print("🟢 [PostTask] Task created successfully: id=\(task.id), title=\(task.title)")
-                HXLogger.info("AITaskCreation: Task created - \(task.id), funding escrow...", category: "Task")
+                HXLogger.info("AITaskCreation: Task created id=\(task.id) — funding escrow", category: "Task")
 
                 // ── CRITICAL: Fund escrow before task goes live ──
                 // Without this, hustlers could accept tasks that have no money behind them.
@@ -605,7 +604,6 @@ struct AITaskCreationScreen: View {
                     return
                 }
             } catch {
-                print("🔴 [PostTask] Task creation FAILED: \(error)")
                 HXLogger.error("AITaskCreation: API failed - \(error.localizedDescription)", category: "Task")
 
                 postError = error.localizedDescription

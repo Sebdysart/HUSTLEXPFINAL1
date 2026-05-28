@@ -457,8 +457,12 @@ struct LiveRadarScreen: View {
             }
         }
 
+        guard let userId = appState.userId else {
+            HXLogger.error("LiveRadar: Cannot start live mode — userId is nil", category: "LiveMode")
+            return
+        }
         session = liveModeService.startLiveMode(
-            workerId: appState.userId ?? "mock-worker",
+            workerId: userId,
             location: location,
             categories: Array(selectedCategories)
         )

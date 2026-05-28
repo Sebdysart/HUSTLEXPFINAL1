@@ -6,18 +6,21 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct PhoneVerificationScreen: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
-    
+
     @State private var phoneNumber: String = ""
     @State private var verificationCode: String = ""
     @State private var isCodeSent: Bool = false
     @State private var isLoading: Bool = false
     @State private var countdown: Int = 0
+    @State private var verificationID: String? = nil
+    @State private var authError: String? = nil
     @FocusState private var focusedField: Field?
-    
+
     private enum Field {
         case phone, code
     }
@@ -106,6 +109,14 @@ struct PhoneVerificationScreen: View {
                                     )
                                 }
                                 
+                                        if let error = authError {
+                                    Text(error)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(Color.errorRed)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal, 4)
+                                }
+
                                 HXButton(
                                     isLoading ? "Sending..." : "Send Code",
                                     variant: .primary,
@@ -224,22 +235,38 @@ struct PhoneVerificationScreen: View {
     }
     
     private func sendCode() {
+        authError = nil
         isLoading = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isLoading = false
-            withAnimation(.spring(response: 0.5)) {
-                isCodeSent = true
-                focusedField = .code
-                startCountdown()
+        let digits = phoneNumber.filter { $0.isNumber }
+        let e164 = "+1\(digits)"
+        Task {
+            do {
+                let id = try await PhoneAuthProvider.provider().verifyPhoneNumber(e164, uiDelegate: nil)
+                await MainActor.run {
+                    verificationID = id
+                    isLoading = false
+                    withAnimation(.spring(response: 0.5)) {
+                        isCodeSent = true
+                        focusedField = .code
+                        startCountdown()
+                    }
+                }
+                HXLogger.info("PhoneAuth: Code sent to \(e164.prefix(6))****", category: "Auth")
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    authError = friendlyFirebaseError(error)
+                }
+                HXLogger.error("PhoneAuth: verifyPhoneNumber failed — \(error.localizedDescription)", category: "Auth")
             }
         }
     }
-    
+
     private func resendCode() {
-        startCountdown()
+        authError = nil
+        sendCode()
     }
-    
+
     private func startCountdown() {
         countdown = 30
         Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
@@ -250,14 +277,52 @@ struct PhoneVerificationScreen: View {
             }
         }
     }
-    
+
     private func verifyCode() {
+        guard let verificationID else {
+            authError = "Session expired — tap 'Send Code' again."
+            return
+        }
+        authError = nil
         isLoading = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isLoading = false
-            // Move to onboarding after verification
-            appState.login(userId: "mock-user-id", role: .hustler)
+        Task {
+            do {
+                let credential = PhoneAuthProvider.provider().credential(
+                    withVerificationID: verificationID,
+                    verificationCode: verificationCode
+                )
+                let authResult = try await Auth.auth().signIn(with: credential)
+                let idToken = try await authResult.user.getIDToken()
+                TRPCClient.shared.setAuthToken(idToken)
+
+                // Register / fetch user row from backend
+                let profile = try await UserProfileService.shared.fetchMe()
+                await MainActor.run {
+                    isLoading = false
+                    let role: UserRole = profile.role == "poster" ? .poster : .hustler
+                    appState.login(userId: authResult.user.uid, role: role)
+                }
+                HXLogger.info("PhoneAuth: Sign-in complete uid=\(authResult.user.uid.prefix(8))...", category: "Auth")
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    verificationCode = ""
+                    authError = friendlyFirebaseError(error)
+                }
+                HXLogger.error("PhoneAuth: signIn failed — \(error.localizedDescription)", category: "Auth")
+            }
+        }
+    }
+
+    private func friendlyFirebaseError(_ error: Error) -> String {
+        let code = (error as NSError).code
+        switch AuthErrorCode(rawValue: code) {
+        case .invalidPhoneNumber:        return "Invalid phone number. Include area code."
+        case .tooManyRequests:           return "Too many attempts. Try again in a few minutes."
+        case .invalidVerificationCode:   return "Incorrect code. Check your messages and try again."
+        case .sessionExpired:            return "Code expired. Request a new one."
+        case .quotaExceeded:             return "SMS quota exceeded. Contact support."
+        default:                         return error.localizedDescription
         }
     }
 }

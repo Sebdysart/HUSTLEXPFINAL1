@@ -352,15 +352,9 @@ struct HustlerFeedScreen: View {
                     }
                 }
             } catch {
-                HXLogger.error("HustlerFeed: Batch API failed, falling back to mock - \(error.localizedDescription)", category: "Task")
+                HXLogger.error("HustlerFeed: Batch API failed — \(error.localizedDescription)", category: "Task")
+                // No batch recommendation shown on API failure — don't substitute mock data
             }
-
-            // Fallback: use mock batch recommendation
-            batchRecommendation = TaskBatchingService.shared.generateRecommendation(
-                for: firstTask,
-                availableTasks: apiTasks.isEmpty ? dataService.availableTasks : apiTasks,
-                userLocation: coords
-            )
         }
     }
     
