@@ -15,6 +15,7 @@ struct SkillGridSelectionScreen: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedSkills: Set<String> = []       // API UUIDs
+    @State private var originalSkills: Set<String> = []       // snapshot after load, for change detection
     @State private var skillGroups: [SkillGroup] = []
     @State private var expandedGroup: String? = nil            // group categoryName
     @State private var showLicensePrompt: Bool = false
@@ -22,7 +23,18 @@ struct SkillGridSelectionScreen: View {
     @State private var searchText: String = ""
     @State private var verifiedSkillIds: Set<String> = []     // API UUIDs of license-verified skills
     @State private var isLoading: Bool = false
+    @State private var isSaving: Bool = false
     @State private var saveError: String? = nil
+    @State private var showDiscardAlert: Bool = false
+
+    private var hasUnsavedChanges: Bool { selectedSkills != originalSkills }
+
+    private var isSaveEnabled: Bool {
+        if isSettingsMode {
+            return hasUnsavedChanges && !selectedSkills.isEmpty && !isSaving
+        }
+        return !selectedSkills.isEmpty && !isSaving
+    }
 
     private let skillService = SkillService.shared
 
@@ -101,12 +113,39 @@ struct SkillGridSelectionScreen: View {
                 bottomButton
             }
         }
-        .navigationBarBackButtonHidden(false)
-        .navigationTitle("")
+        .navigationBarBackButtonHidden(isSettingsMode)
+        .navigationTitle(isSettingsMode ? "My Skills" : "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.brandBlack, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            if isSettingsMode {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        if hasUnsavedChanges {
+                            showDiscardAlert = true
+                        } else {
+                            dismiss()
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                        }
+                        .foregroundStyle(Color.textPrimary)
+                    }
+                }
+            }
+        }
+        .alert("Unsaved Changes", isPresented: $showDiscardAlert) {
+            Button("Discard", role: .destructive) { dismiss() }
+            Button("Save") { saveAndContinue() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You have unsaved skill changes.")
+        }
         .sheet(isPresented: $showLicensePrompt) {
             if let skill = selectedLicenseSkill {
                 APILicensePromptSheet(
@@ -131,10 +170,16 @@ struct SkillGridSelectionScreen: View {
         isLoading = true
         defer { isLoading = false }
 
-        // Load user's existing skills first (for pre-selection)
-        if let records = try? await skillService.getMySkills() {
-            selectedSkills = Set(records.map { $0.skillId })
+        // Load user's existing skills first (for pre-selection and change detection)
+        do {
+            let records = try await skillService.getMySkills()
+            let ids = Set(records.map { $0.skillId })
+            selectedSkills = ids
+            originalSkills = ids
             verifiedSkillIds = Set(records.filter { $0.licenseVerified }.map { $0.skillId })
+            HXLogger.info("SkillGrid: Pre-loaded \(records.count) existing skills", category: "Skill")
+        } catch {
+            HXLogger.error("SkillGrid: getMySkills failed — \(type(of: error)): \(error)", category: "Skill")
         }
 
         // Load full catalog from API
@@ -396,23 +441,29 @@ struct SkillGridSelectionScreen: View {
 
             Button { saveAndContinue() } label: {
                 HStack(spacing: 8) {
-                    Text(isSettingsMode ? "Save Changes" : "Save Skills")
-                        .font(.system(size: 17, weight: .semibold))
-                        .minimumScaleFactor(0.7)
-                    if !selectedSkills.isEmpty {
-                        Text("(\(selectedSkills.count))")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.7))
+                    if isSaving {
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(0.85)
+                    } else {
+                        Text(isSettingsMode ? "Save Changes" : "Save Skills")
+                            .font(.system(size: 17, weight: .semibold))
+                            .minimumScaleFactor(0.7)
+                        if !selectedSkills.isEmpty {
+                            Text("(\(selectedSkills.count))")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
                     }
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background((!isSettingsMode && selectedSkills.isEmpty) ? Color.textMuted : Color.brandPurple)
+                .background(isSaveEnabled ? Color.brandPurple : Color.textMuted)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .accessibilityLabel("Save selected skills")
-            .disabled(!isSettingsMode && selectedSkills.isEmpty)
+            .disabled(!isSaveEnabled)
             .padding(.horizontal, 20)
         }
         .padding(.vertical, 16)
@@ -454,23 +505,39 @@ struct SkillGridSelectionScreen: View {
     }
 
     private func saveAndContinue() {
+        guard !selectedSkills.isEmpty else {
+            saveError = "Select at least one skill"
+            return
+        }
         saveError = nil
+        isSaving = true
         Task {
+            let skillIds = Array(selectedSkills)
+            HXLogger.info("SkillGrid: Saving \(skillIds.count) skills", category: "Skill")
             do {
-                // selectedSkills are already API UUIDs — safe to send directly
-                let saved = try await skillService.addSkills(skillIds: Array(selectedSkills))
+                let saved = try await skillService.addSkills(skillIds: skillIds)
                 verifiedSkillIds = Set(saved.filter { $0.licenseVerified }.map { $0.skillId })
-                HXLogger.info("SkillGrid: Saved \(saved.count) skills", category: "Skill")
-                if isSettingsMode {
-                    await MainActor.run { dismiss() }
-                } else {
-                    await MainActor.run { router.navigateToOnboarding(.complete) }
+                originalSkills = selectedSkills  // reset change baseline
+                HXLogger.info("SkillGrid: Saved \(saved.count) skills successfully", category: "Skill")
+                await MainActor.run {
+                    isSaving = false
+                    if isSettingsMode { dismiss() }
+                    else { router.navigateToOnboarding(.complete) }
                 }
             } catch {
+                HXLogger.error("SkillGrid: Save failed — \(type(of: error)): \(error)", category: "Skill")
                 await MainActor.run {
-                    saveError = "Couldn't save skills — try again"
+                    isSaving = false
+                    if case APIError.forbidden(let msg) = error {
+                        saveError = "Access denied: \(msg)"
+                    } else if case APIError.serverError(let msg) = error {
+                        saveError = msg
+                    } else if case APIError.unauthorized = error {
+                        saveError = "Session expired — please sign in again"
+                    } else {
+                        saveError = "Couldn't save skills — try again"
+                    }
                 }
-                HXLogger.error("SkillGrid: Save failed — \(error.localizedDescription)", category: "Skill")
             }
         }
     }
