@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored from the backend repo by scripts/sync-trpc-types.sh; do not edit.
+    "types/trpc/**",
   ]),
 ]);
 
