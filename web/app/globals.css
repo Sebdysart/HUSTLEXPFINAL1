@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/*
+ * HustleXP design tokens — mirrored EXACTLY from
+ * hustlexp-docs/reference/constants/colors.js (v3.0.0) + COLOR_SEMANTICS_LAW.md
+ * (CONSTITUTIONAL, effective 2026-01-24).
+ *
+ * BRAND = Black + Purple. NOT green.
+ * COLOR LAW (binding):
+ *  - Purple (#5B2DFF) = brand/identity/energy. Entry screens, CTAs, accents.
+ *  - Green  (#34C759 / money #1FAD7E) = SUCCESS-ONLY. FORBIDDEN on entry/brand
+ *    surfaces — only after a positive outcome (escrow released, money received).
+ *  - Blue   (#007AFF) = info / trust / links.
+ *  - Red    (#FF3B30) = error / live mode.
+ *  - Orange (#FF9500) = warning / XP / gamification.
+ *  - Yellow (#FFD900) = instant mode only.
+ */
+
+:root {
+  /* Brand canvas (identity surfaces) */
+  --brand-black: #0b0b0f;
+  --brand-purple: #5b2dff;
+  --brand-purple-light: #7a4dff;
+  --brand-purple-glow: #8b5cf6;
+  --brand-violet: #a78bfa;
+
+  /* Success / money — STATE ONLY, never on entry */
+  --success-green: #34c759;
+  --money-green: #1fad7e;
+
+  /* Status */
+  --error-red: #ff3b30;
+  --warning-orange: #ff9500;
+  --info-blue: #007aff;
+  --instant-yellow: #ffd900;
+
+  /* Neutrals / text */
+  --text-primary: #ffffff;
+  --text-secondary: #e5e5ea;
+  --text-muted: #8e8e93;
+  --background-black: #000000;
+  --background-elevated: #1c1c1e;
+
+  /* App canvas defaults to the brand black (premium, night-mode native) */
+  --background: var(--brand-black);
+  --foreground: var(--text-primary);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-brand-black: var(--brand-black);
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-purple-light: var(--brand-purple-light);
+  --color-brand-purple-glow: var(--brand-purple-glow);
+  --color-brand-violet: var(--brand-violet);
+
+  --color-success: var(--success-green);
+  --color-money: var(--money-green);
+
+  --color-error: var(--error-red);
+  --color-warning: var(--warning-orange);
+  --color-info: var(--info-blue);
+  --color-instant: var(--instant-yellow);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-elevated: var(--background-elevated);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
