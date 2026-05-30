@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HustleXP — get local tasks done",
+  title: "HustleXP — what can you get done today?",
   description:
-    "Post a task, get it done by a local Hustler. You only pay when the work is approved.",
+    "Hire trusted locals on the Eastside. You only pay when the work is approved.",
 };
 
 export default function RootLayout({
