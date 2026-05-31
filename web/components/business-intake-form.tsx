@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { trpc } from "@/lib/trpc";
 
 /**
- * Business intake form (Roadmap E2).
+ * Business intake form (Roadmap E3).
  *
- * Client-side lead-interest capture for the /business demand-sensing lane.
- * E2 is UI-only: there is NO backend, tRPC, DB, analytics, account creation,
- * or charge. On a valid submit nothing is sent anywhere and nothing is
- * persisted — data lives in component state for this session only, and an
- * honest placeholder confirmation is shown. Backend wiring is E3.
+ * Lead-interest capture for the /business demand-sensing lane. Client-side
+ * validation runs first, then a valid submit calls the public, rate-limited,
+ * compliance-gated business.submitLead tRPC mutation. The lead is stored
+ * backend-side as NEW + requires_review (no auto-approval). There is still NO
+ * account creation, charge, analytics, localStorage, or redirect — nothing is
+ * persisted in the browser and an honest, zero-promise confirmation is shown.
  *
  * HONESTY LAW (stricter for a business buyer): describe MECHANICS only. No
  * forbidden trust claims in rendered copy OR in this source file — a copy grep
@@ -44,7 +46,7 @@ const BUSINESS_TYPES = [
   "Moving & storage operator",
   "Small service business",
   "Other",
-];
+] as const;
 
 const RECURRING_TASK_TYPES = [
   "Event setup",
@@ -55,7 +57,7 @@ const RECURRING_TASK_TYPES = [
   "Cleanup",
   "Inventory runs",
   "Flexible labor support",
-];
+] as const;
 
 const FREQUENCY_OPTIONS = [
   "Daily",
@@ -63,9 +65,14 @@ const FREQUENCY_OPTIONS = [
   "Weekly",
   "Monthly",
   "Occasionally",
-];
+] as const;
 
-const URGENCY_OPTIONS = ["Low", "Normal", "High"];
+const URGENCY_OPTIONS = ["Low", "Normal", "High"] as const;
+
+type BusinessType = (typeof BUSINESS_TYPES)[number];
+type RecurringTaskType = (typeof RECURRING_TASK_TYPES)[number];
+type FrequencyOption = (typeof FREQUENCY_OPTIONS)[number];
+type UrgencyOption = (typeof URGENCY_OPTIONS)[number];
 
 const RISK_FLAGS = [
   { id: "enteringHomes", label: "Entering homes" },
@@ -133,6 +140,9 @@ export function BusinessIntakeForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
+  const submitLead = trpc.business.submitLead.useMutation();
+  const isLoading = submitLead.isPending;
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -146,9 +156,11 @@ export function BusinessIntakeForm() {
     });
   }
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (isLoading) return;
 
     const businessName = form.businessName.trim();
     const contactName = form.contactName.trim();
@@ -195,8 +207,43 @@ export function BusinessIntakeForm() {
       return;
     }
 
-    // E2: no network call, no storage, no analytics. Confirmation is local only.
-    setSubmitted(true);
+    // E3: submit to the public, rate-limited, compliance-gated backend.
+    // No PII is persisted locally, no localStorage, no analytics, no account,
+    // no redirect. avgBudget is collected in whole dollars → cents.
+    const notes = form.notes.trim();
+    try {
+      await submitLead.mutateAsync({
+        businessName,
+        contactName,
+        email,
+        phone: form.phone.trim() || undefined,
+        businessType: businessType as BusinessType,
+        city: form.city.trim() || undefined,
+        zip,
+        recurringTaskTypes: [...taskTypes] as RecurringTaskType[],
+        expectedFrequency: form.frequency
+          ? (form.frequency as FrequencyOption)
+          : undefined,
+        avgBudgetCents: budgetRaw ? parseInt(budgetRaw, 10) * 100 : undefined,
+        urgency: form.urgency ? (form.urgency as UrgencyOption) : undefined,
+        notes: notes || undefined,
+        riskFlags,
+        contactPreference: form.contactPreference,
+      });
+      setSubmitted(true);
+    } catch (err: unknown) {
+      const code =
+        (err as { data?: { code?: string } } | undefined)?.data?.code ?? "";
+      if (code === "TOO_MANY_REQUESTS") {
+        setError("Too many attempts. Try again shortly.");
+      } else if (code === "BAD_REQUEST") {
+        setError(
+          "This request cannot be submitted because HustleXP only supports legal, reviewable local task demand.",
+        );
+      } else {
+        setError("We couldn't submit this right now. Try again later.");
+      }
+    }
   }
 
   if (submitted) {
@@ -210,8 +257,9 @@ export function BusinessIntakeForm() {
           Interest registered
         </p>
         <p className="mt-3 text-base text-info">
-          Thanks — this form is ready for review wiring in the next step. No
-          account created, nothing submitted, and nothing charged.
+          Thanks — we received your business registration interest. We&apos;ll
+          review it before any access is granted. No account created and nothing
+          charged.
         </p>
       </div>
     );
@@ -446,9 +494,10 @@ export function BusinessIntakeForm() {
 
       <button
         type="submit"
-        className="inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_10px_40px_-15px_rgba(91,45,255,0.8)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow sm:w-auto sm:self-start"
+        disabled={isLoading}
+        className="inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_10px_40px_-15px_rgba(91,45,255,0.8)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:self-start"
       >
-        Register interest
+        {isLoading ? "Submitting…" : "Register interest"}
       </button>
 
       {error && (
