@@ -1,6 +1,7 @@
 import { FunnelForm } from "@/components/funnel-form";
 import { PageView } from "@/components/page-view";
 import { HeroAurora } from "@/components/hero-aurora";
+import { ProductPreview } from "@/components/product-preview";
 
 /**
  * Public Poster funnel homepage (C3).
@@ -76,35 +77,8 @@ export default function Home() {
           </p>
         </section>
 
-        {/* How it works — a numbered process rail, not another card grid. */}
-        <section
-          aria-labelledby="how"
-          className="mx-auto w-full max-w-5xl border-t border-white/5 px-6 py-16 sm:py-20"
-        >
-          <h2
-            id="how"
-            className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted"
-          >
-            How it works
-          </h2>
-          <ol className="mt-8 grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-3">
-            <Step
-              n="1"
-              title="Describe the task"
-              body="Tell us what you need done and get an AI-suggested price and time. The final price is yours."
-            />
-            <Step
-              n="2"
-              title="Funds go into escrow"
-              body="Your payment is held in escrow when you dispatch — nothing releases before the work is reviewed."
-            />
-            <Step
-              n="3"
-              title="Approve, then release"
-              body="A Hustler submits photo or video proof. Funds release only after you approve it."
-            />
-          </ol>
-        </section>
+        {/* Product preview — clearly-labeled example of the task flow. */}
+        <ProductPreview />
 
         {/* Trust mechanics — a lighter inline band, distinct from the steps above. */}
         <section
@@ -148,20 +122,6 @@ export default function Home() {
         </p>
       </footer>
     </div>
-  );
-}
-
-function Step({ n, title, body }: { n: string; title: string; body: string }) {
-  return (
-    <li className="relative flex flex-col gap-3">
-      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-brand-purple/40 bg-brand-purple/10 font-mono text-base font-semibold text-brand-purple-glow">
-        {n}
-      </span>
-      <div>
-        <p className="text-base font-semibold text-text-primary">{title}</p>
-        <p className="mt-1 text-sm text-text-secondary">{body}</p>
-      </div>
-    </li>
   );
 }
 
