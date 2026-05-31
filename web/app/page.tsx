@@ -1,4 +1,5 @@
 import { FunnelForm } from "@/components/funnel-form";
+import { PageView } from "@/components/page-view";
 
 /**
  * Public Poster funnel homepage (C3).
@@ -19,6 +20,7 @@ import { FunnelForm } from "@/components/funnel-form";
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
+      <PageView event="landing_view" />
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
         <span className="font-mono text-sm font-semibold tracking-tight text-text-primary">
           HustleXP

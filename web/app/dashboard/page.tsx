@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword, type AuthError } from "firebase/auth";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -12,6 +13,8 @@ import {
 import { firebaseAuth } from "@/lib/firebase";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/providers/auth-provider";
+import { capture } from "@/lib/analytics";
+import { PageView } from "@/components/page-view";
 
 // C8: Poster dashboard shell.
 //
@@ -135,6 +138,7 @@ function DashboardBody() {
 
   return (
     <main className="mx-auto max-w-5xl p-6 text-text-primary sm:p-8">
+      <PageView event="dashboard_viewed" source_page="/dashboard" />
       <header className="mb-6">
         <h1 className="text-2xl font-semibold">Your tasks</h1>
         <p className="mt-1 text-sm text-text-muted">
@@ -225,6 +229,20 @@ function TaskDetail({ taskId }: { taskId: string }) {
     { taskId },
     { retry: false },
   );
+
+  // Fire once per distinct task whose detail resolves. Keyed on taskId so
+  // switching tasks re-fires, but re-renders for the same task don't.
+  const detailViewedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!taskQuery.data) return;
+    if (detailViewedRef.current === taskId) return;
+    detailViewedRef.current = taskId;
+    capture("task_detail_viewed", {
+      task_id: taskId,
+      escrow_state: escrowQuery.data?.state,
+      authenticated: true,
+    });
+  }, [taskId, taskQuery.data, escrowQuery.data]);
 
   if (taskQuery.isLoading) {
     return <p className="text-sm text-text-muted">Loading task…</p>;

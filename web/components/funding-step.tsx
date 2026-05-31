@@ -6,6 +6,7 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 import type { Stripe, StripeElementsOptions } from "@stripe/stripe-js";
 import { trpc } from "@/lib/trpc";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
+import { capture } from "@/lib/analytics";
 
 // C7: Stripe Elements funding step. Mounts inside the post-create panel of
 // dispatch-section.tsx once task.create has returned a task id.
@@ -154,6 +155,7 @@ export function FundingStep({
           createdAt: new Date().toISOString(),
         });
         setPhase("collecting");
+        capture("payment_intent_created", { task_id: taskId });
       })
       .catch((err: unknown) => {
         const code = (err as { data?: { code?: string } } | undefined)?.data
@@ -239,9 +241,13 @@ export function FundingStep({
       const stored = readPersistedFunding();
       if (stored) writePersistedFunding({ ...stored, status: "funded" });
       setPhase("funded");
+      capture("payment_funded_backend", {
+        task_id: taskId,
+        escrow_state: "FUNDED",
+      });
       onFunded();
     }
-  }, [phase, getByTaskIdQuery.data, onFunded]);
+  }, [phase, getByTaskIdQuery.data, onFunded, taskId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // After POLL_DEADLINE_MS in polling without FUNDED, fire confirmFunding once
@@ -275,9 +281,15 @@ export function FundingStep({
           void getByTaskIdQuery.refetch();
         })
         .catch((err: unknown) => {
+          const code = (err as { data?: { code?: string } } | undefined)?.data
+            ?.code;
           const msg =
             (err as { message?: string } | undefined)?.message ??
             "Payment received but funding is still settling. Refresh in a moment.";
+          capture("payment_failed", {
+            task_id: taskId,
+            error_code: code || undefined,
+          });
           setErrorMessage(msg);
           // Stay in 'polling' for one more refetch attempt before giving up.
           window.setTimeout(() => {
@@ -294,6 +306,7 @@ export function FundingStep({
     paymentIntentId,
     confirmFundingMutation,
     getByTaskIdQuery,
+    taskId,
   ]);
 
   const elementsOptions: StripeElementsOptions | null = useMemo(() => {
@@ -394,8 +407,15 @@ export function FundingStep({
             setPhase("confirming");
             const stored = readPersistedFunding();
             if (stored) writePersistedFunding({ ...stored, status: "confirming" });
+            capture("payment_started", {
+              task_id: taskId,
+              task_price_cents: priceCents,
+            });
           }}
-          onPaymentReceived={() => setPhase("polling")}
+          onPaymentReceived={() => {
+            capture("payment_succeeded_client", { task_id: taskId });
+            setPhase("polling");
+          }}
           onError={(msg) => {
             setErrorMessage(msg);
             setPhase("error");
@@ -445,6 +465,7 @@ function PaymentForm({
       redirect: "if_required",
     });
     if (error) {
+      capture("payment_failed", { error_code: error.code });
       onError(error.message ?? "Payment could not be confirmed. Please try a different card.");
       return;
     }
@@ -455,6 +476,9 @@ function PaymentForm({
       onPaymentReceived();
       return;
     }
+    capture("payment_failed", {
+      error_code: paymentIntent?.status ?? "unknown",
+    });
     onError(`Payment is in state ${paymentIntent?.status ?? "unknown"}; please try again.`);
   }
 

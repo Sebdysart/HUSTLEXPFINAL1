@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { trpc } from "@/lib/trpc";
+import { capture } from "@/lib/analytics";
 import { LocalAvailability } from "@/components/local-availability";
 import { DispatchSection } from "@/components/dispatch-section";
 import {
@@ -178,6 +179,11 @@ export function FunnelForm({
     null,
   );
 
+  // One-shot analytics guards: fire each funnel-entry event at most once per
+  // mounted form so React Strict Mode / re-renders don't double-count.
+  const inputStartedRef = useRef(false);
+  const zipTrackedRef = useRef(false);
+
   const draftEstimate = trpc.task.draftEstimate.useMutation();
 
   // Restore a saved draft on mount.
@@ -243,6 +249,11 @@ export function FunnelForm({
       ? CHIP_TO_BACKEND_SLUG[category]
       : undefined;
 
+    capture("draft_estimate_started", {
+      city_or_zip: zip,
+      category: backendCategory,
+    });
+
     try {
       const response = await draftEstimate.mutateAsync({
         description: trimmedTask,
@@ -252,6 +263,11 @@ export function FunnelForm({
       setResult(response);
       setSavedBackendCategory(backendCategory);
       setSavedZip(zip);
+      capture("draft_estimate_succeeded", {
+        city_or_zip: zip,
+        category: backendCategory,
+        task_price_cents: response.recommendedPriceCents,
+      });
       try {
         window.localStorage.setItem(
           DRAFT_STORAGE_KEY,
@@ -275,6 +291,10 @@ export function FunnelForm({
       const message =
         (err as { message?: string } | undefined)?.message ??
         "Something went wrong. Try again in a moment.";
+      capture("draft_estimate_failed", {
+        city_or_zip: zip,
+        error_code: code || undefined,
+      });
       if (code === "TOO_MANY_REQUESTS") {
         setError(
           "You've made a lot of requests — try again in a minute.",
@@ -479,7 +499,14 @@ export function FunnelForm({
           name="task"
           rows={3}
           value={task}
-          onChange={(e) => setTask(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            setTask(next);
+            if (next.trim().length > 0 && !inputStartedRef.current) {
+              inputStartedRef.current = true;
+              capture("task_input_started");
+            }
+          }}
           placeholder="What do you need done? e.g., move a couch from my apartment to a storage unit"
           className="w-full resize-none rounded-2xl border border-white/10 bg-elevated px-5 py-4 text-base text-text-primary placeholder:text-text-muted focus:border-brand-purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple sm:rows-2 sm:text-lg"
         />
@@ -498,7 +525,14 @@ export function FunnelForm({
           pattern="[0-9]{5}"
           maxLength={5}
           value={zip}
-          onChange={(e) => setZip(e.target.value.replace(/\D/g, ""))}
+          onChange={(e) => {
+            const next = e.target.value.replace(/\D/g, "");
+            setZip(next);
+            if (next.length === 5 && !zipTrackedRef.current) {
+              zipTrackedRef.current = true;
+              capture("zip_entered", { city_or_zip: next });
+            }
+          }}
           placeholder="ZIP code"
           className="w-full rounded-xl border border-white/10 bg-elevated px-4 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple sm:w-40"
         />
@@ -517,7 +551,11 @@ export function FunnelForm({
                 key={c.id}
                 type="button"
                 aria-pressed={selected}
-                onClick={() => setCategory(selected ? null : c.id)}
+                onClick={() => {
+                  const next = selected ? null : c.id;
+                  setCategory(next);
+                  if (next) capture("category_selected", { category: next });
+                }}
                 className={
                   "rounded-full border px-4 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple " +
                   (selected

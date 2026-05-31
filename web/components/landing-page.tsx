@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FunnelForm, type CategoryId } from "@/components/funnel-form";
+import { PageView } from "@/components/page-view";
 
 /**
  * Reusable local/category landing page template (C9).
@@ -47,6 +48,7 @@ export function LandingPage({
 }) {
   return (
     <div className="flex flex-1 flex-col">
+      <PageView event="landing_view" />
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
         <Link
           href="/"

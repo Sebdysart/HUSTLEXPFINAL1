@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
+import { capture } from "@/lib/analytics";
 
 const CATEGORY_LABELS: Record<string, string> = {
   standard_physical: "Physical / muscle work",
@@ -38,6 +40,16 @@ export function LocalAvailability({
       retry: false,
     },
   );
+
+  // Fire once when the availability signal first resolves for this ZIP (data or
+  // honest empty-state). Ref-guarded so re-renders don't double-count.
+  const viewedRef = useRef(false);
+  useEffect(() => {
+    if (viewedRef.current) return;
+    if (!enabled || !query.data) return;
+    viewedRef.current = true;
+    capture("local_availability_viewed", { city_or_zip: zip });
+  }, [enabled, query.data, zip]);
 
   if (!enabled) return null;
 

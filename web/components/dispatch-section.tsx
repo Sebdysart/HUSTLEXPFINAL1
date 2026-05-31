@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -10,6 +10,7 @@ import { firebaseAuth, getIdToken } from "@/lib/firebase";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/providers/auth-provider";
 import { FundingStep } from "@/components/funding-step";
+import { capture } from "@/lib/analytics";
 
 // C6: Dispatch section. Lives at the bottom of the C4 result panel.
 //
@@ -104,6 +105,12 @@ export function DispatchSection({
         await updateProfileMutation.mutateAsync({ defaultMode: "poster" });
       }
 
+      capture("task_create_started", {
+        category: draft.templateSlug,
+        task_price_cents: draft.recommendedPriceCents,
+        city_or_zip: draft.zip,
+      });
+
       const task = await createTaskMutation.mutateAsync({
         title: draft.title.slice(0, 255),
         description: draft.cleanedDescription,
@@ -116,6 +123,12 @@ export function DispatchSection({
       const created = { id: task.id, title: task.title ?? draft.title };
       setCreatedTask(created);
       setPhase("created");
+      capture("task_create_succeeded", {
+        task_id: task.id,
+        task_price_cents: draft.recommendedPriceCents,
+        category: draft.templateSlug,
+        authenticated: true,
+      });
       try {
         window.localStorage.setItem(
           CREATED_TASK_STORAGE_KEY,
@@ -131,6 +144,7 @@ export function DispatchSection({
         "Couldn't dispatch the task. Try again in a moment.";
       const code =
         (err as { data?: { code?: string } } | undefined)?.data?.code ?? "";
+      capture("task_create_failed", { error_code: code || undefined });
       if (code === "FORBIDDEN") {
         setDispatchError(
           "Your account isn't set up as a Poster yet. Try signing out and back in.",
@@ -175,6 +189,7 @@ export function DispatchSection({
           onClick={() => {
             setDispatchError(null);
             setPhase("auth");
+            capture("dispatch_clicked", { authenticated: !!user });
           }}
           disabled={authLoading}
           className="inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-6 py-3 text-base font-semibold text-text-primary shadow-[0_10px_40px_-15px_rgba(91,45,255,0.8)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
@@ -234,6 +249,7 @@ function AuthGate({
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const termsTrackedRef = useRef(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -259,11 +275,13 @@ function AuthGate({
           return;
         }
       }
+      capture("signup_started", { authenticated: false });
       setBusy(true);
       try {
         if (mode === "signup") {
           setStoredDOB(dob);
           await createUserWithEmailAndPassword(firebaseAuth(), email, password);
+          capture("signup_completed", { authenticated: true });
         } else {
           await signInWithEmailAndPassword(firebaseAuth(), email, password);
         }
@@ -393,7 +411,13 @@ function AuthGate({
           type="checkbox"
           required
           checked={agreed}
-          onChange={(e) => setAgreed(e.target.checked)}
+          onChange={(e) => {
+            setAgreed(e.target.checked);
+            if (e.target.checked && !termsTrackedRef.current) {
+              termsTrackedRef.current = true;
+              capture("terms_accepted");
+            }
+          }}
           className="mt-0.5 h-4 w-4 rounded border-white/25 bg-elevated text-brand-purple focus:ring-brand-purple"
         />
         <span>I agree to the Terms and Privacy Policy</span>
