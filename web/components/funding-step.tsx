@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import type { Stripe, StripeElementsOptions } from "@stripe/stripe-js";
@@ -332,6 +333,12 @@ export function FundingStep({
           You&apos;ll get an update when a Hustler accepts. Funds stay in escrow
           until you approve the proof.
         </p>
+        <Link
+          href="/dashboard"
+          className="mt-3 inline-flex items-center justify-center rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-text-secondary transition hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
+        >
+          View task dashboard
+        </Link>
       </div>
     );
   }
