@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { trpc } from "@/lib/trpc";
 
+// Front-of-funnel chip IDs. These are designed for the homepage and do NOT
+// match backend template slugs 1:1 — many real tasks (dump runs, errands,
+// yard work, event setup, assembly) all collapse onto the small set of
+// backend templates the manifest exposes. Mapping is explicit below so the
+// procedure only ever receives a slug it accepts.
 const CATEGORIES = [
   { id: "moving", label: "Moving help" },
   { id: "assembly", label: "Furniture assembly" },
@@ -12,6 +18,18 @@ const CATEGORIES = [
 ] as const;
 
 type CategoryId = (typeof CATEGORIES)[number]["id"];
+
+// Maps homepage chip → backend template slug from getManifest().
+// Anything not in the manifest goes to standard_physical, the default
+// muscle-work template — the safest fallback for a poster funnel.
+const CHIP_TO_BACKEND_SLUG: Record<CategoryId, string> = {
+  moving: "standard_physical",
+  assembly: "in_home",
+  dump: "standard_physical",
+  yard: "standard_physical",
+  errands: "standard_physical",
+  event: "event_appearance",
+};
 
 // Eastside-only beta zips. Honest scope — if a Poster's zip isn't here,
 // we say so directly instead of pretending to serve them.
@@ -28,23 +46,108 @@ const EASTSIDE_ZIPS = new Set([
   "98027", "98029",
 ]);
 
+const DRAFT_STORAGE_KEY = "hustlexp.draft.v1";
+const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+type DraftResult = {
+  title: string;
+  cleanedDescription: string;
+  category: string;
+  recommendedPriceCents: number;
+  estimatedDurationMinutes: number;
+  requiredTools: string[];
+  urgency: "low" | "normal" | "high";
+  safetyNotes: string[];
+  followUpQuestions: string[];
+};
+
+type PersistedDraft = {
+  input: { description: string; category?: string; zip?: string };
+  result: DraftResult;
+  createdAt: string;
+};
+
+function readPersistedDraft(): PersistedDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedDraft;
+    if (
+      !parsed?.result ||
+      typeof parsed.result.recommendedPriceCents !== "number" ||
+      typeof parsed.createdAt !== "string"
+    ) {
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      return null;
+    }
+    const ageMs = Date.now() - new Date(parsed.createdAt).getTime();
+    if (!Number.isFinite(ageMs) || ageMs > DRAFT_TTL_MS) {
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    return null;
+  }
+}
+
+function formatPrice(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} hr` : `${hours} hr ${rest} min`;
+}
+
 export function FunnelForm() {
   const [task, setTask] = useState("");
   const [zip, setZip] = useState("");
   const [category, setCategory] = useState<CategoryId | null>(null);
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<DraftResult | null>(null);
+
+  const draftEstimate = trpc.task.draftEstimate.useMutation();
+
+  // Restore a saved draft on mount.
+  //
+  // useEffect is the right tool here even though the lint rule discourages
+  // setState in an effect: localStorage is only available client-side, and
+  // doing this in a useState lazy initializer would cause an SSR/CSR
+  // hydration mismatch (server renders an empty form, client a populated one).
+  // React's docs explicitly recommend exactly this pattern for hydrating
+  // from a client-only store.
+  useEffect(() => {
+    const persisted = readPersistedDraft();
+    if (!persisted) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setTask(persisted.input.description);
+    setZip(persisted.input.zip ?? "");
+    const chip = CATEGORIES.find(
+      (c) => CHIP_TO_BACKEND_SLUG[c.id] === persisted.input.category,
+    );
+    if (chip) setCategory(chip.id);
+    setResult(persisted.result);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
 
   const trimmedTask = task.trim();
   const zipLooksValid = /^\d{5}$/.test(zip);
-  const canSubmit = trimmedTask.length >= 3 && zipLooksValid;
+  const canSubmit = trimmedTask.length >= 8 && zipLooksValid;
+  const isLoading = draftEstimate.isPending;
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
     if (!canSubmit) {
-      setError("Add a short description and a 5-digit ZIP.");
+      setError(
+        "Add a description (at least 8 characters) and a 5-digit ZIP.",
+      );
       return;
     }
     if (!EASTSIDE_ZIPS.has(zip)) {
@@ -54,12 +157,68 @@ export function FunnelForm() {
       return;
     }
 
-    setSubmitted(true);
+    const backendCategory = category
+      ? CHIP_TO_BACKEND_SLUG[category]
+      : undefined;
+
+    try {
+      const response = await draftEstimate.mutateAsync({
+        description: trimmedTask,
+        category: backendCategory,
+        zip,
+      });
+      setResult(response);
+      try {
+        window.localStorage.setItem(
+          DRAFT_STORAGE_KEY,
+          JSON.stringify({
+            input: {
+              description: trimmedTask,
+              category: backendCategory,
+              zip,
+            },
+            result: response,
+            createdAt: new Date().toISOString(),
+          } satisfies PersistedDraft),
+        );
+      } catch {
+        // localStorage may be unavailable (private mode quota); the draft
+        // still renders in-memory for this session.
+      }
+    } catch (err: unknown) {
+      const code =
+        (err as { data?: { code?: string } } | undefined)?.data?.code ?? "";
+      const message =
+        (err as { message?: string } | undefined)?.message ??
+        "Something went wrong. Try again in a moment.";
+      if (code === "TOO_MANY_REQUESTS") {
+        setError(
+          "You've made a lot of requests — try again in a minute.",
+        );
+      } else if (code === "SERVICE_UNAVAILABLE") {
+        setError(
+          "Our estimator is taking a breath — please try in a bit.",
+        );
+      } else {
+        setError(message);
+      }
+    }
   }
 
-  if (submitted) {
-    const selectedLabel =
-      CATEGORIES.find((c) => c.id === category)?.label ?? "Uncategorized";
+  function onStartOver() {
+    setResult(null);
+    setError(null);
+    setTask("");
+    setZip("");
+    setCategory(null);
+    try {
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }
+
+  if (result) {
     return (
       <div
         role="status"
@@ -67,34 +226,97 @@ export function FunnelForm() {
         className="rounded-2xl border border-brand-purple/40 bg-elevated/60 p-5 text-left shadow-[0_0_60px_-30px_rgba(91,45,255,0.6)]"
       >
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-purple-glow">
-          Generating estimate…
+          Estimate
         </p>
-        <dl className="mt-3 space-y-2 text-sm text-text-secondary">
+        <h2 className="mt-2 text-xl font-semibold text-text-primary">
+          {result.title}
+        </h2>
+        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
           <div>
-            <dt className="text-text-muted">Task</dt>
-            <dd className="text-text-primary">{trimmedTask}</dd>
+            <dt className="text-text-muted">Recommended price</dt>
+            <dd className="text-text-primary font-medium">
+              {formatPrice(result.recommendedPriceCents)}
+            </dd>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <dt className="text-text-muted">ZIP</dt>
-              <dd className="text-text-primary">{zip}</dd>
-            </div>
-            <div>
-              <dt className="text-text-muted">Category</dt>
-              <dd className="text-text-primary">{selectedLabel}</dd>
-            </div>
+          <div>
+            <dt className="text-text-muted">Estimated duration</dt>
+            <dd className="text-text-primary font-medium">
+              {formatDuration(result.estimatedDurationMinutes)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-text-muted">Category</dt>
+            <dd className="text-text-primary">{result.category}</dd>
+          </div>
+          <div>
+            <dt className="text-text-muted">Urgency</dt>
+            <dd className="text-text-primary capitalize">{result.urgency}</dd>
           </div>
         </dl>
+
+        <div className="mt-4">
+          <p className="text-text-muted text-xs uppercase tracking-wide">
+            Cleaned description
+          </p>
+          <p className="mt-1 text-text-secondary text-sm">
+            {result.cleanedDescription}
+          </p>
+        </div>
+
+        {result.requiredTools.length > 0 && (
+          <div className="mt-4">
+            <p className="text-text-muted text-xs uppercase tracking-wide">
+              Likely tools
+            </p>
+            <ul className="mt-1 flex flex-wrap gap-2 text-sm text-text-secondary">
+              {result.requiredTools.map((tool) => (
+                <li
+                  key={tool}
+                  className="rounded-full border border-white/10 bg-elevated px-3 py-1"
+                >
+                  {tool}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {result.safetyNotes.length > 0 && (
+          <div className="mt-4">
+            <p className="text-text-muted text-xs uppercase tracking-wide">
+              Safety notes
+            </p>
+            <ul className="mt-1 list-disc pl-5 text-sm text-text-secondary">
+              {result.safetyNotes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {result.followUpQuestions.length > 0 && (
+          <div className="mt-4">
+            <p className="text-text-muted text-xs uppercase tracking-wide">
+              Before you post
+            </p>
+            <ul className="mt-1 list-disc pl-5 text-sm text-text-secondary">
+              {result.followUpQuestions.map((q) => (
+                <li key={q}>{q}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <p className="mt-4 text-xs text-text-muted">
-          Live AI estimates land in the next update. Your details are saved in
-          this browser.
+          Estimates are AI-generated suggestions. Final price is yours.
         </p>
+
         <button
           type="button"
-          onClick={() => setSubmitted(false)}
+          onClick={onStartOver}
           className="mt-4 rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-text-secondary hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
         >
-          Edit
+          Start over
         </button>
       </div>
     );
@@ -170,10 +392,11 @@ export function FunnelForm() {
 
       <button
         type="submit"
-        disabled={!canSubmit}
+        disabled={!canSubmit || isLoading}
+        aria-busy={isLoading}
         className="mt-1 inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_10px_40px_-15px_rgba(91,45,255,0.8)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:self-start"
       >
-        Get estimate
+        {isLoading ? "Estimating…" : "Get estimate"}
       </button>
 
       {error && (
