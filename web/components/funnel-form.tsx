@@ -4,6 +4,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { trpc } from "@/lib/trpc";
 import { LocalAvailability } from "@/components/local-availability";
 import { DispatchSection } from "@/components/dispatch-section";
+import {
+  FUNDING_STORAGE_KEY,
+  readPersistedFunding,
+  type PersistedFunding,
+} from "@/components/funding-step";
 
 // Front-of-funnel chip IDs. These are designed for the homepage and do NOT
 // match backend template slugs 1:1 — many real tasks (dump runs, errands,
@@ -49,7 +54,39 @@ const EASTSIDE_ZIPS = new Set([
 ]);
 
 const DRAFT_STORAGE_KEY = "hustlexp.draft.v1";
+const CREATED_TASK_STORAGE_KEY = "hustlexp.lastTaskId.v1";
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+type PersistedLastTask = {
+  id: string;
+  createdAt: string;
+};
+
+function readPersistedLastTask(): PersistedLastTask | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(CREATED_TASK_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedLastTask;
+    if (!parsed?.id || !parsed?.createdAt) {
+      window.localStorage.removeItem(CREATED_TASK_STORAGE_KEY);
+      return null;
+    }
+    const ageMs = Date.now() - new Date(parsed.createdAt).getTime();
+    if (!Number.isFinite(ageMs) || ageMs > DRAFT_TTL_MS) {
+      window.localStorage.removeItem(CREATED_TASK_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    try {
+      window.localStorage.removeItem(CREATED_TASK_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }
+}
 
 type DraftResult = {
   title: string;
@@ -117,6 +154,13 @@ export function FunnelForm() {
   >(undefined);
   const [savedZip, setSavedZip] = useState<string>("");
   const [taskCreated, setTaskCreated] = useState(false);
+  const [resumeCreated, setResumeCreated] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [resumeFunding, setResumeFunding] = useState<PersistedFunding | null>(
+    null,
+  );
 
   const draftEstimate = trpc.task.draftEstimate.useMutation();
 
@@ -141,6 +185,18 @@ export function FunnelForm() {
     );
     if (chip) setCategory(chip.id);
     setResult(persisted.result);
+
+    // C7 resume: if a funding session is in flight for the last-created task,
+    // land back in the post-create panel with the FundingStep ready to
+    // continue. The persisted entries are matched by task id so a stale
+    // session from a different task can't hijack the resume.
+    const lastTask = readPersistedLastTask();
+    const funding = readPersistedFunding();
+    if (lastTask && funding && funding.taskId === lastTask.id && funding.status !== "funded") {
+      setResumeCreated({ id: lastTask.id, title: persisted.result.title });
+      setResumeFunding(funding);
+      setTaskCreated(true);
+    }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
@@ -226,21 +282,38 @@ export function FunnelForm() {
     setSavedBackendCategory(undefined);
     setSavedZip("");
     setTaskCreated(false);
+    setResumeCreated(null);
+    setResumeFunding(null);
+    // Start Over is the user's explicit reset — clear ALL session storage so
+    // they don't get resumed back into a stale funding flow.
     try {
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      window.localStorage.removeItem(CREATED_TASK_STORAGE_KEY);
+      window.localStorage.removeItem(FUNDING_STORAGE_KEY);
     } catch {
       // ignore
     }
   }
 
-  // Called from <DispatchSection> only after task.create succeeds. The draft
-  // is intentionally NOT cleared before this — if anything in the dispatch
-  // pipeline (auth, register, role flip, task.create) fails, the user keeps
-  // their estimate and can retry without re-typing.
+  // Called from <DispatchSection> after task.create succeeds. C7: the draft
+  // is intentionally NOT cleared yet — funding hasn't happened. The draft
+  // and lastTaskId persist through the funding step so a refresh mid-payment
+  // resumes coherently.
   function onTaskCreated() {
     setTaskCreated(true);
+  }
+
+  // Called from <DispatchSection> → <FundingStep> after the backend confirms
+  // escrow state === 'FUNDED'. Only NOW is it safe to clear the draft and
+  // the funding session storage — the user has reached the terminal happy
+  // state for this task.
+  function onTaskFunded() {
     try {
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      window.localStorage.removeItem(FUNDING_STORAGE_KEY);
+      // Intentionally KEEP CREATED_TASK_STORAGE_KEY so future visits know the
+      // task exists. Clearing the funding session is enough — the funded
+      // panel will render via the FundingStep's terminal 'funded' phase.
     } catch {
       // ignore
     }
@@ -349,6 +422,17 @@ export function FunnelForm() {
             templateSlug: savedBackendCategory,
           }}
           onCreated={onTaskCreated}
+          onFunded={onTaskFunded}
+          resumeCreated={resumeCreated ?? undefined}
+          resumeFunding={
+            resumeFunding
+              ? {
+                  escrowId: resumeFunding.escrowId,
+                  paymentIntentId: resumeFunding.paymentIntentId,
+                  clientSecret: resumeFunding.clientSecret,
+                }
+              : undefined
+          }
         />
 
         {!taskCreated && (

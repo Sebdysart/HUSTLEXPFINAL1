@@ -9,6 +9,7 @@ import {
 import { firebaseAuth, getIdToken } from "@/lib/firebase";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/providers/auth-provider";
+import { FundingStep } from "@/components/funding-step";
 
 // C6: Dispatch section. Lives at the bottom of the C4 result panel.
 //
@@ -45,13 +46,27 @@ const CREATED_TASK_STORAGE_KEY = "hustlexp.lastTaskId.v1";
 export function DispatchSection({
   draft,
   onCreated,
+  onFunded,
+  resumeCreated,
+  resumeFunding,
 }: {
   draft: DispatchDraft;
   onCreated: (task: CreatedTask) => void;
+  onFunded?: () => void;
+  resumeCreated?: CreatedTask;
+  resumeFunding?: {
+    escrowId: string;
+    paymentIntentId: string;
+    clientSecret: string;
+  };
 }) {
   const { user, loading: authLoading } = useAuth();
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [createdTask, setCreatedTask] = useState<CreatedTask | null>(null);
+  const [phase, setPhase] = useState<Phase>(
+    resumeCreated ? "created" : "idle",
+  );
+  const [createdTask, setCreatedTask] = useState<CreatedTask | null>(
+    resumeCreated ?? null,
+  );
   const [dispatchError, setDispatchError] = useState<string | null>(null);
 
   const registerMutation = trpc.user.register.useMutation();
@@ -129,9 +144,9 @@ export function DispatchSection({
 
   if (phase === "created" && createdTask) {
     return (
-      <div className="mt-6 rounded-2xl border border-success-green/40 bg-elevated/60 p-5 text-left">
+      <div className="mt-6 rounded-2xl border border-brand-purple/40 bg-elevated/60 p-5 text-left">
         <p
-          className="text-sm font-semibold uppercase tracking-wide text-success-green"
+          className="text-sm font-semibold uppercase tracking-wide text-brand-purple-glow"
           role="status"
           aria-live="polite"
         >
@@ -140,13 +155,14 @@ export function DispatchSection({
         <h3 className="mt-2 text-lg font-semibold text-text-primary">
           {createdTask.title}
         </h3>
-        <p className="mt-2 text-sm text-text-secondary">
-          Task draft created. Secure payment is next.
-        </p>
-        <p className="mt-3 text-xs text-text-muted">
-          Funding opens up in the next step. Nothing has been charged and no
-          Hustler has been notified yet.
-        </p>
+        <FundingStep
+          taskId={createdTask.id}
+          priceCents={draft.recommendedPriceCents}
+          onFunded={() => {
+            onFunded?.();
+          }}
+          resumeFrom={resumeFunding}
+        />
       </div>
     );
   }
