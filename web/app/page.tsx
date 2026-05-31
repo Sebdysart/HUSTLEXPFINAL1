@@ -1,127 +1,231 @@
+import Link from "next/link";
 import { FunnelForm } from "@/components/funnel-form";
 import { PageView } from "@/components/page-view";
 import { HeroAurora } from "@/components/hero-aurora";
 import { ProductPreview } from "@/components/product-preview";
+import {
+  EscrowIcon,
+  ProofIcon,
+  ChecklistIcon,
+  MapDotIcon,
+} from "@/components/hx-icons";
 
 /**
- * Public Poster funnel homepage (C3).
+ * Public Poster funnel homepage (C3) — full-width premium rebuild.
  *
- * Server-rendered for SEO + fast LCP. The interactive form is the only
- * client island (components/funnel-form.tsx).
+ * Server-rendered for SEO + fast LCP. The interactive form is the only client
+ * island (components/funnel-form.tsx) and its behavior is untouched here —
+ * page.tsx only owns layout, composition, and presentation.
  *
- * COLOR LAW: entry surface → Black + Purple brand only.
- * - Green is FORBIDDEN here (success-state only).
- * - Blue (info) is the trust-line accent.
- * - Purple is the CTA / brand accent.
+ * Layout: sticky premium nav → two-column hero (copy left, the task funnel as an
+ * elevated product card right) → wide product-preview strip → trust band.
+ * Content lives in a 1280px shell with full-bleed gradient/aurora behind it so
+ * the page fills the viewport instead of stranding a narrow centered column.
  *
- * HONESTY LAW: no fake liquidity, no fake completed-task counts, no fake
- * response times, no "background-checked" copy until Checkr is live, no
- * insurance / self-protection claims. Trust bullets describe mechanics
- * that ARE real (escrow, proof-before-release, TrustTierService).
+ * COLOR LAW: entry surface → black + purple/violet + info-blue + white only.
+ * Green is success-state only and never appears here.
  *
- * Motion: decorative CSS-only entrance/aurora (globals.css), disabled under
- * prefers-reduced-motion. No behavior, no data, no new dependencies.
+ * HONESTY LAW: no fake liquidity, counts, response times, testimonials, logos,
+ * or "background-checked"/insurance claims. Every trust line is a real mechanic
+ * (escrow, proof-before-release, manual review). Live numbers only ever come
+ * from the backend via <LocalAvailability> inside the funnel.
  */
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
       <PageView event="landing_view" />
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-        <span className="font-mono text-sm font-semibold tracking-tight text-text-primary">
-          HustleXP
-        </span>
-        <span className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
-          Eastside beta
-        </span>
+
+      {/* Premium sticky navigation. */}
+      <header className="sticky top-0 z-40 border-b border-white/5 bg-background/70 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 w-full max-w-[1280px] items-center justify-between px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-base font-semibold tracking-tight text-text-primary">
+              HustleXP
+            </span>
+            <span className="hidden rounded-full border border-brand-purple/30 bg-brand-purple/10 px-2.5 py-0.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-brand-purple-glow sm:inline">
+              Eastside beta
+            </span>
+          </div>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-text-secondary md:flex">
+            <a
+              href="#post"
+              className="transition hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
+            >
+              Post a task
+            </a>
+            <Link
+              href="/business"
+              className="transition hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
+            >
+              For businesses
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center rounded-lg border border-white/15 px-3.5 py-1.5 transition hover:border-white/30 hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
+            >
+              Dashboard
+            </Link>
+          </nav>
+        </div>
       </header>
 
       <main className="relative flex-1">
-        <section className="relative mx-auto flex w-full max-w-3xl flex-col gap-7 px-6 pb-16 pt-10 sm:pt-14 md:pt-20">
+        {/* HERO — full-bleed background, 1280px two-column content shell. */}
+        <section className="relative isolate overflow-hidden">
           <HeroAurora />
-
-          <div className="space-y-4 text-center sm:text-left">
-            <p
-              className="hx-reveal text-xs font-semibold uppercase tracking-[0.18em] text-brand-purple-glow"
-              style={{ "--hx-i": 0 } as React.CSSProperties}
-            >
-              Eastside beta · Redmond · Bellevue · Sammamish
-            </p>
-            <h1
-              className="hx-reveal text-balance text-4xl font-semibold tracking-tight text-text-primary sm:text-5xl md:text-6xl"
-              style={{ "--hx-i": 1 } as React.CSSProperties}
-            >
-              Get it done today, on the Eastside.
-            </h1>
-            <p
-              className="hx-reveal max-w-xl text-base font-medium text-info sm:text-lg"
-              style={{ "--hx-i": 2 } as React.CSSProperties}
-            >
-              Describe a task, get a fair estimate, and dispatch a local Hustler.
-              You only pay when the work is approved.
-            </p>
-          </div>
-
-          {/* The funnel is the product — give it a deliberate, elevated frame. */}
+          {/* Full-width brand wash so the page never reads as a narrow column. */}
           <div
-            className="hx-reveal relative rounded-3xl border border-white/10 bg-white/[0.02] p-3 shadow-[0_36px_90px_-48px_rgba(91,45,255,0.6)] backdrop-blur-sm sm:p-5"
-            style={{ "--hx-i": 3 } as React.CSSProperties}
-          >
-            <FunnelForm />
-          </div>
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(70%_55%_at_70%_0%,rgba(91,45,255,0.20),transparent_72%)]"
+          />
 
-          <p
-            className="hx-reveal text-sm text-text-muted"
-            style={{ "--hx-i": 4 } as React.CSSProperties}
-          >
-            Serving Redmond, Sammamish, Bellevue, Kirkland, and Issaquah.
-          </p>
+          <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 items-center gap-10 px-6 pb-16 pt-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:px-8 lg:pb-24 lg:pt-20">
+            {/* LEFT — dominant headline + value + CTAs. */}
+            <div className="flex flex-col gap-7 text-center lg:text-left">
+              <p
+                className="hx-reveal text-xs font-semibold uppercase tracking-[0.2em] text-brand-purple-glow"
+                style={{ "--hx-i": 0 } as React.CSSProperties}
+              >
+                Eastside beta · Redmond · Bellevue · Sammamish · Kirkland · Issaquah
+              </p>
+              <h1
+                className="hx-reveal text-balance text-5xl font-semibold leading-[1.02] tracking-tight text-text-primary sm:text-6xl lg:text-7xl"
+                style={{ "--hx-i": 1 } as React.CSSProperties}
+              >
+                Get it done today, on the Eastside.
+              </h1>
+              <p
+                className="hx-reveal mx-auto max-w-xl text-lg font-medium text-info lg:mx-0 lg:text-xl"
+                style={{ "--hx-i": 2 } as React.CSSProperties}
+              >
+                Describe a task, get a fair estimate, and dispatch a local
+                Hustler. You only pay when the work is approved.
+              </p>
+
+              <div
+                className="hx-reveal flex flex-col items-center gap-3 sm:flex-row lg:items-start"
+                style={{ "--hx-i": 3 } as React.CSSProperties}
+              >
+                <a
+                  href="#post"
+                  className="hx-shimmer inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-7 py-3.5 text-base font-semibold text-text-primary shadow-[0_14px_50px_-16px_rgba(91,45,255,0.9)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow sm:w-auto"
+                >
+                  Post a task
+                </a>
+                <Link
+                  href="/business"
+                  className="inline-flex w-full items-center justify-center rounded-xl border border-white/15 px-7 py-3.5 text-base font-medium text-text-secondary transition hover:border-white/30 hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple sm:w-auto"
+                >
+                  For businesses
+                </Link>
+              </div>
+
+              {/* Honest mechanic trust line. */}
+              <ul
+                className="hx-reveal mt-1 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-text-secondary lg:justify-start"
+                style={{ "--hx-i": 4 } as React.CSSProperties}
+              >
+                <TrustChip icon={<EscrowIcon className="h-4 w-4" />}>
+                  Funds held until proof is reviewed
+                </TrustChip>
+                <TrustChip icon={<ProofIcon className="h-4 w-4" />}>
+                  Proof before release
+                </TrustChip>
+                <TrustChip icon={<MapDotIcon className="h-4 w-4" />}>
+                  Availability builds as Hustlers join
+                </TrustChip>
+              </ul>
+            </div>
+
+            {/* RIGHT — the funnel, presented as the core product engine. */}
+            <div
+              id="post"
+              className="hx-reveal relative scroll-mt-20"
+              style={{ "--hx-i": 3 } as React.CSSProperties}
+            >
+              <div
+                aria-hidden
+                className="absolute -inset-3 -z-10 rounded-[2rem] bg-brand-purple/10 blur-2xl"
+              />
+              <div className="rounded-3xl border border-white/12 bg-elevated/50 p-6 shadow-[0_50px_120px_-50px_rgba(91,45,255,0.75)] ring-1 ring-white/5 backdrop-blur-md sm:p-8">
+                <div className="mb-5 flex items-center justify-between">
+                  <p className="text-sm font-semibold uppercase tracking-[0.16em] text-brand-purple-glow">
+                    Post a task
+                  </p>
+                  <span className="rounded-full border border-info/30 bg-info/10 px-2.5 py-0.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-info">
+                    Free estimate
+                  </span>
+                </div>
+                <FunnelForm />
+              </div>
+            </div>
+          </div>
         </section>
 
-        {/* Product preview — clearly-labeled example of the task flow. */}
+        {/* Product preview — wide premium strip. */}
         <ProductPreview />
 
-        {/* Trust mechanics — a lighter inline band, distinct from the steps above. */}
+        {/* Trust band — real mechanics, wider rhythm. */}
         <section
           aria-labelledby="why"
-          className="mx-auto w-full max-w-5xl border-t border-white/5 px-6 py-14 sm:py-16"
+          className="border-t border-white/5"
         >
-          <h2
-            id="why"
-            className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted"
-          >
-            Built to be trustworthy
-          </h2>
-          <ul className="mt-8 grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2">
-            <TrustBullet
-              icon={<LockIcon />}
-              title="Secure payment"
-              body="Funds are held in escrow until you approve the work."
-            />
-            <TrustBullet
-              icon={<CameraIcon />}
-              title="Proof before release"
-              body="Hustlers submit photo or video proof before any funds release."
-            />
-            <TrustBullet
-              icon={<StarIcon />}
-              title="Ratings & reviews"
-              body="Poster feedback appears on Hustler profiles as tasks are completed."
-            />
-            <TrustBullet
-              icon={<ShieldCheckIcon />}
-              title="Reviewed for higher-risk tasks"
-              body="Hustlers complete identity and trust checks for higher-stakes work."
-            />
-          </ul>
+          <div className="mx-auto w-full max-w-[1280px] px-6 py-16 lg:px-8 lg:py-20">
+            <h2
+              id="why"
+              className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted"
+            >
+              Built to be trustworthy
+            </h2>
+            <ul className="mt-8 grid grid-cols-1 gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+              <TrustBullet
+                icon={<EscrowIcon className="h-5 w-5" />}
+                title="Secure payment"
+                body="Funds are held in escrow until you approve the work."
+              />
+              <TrustBullet
+                icon={<ProofIcon className="h-5 w-5" />}
+                title="Proof before release"
+                body="Hustlers submit photo or video proof before any funds release."
+              />
+              <TrustBullet
+                icon={<ChecklistIcon className="h-5 w-5" />}
+                title="Manual review for higher-risk work"
+                body="Higher-risk tasks are reviewed before they can be posted."
+              />
+              <TrustBullet
+                icon={<MapDotIcon className="h-5 w-5" />}
+                title="Eastside beta"
+                body="We're starting on the Eastside. Availability builds as Hustlers join."
+              />
+            </ul>
+          </div>
         </section>
       </main>
 
-      <footer className="mx-auto w-full max-w-6xl border-t border-white/5 px-6 py-6">
-        <p className="text-xs text-text-muted">
-          © HustleXP · Eastside beta · No guaranteed timeline.
-        </p>
+      <footer className="border-t border-white/5">
+        <div className="mx-auto w-full max-w-[1280px] px-6 py-8 lg:px-8">
+          <p className="text-xs text-text-muted">
+            © HustleXP · Eastside beta · No guaranteed timeline.
+          </p>
+        </div>
       </footer>
     </div>
+  );
+}
+
+function TrustChip({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="flex items-center gap-2">
+      <span className="text-info">{icon}</span>
+      <span>{children}</span>
+    </li>
   );
 }
 
@@ -135,8 +239,8 @@ function TrustBullet({
   body: string;
 }) {
   return (
-    <li className="flex gap-4">
-      <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-elevated text-info ring-1 ring-white/5">
+    <li className="flex flex-col gap-3">
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-elevated text-info ring-1 ring-white/10">
         {icon}
       </span>
       <div>
@@ -144,76 +248,5 @@ function TrustBullet({
         <p className="mt-1 text-sm text-text-secondary">{body}</p>
       </div>
     </li>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="4" y="9" width="12" height="8" rx="2" />
-      <path d="M7 9V6a3 3 0 1 1 6 0v3" />
-    </svg>
-  );
-}
-
-function CameraIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 7h2l1.5-2h7L15 7h2a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" />
-      <circle cx="10" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10 3l2.36 4.78 5.28.77-3.82 3.72.9 5.25L10 15.27 5.28 17.52l.9-5.25L2.36 8.55l5.28-.77L10 3z" />
-    </svg>
-  );
-}
-
-function ShieldCheckIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10 2.5 4 5v5c0 4 2.7 6.7 6 7.5 3.3-.8 6-3.5 6-7.5V5l-6-2.5Z" />
-      <path d="M7.5 10.2 9.3 12l3.4-3.4" />
-    </svg>
   );
 }

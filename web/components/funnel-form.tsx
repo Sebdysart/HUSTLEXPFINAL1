@@ -585,7 +585,7 @@ export function FunnelForm({
         type="submit"
         disabled={!canSubmit || isLoading}
         aria-busy={isLoading}
-        className="hx-shimmer mt-1 inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_10px_40px_-15px_rgba(91,45,255,0.8)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:self-start"
+        className="hx-shimmer mt-1 inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_14px_44px_-16px_rgba(91,45,255,0.85)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isLoading ? "Estimating…" : "Get estimate"}
       </button>
