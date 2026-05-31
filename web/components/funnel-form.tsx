@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { trpc } from "@/lib/trpc";
+import { LocalAvailability } from "@/components/local-availability";
 
 // Front-of-funnel chip IDs. These are designed for the homepage and do NOT
 // match backend template slugs 1:1 — many real tasks (dump runs, errands,
@@ -139,6 +140,7 @@ export function FunnelForm() {
   const zipLooksValid = /^\d{5}$/.test(zip);
   const canSubmit = trimmedTask.length >= 8 && zipLooksValid;
   const isLoading = draftEstimate.isPending;
+  const isEastsideZip = zipLooksValid && EASTSIDE_ZIPS.has(zip);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -404,6 +406,8 @@ export function FunnelForm() {
           {error}
         </p>
       )}
+
+      <LocalAvailability zip={zip} enabled={isEastsideZip} />
     </form>
   );
 }
