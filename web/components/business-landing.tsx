@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BusinessIntakeForm } from "@/components/business-intake-form";
 
 /**
  * Business demand-sensing landing page (Roadmap E1).
@@ -198,14 +199,13 @@ export function BusinessLanding() {
               Register your interest
             </h2>
             <p className="mt-3 text-base text-info">
-              We&apos;re onboarding Eastside businesses gradually. Registration opens
-              in the next step.
+              We&apos;re onboarding Eastside businesses gradually. Tell us about
+              your recurring work — every business is reviewed manually, and
+              there&apos;s no guaranteed timeline.
             </p>
-            <ul className="mt-6 space-y-2 text-sm text-text-secondary">
-              <li>· Register interest — no account is created yet.</li>
-              <li>· Every business is reviewed before access.</li>
-              <li>· No guaranteed timeline. Availability builds as Hustlers join.</li>
-            </ul>
+            <div className="mt-8">
+              <BusinessIntakeForm />
+            </div>
           </div>
         </section>
       </main>
