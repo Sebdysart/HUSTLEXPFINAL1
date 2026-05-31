@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { trpc } from "@/lib/trpc";
 import { LocalAvailability } from "@/components/local-availability";
+import { DispatchSection } from "@/components/dispatch-section";
 
 // Front-of-funnel chip IDs. These are designed for the homepage and do NOT
 // match backend template slugs 1:1 — many real tasks (dump runs, errands,
@@ -111,6 +112,11 @@ export function FunnelForm() {
   const [category, setCategory] = useState<CategoryId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DraftResult | null>(null);
+  const [savedBackendCategory, setSavedBackendCategory] = useState<
+    string | undefined
+  >(undefined);
+  const [savedZip, setSavedZip] = useState<string>("");
+  const [taskCreated, setTaskCreated] = useState(false);
 
   const draftEstimate = trpc.task.draftEstimate.useMutation();
 
@@ -128,6 +134,8 @@ export function FunnelForm() {
     /* eslint-disable react-hooks/set-state-in-effect */
     setTask(persisted.input.description);
     setZip(persisted.input.zip ?? "");
+    setSavedZip(persisted.input.zip ?? "");
+    setSavedBackendCategory(persisted.input.category);
     const chip = CATEGORIES.find(
       (c) => CHIP_TO_BACKEND_SLUG[c.id] === persisted.input.category,
     );
@@ -170,6 +178,8 @@ export function FunnelForm() {
         zip,
       });
       setResult(response);
+      setSavedBackendCategory(backendCategory);
+      setSavedZip(zip);
       try {
         window.localStorage.setItem(
           DRAFT_STORAGE_KEY,
@@ -213,6 +223,22 @@ export function FunnelForm() {
     setTask("");
     setZip("");
     setCategory(null);
+    setSavedBackendCategory(undefined);
+    setSavedZip("");
+    setTaskCreated(false);
+    try {
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }
+
+  // Called from <DispatchSection> only after task.create succeeds. The draft
+  // is intentionally NOT cleared before this — if anything in the dispatch
+  // pipeline (auth, register, role flip, task.create) fails, the user keeps
+  // their estimate and can retry without re-typing.
+  function onTaskCreated() {
+    setTaskCreated(true);
     try {
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch {
@@ -313,13 +339,27 @@ export function FunnelForm() {
           Estimates are AI-generated suggestions. Final price is yours.
         </p>
 
-        <button
-          type="button"
-          onClick={onStartOver}
-          className="mt-4 rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-text-secondary hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
-        >
-          Start over
-        </button>
+        <DispatchSection
+          draft={{
+            title: result.title,
+            cleanedDescription: result.cleanedDescription,
+            category: result.category,
+            recommendedPriceCents: result.recommendedPriceCents,
+            zip: savedZip,
+            templateSlug: savedBackendCategory,
+          }}
+          onCreated={onTaskCreated}
+        />
+
+        {!taskCreated && (
+          <button
+            type="button"
+            onClick={onStartOver}
+            className="mt-4 rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-text-secondary hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
+          >
+            Start over
+          </button>
+        )}
       </div>
     );
   }
