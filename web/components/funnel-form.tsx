@@ -24,7 +24,7 @@ const CATEGORIES = [
   { id: "event", label: "Event setup" },
 ] as const;
 
-type CategoryId = (typeof CATEGORIES)[number]["id"];
+export type CategoryId = (typeof CATEGORIES)[number]["id"];
 
 // Maps homepage chip → backend template slug from getManifest().
 // Anything not in the manifest goes to standard_physical, the default
@@ -143,10 +143,26 @@ function formatDuration(minutes: number): string {
   return rest === 0 ? `${hours} hr` : `${hours} hr ${rest} min`;
 }
 
-export function FunnelForm() {
+export function FunnelForm({
+  initialZip = "",
+  initialCategory = null,
+}: {
+  /**
+   * Optional ZIP prefill — used by the C9 local landing pages (e.g. /redmond)
+   * so a visitor who already declared their area lands in the funnel with the
+   * field filled. A restored localStorage draft still takes precedence (see
+   * the mount effect below), so an in-flight estimate is never clobbered.
+   */
+  initialZip?: string;
+  /**
+   * Optional category prefill — used by the C9 category landing pages
+   * (e.g. /moving-help). Same precedence rule as initialZip.
+   */
+  initialCategory?: CategoryId | null;
+} = {}) {
   const [task, setTask] = useState("");
-  const [zip, setZip] = useState("");
-  const [category, setCategory] = useState<CategoryId | null>(null);
+  const [zip, setZip] = useState(initialZip);
+  const [category, setCategory] = useState<CategoryId | null>(initialCategory);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DraftResult | null>(null);
   const [savedBackendCategory, setSavedBackendCategory] = useState<
