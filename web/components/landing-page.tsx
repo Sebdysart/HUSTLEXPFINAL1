@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FunnelForm, type CategoryId } from "@/components/funnel-form";
 import { PageView } from "@/components/page-view";
+import { HeroAurora } from "@/components/hero-aurora";
 
 /**
  * Reusable local/category landing page template (C9).
@@ -21,6 +22,9 @@ import { PageView } from "@/components/page-view";
  *
  * COLOR LAW: entry surface → Black + Purple brand only. Green is success-state
  * only and never appears here. Blue is the info/trust accent.
+ *
+ * Motion: decorative CSS-only entrance/aurora (globals.css), disabled under
+ * prefers-reduced-motion. No behavior, no data, no new dependencies.
  */
 export function LandingPage({
   eyebrow,
@@ -62,27 +66,43 @@ export function LandingPage({
       </header>
 
       <main className="relative flex-1">
-        <section className="relative mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-8 sm:pt-12 md:pt-16">
-          {/* Purple atmosphere behind the hero (entry-screen composition). */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-0 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-purple opacity-20 blur-[120px]"
-          />
+        <section className="relative mx-auto flex w-full max-w-3xl flex-col gap-7 px-6 pb-16 pt-10 sm:pt-14 md:pt-20">
+          <HeroAurora />
 
           <div className="space-y-4 text-center sm:text-left">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-purple-glow">
+            <p
+              className="hx-reveal text-xs font-semibold uppercase tracking-[0.18em] text-brand-purple-glow"
+              style={{ "--hx-i": 0 } as React.CSSProperties}
+            >
               {eyebrow}
             </p>
-            <h1 className="text-4xl font-semibold tracking-tight text-text-primary sm:text-5xl md:text-6xl">
+            <h1
+              className="hx-reveal text-balance text-4xl font-semibold tracking-tight text-text-primary sm:text-5xl md:text-6xl"
+              style={{ "--hx-i": 1 } as React.CSSProperties}
+            >
               {headline}
             </h1>
-            <p className="text-base font-medium text-info sm:text-lg">{subhead}</p>
+            <p
+              className="hx-reveal max-w-xl text-base font-medium text-info sm:text-lg"
+              style={{ "--hx-i": 2 } as React.CSSProperties}
+            >
+              {subhead}
+            </p>
           </div>
 
-          <FunnelForm initialZip={initialZip} initialCategory={initialCategory} />
+          {/* The funnel is the product — give it a deliberate, elevated frame. */}
+          <div
+            className="hx-reveal relative rounded-3xl border border-white/10 bg-white/[0.02] p-3 shadow-[0_36px_90px_-48px_rgba(91,45,255,0.6)] backdrop-blur-sm sm:p-5"
+            style={{ "--hx-i": 3 } as React.CSSProperties}
+          >
+            <FunnelForm initialZip={initialZip} initialCategory={initialCategory} />
+          </div>
 
-          <p className="text-sm text-text-muted">
-            Serving Redmond, Sammamish, Bellevue, and nearby Eastside areas.
+          <p
+            className="hx-reveal text-sm text-text-muted"
+            style={{ "--hx-i": 4 } as React.CSSProperties}
+          >
+            Serving Redmond, Sammamish, Bellevue, Kirkland, and Issaquah.
           </p>
         </section>
 
@@ -96,22 +116,27 @@ export function LandingPage({
           >
             {examplesHeading}
           </h2>
-          <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <ul className="mt-6 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
             {examples.map((example) => (
               <li
                 key={example}
-                className="rounded-xl border border-white/10 bg-elevated/60 px-4 py-3 text-sm text-text-secondary"
+                className="flex items-start gap-3 text-sm text-text-secondary"
               >
+                <span
+                  aria-hidden
+                  className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-brand-purple-glow"
+                />
                 {example}
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-xs text-text-muted">
+          <p className="mt-5 text-xs text-text-muted">
             Examples of what you can post — not a list of completed tasks. Local
             availability appears as real tasks complete.
           </p>
         </section>
 
+        {/* How it works — numbered process rail, consistent with the homepage. */}
         <section
           aria-labelledby="how"
           className="mx-auto w-full max-w-5xl border-t border-white/5 px-6 py-16 sm:py-20"
@@ -122,28 +147,27 @@ export function LandingPage({
           >
             How it works
           </h2>
-          <ul className="mt-8 grid grid-cols-1 gap-x-10 gap-y-8 sm:grid-cols-2">
-            <TrustBullet
-              icon={<EstimateIcon />}
-              title="Post a task and get an estimate"
-              body="Describe the job and get an AI-suggested price and time before you commit. The final price is yours."
+          <ol className="mt-8 grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-3">
+            <Step
+              n="1"
+              title="Describe the task"
+              body="Get an AI-suggested price and time before you commit. The final price is yours."
             />
-            <TrustBullet
-              icon={<LockIcon />}
-              title="Funds stay in escrow"
+            <Step
+              n="2"
+              title="Funds go into escrow"
               body="Your payment is held in escrow until proof is reviewed — nothing releases before then."
             />
-            <TrustBullet
-              icon={<CameraIcon />}
-              title="Proof before release"
-              body="Hustlers submit photo or video proof before any funds release."
+            <Step
+              n="3"
+              title="Proof, then release"
+              body="Hustlers submit photo or video proof. Funds release only after you approve it."
             />
-            <TrustBullet
-              icon={<MapPinIcon />}
-              title="Eastside beta"
-              body="We're starting on the Eastside. Local availability appears as real tasks complete."
-            />
-          </ul>
+          </ol>
+          <p className="mt-8 text-xs text-text-muted">
+            We&apos;re starting on the Eastside. Local availability appears as real
+            tasks complete.
+          </p>
         </section>
       </main>
 
@@ -156,96 +180,16 @@ export function LandingPage({
   );
 }
 
-function TrustBullet({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-}) {
+function Step({ n, title, body }: { n: string; title: string; body: string }) {
   return (
-    <li className="flex gap-4">
-      <span className="mt-1 inline-flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-elevated text-info ring-1 ring-white/5">
-        {icon}
+    <li className="flex flex-col gap-3">
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-brand-purple/40 bg-brand-purple/10 font-mono text-base font-semibold text-brand-purple-glow">
+        {n}
       </span>
       <div>
         <p className="text-base font-semibold text-text-primary">{title}</p>
         <p className="mt-1 text-sm text-text-secondary">{body}</p>
       </div>
     </li>
-  );
-}
-
-function EstimateIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="4" y="3" width="12" height="14" rx="2" />
-      <path d="M7 7h6M7 10h6M7 13h3" />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="4" y="9" width="12" height="8" rx="2" />
-      <path d="M7 9V6a3 3 0 1 1 6 0v3" />
-    </svg>
-  );
-}
-
-function CameraIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 7h2l1.5-2h7L15 7h2a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" />
-      <circle cx="10" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function MapPinIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10 17.5c3-3.2 5-6 5-8.5a5 5 0 0 0-10 0c0 2.5 2 5.3 5 8.5Z" />
-      <circle cx="10" cy="9" r="1.8" />
-    </svg>
   );
 }

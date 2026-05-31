@@ -78,3 +78,145 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
+
+/*
+ * ============================================================
+ * Motion utilities — UI credibility pass (ADDITIVE, decorative).
+ *
+ * CSS-only: animates transform / opacity / stroke-dashoffset only.
+ * No layout-affecting properties, no scroll-driven timelines, no JS.
+ * Purple / violet / info-blue only — NO green on entry surfaces.
+ *
+ * Accessibility: every animation below is disabled under
+ * prefers-reduced-motion and resolves to its final, fully-visible
+ * resting state (no hidden content).
+ * ============================================================
+ */
+
+@keyframes hx-reveal-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hx-aurora-drift {
+  0% {
+    transform: translate3d(-6%, -2%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6%, 4%, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(-6%, -2%, 0) scale(1);
+  }
+}
+
+@keyframes hx-pin-float {
+  0% {
+    transform: translateY(0);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.65;
+  }
+}
+
+@keyframes hx-route-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes hx-shimmer {
+  0% {
+    transform: translateX(-130%);
+  }
+  60%,
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+@layer utilities {
+  /* Staggered entrance reveal — set --hx-i to order siblings. */
+  .hx-reveal {
+    opacity: 0;
+    animation: hx-reveal-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--hx-i, 0) * 90ms);
+  }
+
+  /* Slow ambient drift for the decorative aurora blobs. */
+  .hx-aurora {
+    animation: hx-aurora-drift 18s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* Floating decorative task-pin dots. */
+  .hx-pin {
+    animation: hx-pin-float 6s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+    will-change: transform;
+  }
+
+  /* Self-drawing decorative route line (stroke-dashoffset only). */
+  .hx-route {
+    stroke-dasharray: var(--hx-len, 240);
+    stroke-dashoffset: var(--hx-len, 240);
+    animation: hx-route-draw 2.4s ease-out forwards;
+    animation-delay: 0.2s;
+  }
+
+  /* Decorative CTA sheen — the ::after overlay moves, never the button. */
+  .hx-shimmer {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .hx-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+      110deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.16) 50%,
+      transparent 65%
+    );
+    transform: translateX(-130%);
+    animation: hx-shimmer 4.5s ease-in-out infinite;
+    animation-delay: 1.2s;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hx-reveal,
+  .hx-aurora,
+  .hx-pin,
+  .hx-route,
+  .hx-shimmer::after {
+    animation: none !important;
+  }
+  .hx-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .hx-route {
+    stroke-dashoffset: 0 !important;
+  }
+  .hx-shimmer::after {
+    display: none !important;
+  }
+}

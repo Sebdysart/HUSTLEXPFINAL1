@@ -59,7 +59,11 @@ export function LocalAvailability({
         aria-label="Local availability signal"
         className="rounded-2xl border border-white/5 bg-elevated/40 p-4 text-sm text-text-muted"
       >
-        <p className="text-xs uppercase tracking-wide text-text-muted">
+        <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-text-muted">
+          <span
+            aria-hidden
+            className="hx-pin inline-block h-1.5 w-1.5 rounded-full bg-brand-purple-glow"
+          />
           Local availability signal
         </p>
         <p className="mt-1">Checking your area…</p>
@@ -73,7 +77,11 @@ export function LocalAvailability({
         aria-label="Local availability signal"
         className="rounded-2xl border border-white/5 bg-elevated/40 p-4 text-sm text-text-muted"
       >
-        <p className="text-xs uppercase tracking-wide text-text-muted">
+        <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-text-muted">
+          <span
+            aria-hidden
+            className="hx-pin inline-block h-1.5 w-1.5 rounded-full bg-brand-purple-glow"
+          />
           Local availability signal
         </p>
         <p className="mt-1">Availability signal is temporarily unavailable.</p>
@@ -97,7 +105,11 @@ export function LocalAvailability({
         aria-label="Local availability signal"
         className="rounded-2xl border border-white/5 bg-elevated/40 p-4 text-sm text-text-secondary"
       >
-        <p className="text-xs uppercase tracking-wide text-text-muted">
+        <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-text-muted">
+          <span
+            aria-hidden
+            className="hx-pin inline-block h-1.5 w-1.5 rounded-full bg-brand-purple-glow"
+          />
           Local availability signal
         </p>
         <p className="mt-2 text-text-primary">

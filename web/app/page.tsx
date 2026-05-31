@@ -1,5 +1,6 @@
 import { FunnelForm } from "@/components/funnel-form";
 import { PageView } from "@/components/page-view";
+import { HeroAurora } from "@/components/hero-aurora";
 
 /**
  * Public Poster funnel homepage (C3).
@@ -16,6 +17,9 @@ import { PageView } from "@/components/page-view";
  * response times, no "background-checked" copy until Checkr is live, no
  * insurance / self-protection claims. Trust bullets describe mechanics
  * that ARE real (escrow, proof-before-release, TrustTierService).
+ *
+ * Motion: decorative CSS-only entrance/aurora (globals.css), disabled under
+ * prefers-reduced-motion. No behavior, no data, no new dependencies.
  */
 export default function Home() {
   return (
@@ -25,43 +29,95 @@ export default function Home() {
         <span className="font-mono text-sm font-semibold tracking-tight text-text-primary">
           HustleXP
         </span>
+        <span className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
+          Eastside beta
+        </span>
       </header>
 
       <main className="relative flex-1">
-        <section className="relative mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-8 sm:pt-12 md:pt-16">
-          {/* Purple atmosphere behind the hero (entry-screen composition). */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-0 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-purple opacity-20 blur-[120px]"
-          />
+        <section className="relative mx-auto flex w-full max-w-3xl flex-col gap-7 px-6 pb-16 pt-10 sm:pt-14 md:pt-20">
+          <HeroAurora />
 
           <div className="space-y-4 text-center sm:text-left">
-            <h1 className="text-4xl font-semibold tracking-tight text-text-primary sm:text-5xl md:text-6xl">
-              What can you get done today?
+            <p
+              className="hx-reveal text-xs font-semibold uppercase tracking-[0.18em] text-brand-purple-glow"
+              style={{ "--hx-i": 0 } as React.CSSProperties}
+            >
+              Eastside beta · Redmond · Bellevue · Sammamish
+            </p>
+            <h1
+              className="hx-reveal text-balance text-4xl font-semibold tracking-tight text-text-primary sm:text-5xl md:text-6xl"
+              style={{ "--hx-i": 1 } as React.CSSProperties}
+            >
+              Get it done today, on the Eastside.
             </h1>
-            <p className="text-base font-medium text-info sm:text-lg">
+            <p
+              className="hx-reveal max-w-xl text-base font-medium text-info sm:text-lg"
+              style={{ "--hx-i": 2 } as React.CSSProperties}
+            >
+              Describe a task, get a fair estimate, and dispatch a local Hustler.
               You only pay when the work is approved.
             </p>
           </div>
 
-          <FunnelForm />
+          {/* The funnel is the product — give it a deliberate, elevated frame. */}
+          <div
+            className="hx-reveal relative rounded-3xl border border-white/10 bg-white/[0.02] p-3 shadow-[0_36px_90px_-48px_rgba(91,45,255,0.6)] backdrop-blur-sm sm:p-5"
+            style={{ "--hx-i": 3 } as React.CSSProperties}
+          >
+            <FunnelForm />
+          </div>
 
-          <p className="text-sm text-text-muted">
-            Serving Redmond, Sammamish, Bellevue, and the rest of the Eastside.
+          <p
+            className="hx-reveal text-sm text-text-muted"
+            style={{ "--hx-i": 4 } as React.CSSProperties}
+          >
+            Serving Redmond, Sammamish, Bellevue, Kirkland, and Issaquah.
           </p>
         </section>
 
+        {/* How it works — a numbered process rail, not another card grid. */}
+        <section
+          aria-labelledby="how"
+          className="mx-auto w-full max-w-5xl border-t border-white/5 px-6 py-16 sm:py-20"
+        >
+          <h2
+            id="how"
+            className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted"
+          >
+            How it works
+          </h2>
+          <ol className="mt-8 grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-3">
+            <Step
+              n="1"
+              title="Describe the task"
+              body="Tell us what you need done and get an AI-suggested price and time. The final price is yours."
+            />
+            <Step
+              n="2"
+              title="Funds go into escrow"
+              body="Your payment is held in escrow when you dispatch — nothing releases before the work is reviewed."
+            />
+            <Step
+              n="3"
+              title="Approve, then release"
+              body="A Hustler submits photo or video proof. Funds release only after you approve it."
+            />
+          </ol>
+        </section>
+
+        {/* Trust mechanics — a lighter inline band, distinct from the steps above. */}
         <section
           aria-labelledby="why"
-          className="mx-auto w-full max-w-5xl border-t border-white/5 px-6 py-16 sm:py-20"
+          className="mx-auto w-full max-w-5xl border-t border-white/5 px-6 py-14 sm:py-16"
         >
           <h2
             id="why"
             className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted"
           >
-            Why HustleXP
+            Built to be trustworthy
           </h2>
-          <ul className="mt-8 grid grid-cols-1 gap-x-10 gap-y-8 sm:grid-cols-2">
+          <ul className="mt-8 grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2">
             <TrustBullet
               icon={<LockIcon />}
               title="Secure payment"
@@ -79,7 +135,7 @@ export default function Home() {
             />
             <TrustBullet
               icon={<ShieldCheckIcon />}
-              title="Verified for higher-risk tasks"
+              title="Reviewed for higher-risk tasks"
               body="Hustlers complete identity and trust checks for higher-stakes work."
             />
           </ul>
@@ -95,6 +151,20 @@ export default function Home() {
   );
 }
 
+function Step({ n, title, body }: { n: string; title: string; body: string }) {
+  return (
+    <li className="relative flex flex-col gap-3">
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-brand-purple/40 bg-brand-purple/10 font-mono text-base font-semibold text-brand-purple-glow">
+        {n}
+      </span>
+      <div>
+        <p className="text-base font-semibold text-text-primary">{title}</p>
+        <p className="mt-1 text-sm text-text-secondary">{body}</p>
+      </div>
+    </li>
+  );
+}
+
 function TrustBullet({
   icon,
   title,
@@ -106,7 +176,7 @@ function TrustBullet({
 }) {
   return (
     <li className="flex gap-4">
-      <span className="mt-1 inline-flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-elevated text-info ring-1 ring-white/5">
+      <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-elevated text-info ring-1 ring-white/5">
         {icon}
       </span>
       <div>

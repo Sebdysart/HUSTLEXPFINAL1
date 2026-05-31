@@ -251,7 +251,7 @@ export function BusinessIntakeForm() {
       <div
         role="status"
         aria-live="polite"
-        className="rounded-2xl border border-brand-purple/40 bg-elevated/60 p-6 text-left shadow-[0_0_60px_-30px_rgba(91,45,255,0.6)]"
+        className="hx-reveal rounded-2xl border border-brand-purple/40 bg-elevated/60 p-6 text-left shadow-[0_0_60px_-30px_rgba(91,45,255,0.6)]"
       >
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-purple-glow">
           Interest registered
@@ -495,14 +495,31 @@ export function BusinessIntakeForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_10px_40px_-15px_rgba(91,45,255,0.8)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:self-start"
+        className="hx-shimmer inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_10px_40px_-15px_rgba(91,45,255,0.8)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:self-start"
       >
         {isLoading ? "Submitting…" : "Register interest"}
       </button>
 
       {error && (
-        <p role="alert" className="text-sm text-error-red">
-          {error}
+        <p
+          role="alert"
+          className="flex items-start gap-2.5 rounded-xl border border-error-red/30 bg-error-red/10 px-4 py-3 text-sm text-error-red"
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 20 20"
+            className="mt-0.5 h-4 w-4 flex-none"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.7}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="10" cy="10" r="7.5" />
+            <path d="M10 6.5v4" />
+            <path d="M10 13.5h.01" />
+          </svg>
+          <span>{error}</span>
         </p>
       )}
 

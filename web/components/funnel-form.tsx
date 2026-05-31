@@ -360,7 +360,7 @@ export function FunnelForm({
       <div
         role="status"
         aria-live="polite"
-        className="rounded-2xl border border-brand-purple/40 bg-elevated/60 p-5 text-left shadow-[0_0_60px_-30px_rgba(91,45,255,0.6)]"
+        className="hx-reveal rounded-2xl border border-brand-purple/40 bg-elevated/60 p-5 text-left shadow-[0_0_60px_-30px_rgba(91,45,255,0.6)]"
       >
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-purple-glow">
           Estimate
@@ -488,10 +488,13 @@ export function FunnelForm({
     <form
       onSubmit={onSubmit}
       noValidate
-      className="flex w-full flex-col gap-4 text-left"
+      className="flex w-full flex-col gap-5 text-left"
     >
-      <div>
-        <label htmlFor="task" className="sr-only">
+      <div className="flex flex-col gap-2">
+        <label
+          htmlFor="task"
+          className="text-sm font-semibold text-text-primary"
+        >
           What do you need done?
         </label>
         <textarea
@@ -512,38 +515,46 @@ export function FunnelForm({
         />
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <label htmlFor="zip" className="sr-only">
-          ZIP code
+      <div className="flex flex-col gap-2">
+        <label
+          htmlFor="zip"
+          className="text-sm font-semibold text-text-primary"
+        >
+          Your ZIP code
         </label>
-        <input
-          id="zip"
-          name="zip"
-          type="text"
-          inputMode="numeric"
-          autoComplete="postal-code"
-          pattern="[0-9]{5}"
-          maxLength={5}
-          value={zip}
-          onChange={(e) => {
-            const next = e.target.value.replace(/\D/g, "");
-            setZip(next);
-            if (next.length === 5 && !zipTrackedRef.current) {
-              zipTrackedRef.current = true;
-              capture("zip_entered", { city_or_zip: next });
-            }
-          }}
-          placeholder="ZIP code"
-          className="w-full rounded-xl border border-white/10 bg-elevated px-4 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple sm:w-40"
-        />
-        <p className="text-xs text-text-muted sm:ml-1">
-          Eastside only for now.
-        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <input
+            id="zip"
+            name="zip"
+            type="text"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            pattern="[0-9]{5}"
+            maxLength={5}
+            value={zip}
+            onChange={(e) => {
+              const next = e.target.value.replace(/\D/g, "");
+              setZip(next);
+              if (next.length === 5 && !zipTrackedRef.current) {
+                zipTrackedRef.current = true;
+                capture("zip_entered", { city_or_zip: next });
+              }
+            }}
+            placeholder="ZIP code"
+            className="w-full rounded-xl border border-white/10 bg-elevated px-4 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple sm:w-40"
+          />
+          <p className="text-xs text-text-muted sm:ml-1">
+            Eastside only for now.
+          </p>
+        </div>
       </div>
 
       <fieldset>
-        <legend className="sr-only">Pick a category</legend>
-        <div className="flex flex-wrap gap-2">
+        <legend className="text-sm font-semibold text-text-primary">
+          Add a category{" "}
+          <span className="font-normal text-text-muted">(optional)</span>
+        </legend>
+        <div className="mt-3 flex flex-wrap gap-2">
           {CATEGORIES.map((c) => {
             const selected = c.id === category;
             return (
@@ -574,14 +585,31 @@ export function FunnelForm({
         type="submit"
         disabled={!canSubmit || isLoading}
         aria-busy={isLoading}
-        className="mt-1 inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_10px_40px_-15px_rgba(91,45,255,0.8)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:self-start"
+        className="hx-shimmer mt-1 inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_10px_40px_-15px_rgba(91,45,255,0.8)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:self-start"
       >
         {isLoading ? "Estimating…" : "Get estimate"}
       </button>
 
       {error && (
-        <p role="alert" className="text-sm text-error-red">
-          {error}
+        <p
+          role="alert"
+          className="flex items-start gap-2.5 rounded-xl border border-error-red/30 bg-error-red/10 px-4 py-3 text-sm text-error-red"
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 20 20"
+            className="mt-0.5 h-4 w-4 flex-none"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.7}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="10" cy="10" r="7.5" />
+            <path d="M10 6.5v4" />
+            <path d="M10 13.5h.01" />
+          </svg>
+          <span>{error}</span>
         </p>
       )}
 
