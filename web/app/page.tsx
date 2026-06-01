@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FunnelForm } from "@/components/funnel-form";
 import { PageView } from "@/components/page-view";
 import { HeroAurora } from "@/components/hero-aurora";
-import { ProductPreview } from "@/components/product-preview";
+import { CinematicFlowDemo } from "@/components/cinematic-flow-demo";
 import {
   EscrowIcon,
   ProofIcon,
@@ -18,7 +18,7 @@ import {
  * page.tsx only owns layout, composition, and presentation.
  *
  * Layout: sticky premium nav → two-column hero (copy left, the task funnel as an
- * elevated product card right) → wide product-preview strip → trust band.
+ * elevated product card right) → cinematic flow demo theater → trust band.
  * Content lives in a 1280px shell with full-bleed gradient/aurora behind it so
  * the page fills the viewport instead of stranding a narrow centered column.
  *
@@ -79,7 +79,7 @@ export default function Home() {
             className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(70%_55%_at_70%_0%,rgba(91,45,255,0.20),transparent_72%)]"
           />
 
-          <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 items-center gap-10 px-6 pb-16 pt-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:px-8 lg:pb-24 lg:pt-20">
+          <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 items-center gap-10 px-6 pb-12 pt-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:px-8 lg:pb-16 lg:pt-16">
             {/* LEFT — dominant headline + value + CTAs. */}
             <div className="flex flex-col gap-7 text-center lg:text-left">
               <p
@@ -162,8 +162,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Product preview — wide premium strip. */}
-        <ProductPreview />
+        {/* Cinematic flow demo — wide "how it works" theater. */}
+        <CinematicFlowDemo />
 
         {/* Trust band — real mechanics, wider rhythm. */}
         <section

@@ -38,47 +38,67 @@ function Svg({ children, className, ...props }: IconProps) {
   );
 }
 
-/** A located task — pin with a centered marker. */
+/** A located task — pin with a filled center marker. */
 export function TaskPinIcon(props: IconProps) {
   return (
     <Svg {...props}>
       <path d="M12 21c4.5-4.6 7-7.7 7-11a7 7 0 1 0-14 0c0 3.3 2.5 6.4 7 11Z" />
-      <circle cx="12" cy="10" r="2.4" />
+      <circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none" />
     </Svg>
   );
 }
 
-/** Escrow — funds held safe behind a lock. */
+/** Escrow — funds held safe behind a lock (filled keyhole). */
 export function EscrowIcon(props: IconProps) {
   return (
     <Svg {...props}>
       <rect x="4" y="10.5" width="16" height="9.5" rx="2.2" />
       <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
-      <circle cx="12" cy="15" r="1.4" />
+      <circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none" />
       <path d="M12 16.4v1.6" />
     </Svg>
   );
 }
 
-/** Proof — photo/video proof submitted for review. */
+/** Proof — photo/video proof with a filled check badge. */
 export function ProofIcon(props: IconProps) {
   return (
     <Svg {...props}>
       <path d="M4 8.5h3l1.6-2.2h6.8L17 8.5h3a0 0 0 0 1 0 0" />
       <rect x="3" y="6.3" width="18" height="13" rx="2.4" />
-      <circle cx="12" cy="13" r="3.2" />
-      <path d="m10.8 13 1 1 1.6-1.8" />
+      <circle cx="12" cy="13" r="3.4" fill="currentColor" stroke="none" />
+      <path d="m10.6 13 1 1 1.8-2" stroke="var(--background-elevated, #1c1c1e)" />
     </Svg>
   );
 }
 
-/** Route — a task moving along a path. */
+/** Route — a task moving along a path between filled nodes. */
 export function RouteIcon(props: IconProps) {
   return (
     <Svg {...props}>
-      <circle cx="6" cy="18" r="2.1" />
-      <circle cx="18" cy="6" r="2.1" />
+      <circle cx="6" cy="18" r="2.3" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="6" r="2.3" fill="currentColor" stroke="none" />
       <path d="M8 17.4c2.2-.6 3.4-2 3.4-4 0-2.2 1.2-3.6 3.4-4.2" strokeDasharray="0.1 3" />
+    </Svg>
+  );
+}
+
+/** Dashboard — a board of stacked task rows, lead row filled. */
+export function DashboardIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="4" width="17" height="16" rx="2.4" />
+      <rect
+        x="6.2"
+        y="7.2"
+        width="11.6"
+        height="2.6"
+        rx="1.3"
+        fill="currentColor"
+        stroke="none"
+      />
+      <path d="M6.5 13h7.5" />
+      <path d="M6.5 16.4h5" />
     </Svg>
   );
 }
@@ -118,11 +138,11 @@ export function ClockIcon(props: IconProps) {
   );
 }
 
-/** Map dot — a precise local point. */
+/** Map dot — a precise local point with a filled core. */
 export function MapDotIcon(props: IconProps) {
   return (
     <Svg {...props}>
-      <circle cx="12" cy="12" r="2.4" />
+      <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" />
       <circle cx="12" cy="12" r="6.4" strokeDasharray="0.1 3.2" />
       <circle cx="12" cy="12" r="9.6" strokeDasharray="0.1 3.8" />
     </Svg>
@@ -150,7 +170,8 @@ export type HxIconName =
   | "checklist"
   | "clock"
   | "mapDot"
-  | "receipt";
+  | "receipt"
+  | "dashboard";
 
 const ICONS: Record<HxIconName, (props: IconProps) => React.ReactElement> = {
   taskPin: TaskPinIcon,
@@ -162,6 +183,7 @@ const ICONS: Record<HxIconName, (props: IconProps) => React.ReactElement> = {
   clock: ClockIcon,
   mapDot: MapDotIcon,
   receipt: ReceiptIcon,
+  dashboard: DashboardIcon,
 };
 
 /** Render an icon by key, e.g. <HxIcon name="escrow" className="h-5 w-5" />. */

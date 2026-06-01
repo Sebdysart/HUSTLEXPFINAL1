@@ -147,6 +147,57 @@ body {
   }
 }
 
+/* Radar ping ring — expands and fades out (cinematic flow demo pins). */
+@keyframes hx-ping {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.55;
+  }
+  70% {
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* Light bead running along a route line (stroke-dashoffset only). */
+@keyframes hx-flow-run {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Glow that sweeps down the vertical flow-rail connector. */
+@keyframes hx-rail {
+  0% {
+    transform: translateY(-20%);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(320%);
+    opacity: 0;
+  }
+}
+
+/* Subtle bob for floating overlay cards. */
+@keyframes hx-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
 @layer utilities {
   /* Staggered entrance reveal — set --hx-i to order siblings. */
   .hx-reveal {
@@ -175,6 +226,35 @@ body {
     stroke-dashoffset: var(--hx-len, 240);
     animation: hx-route-draw 2.4s ease-out forwards;
     animation-delay: 0.2s;
+  }
+
+  /* Radar ping ring on a flow-demo pin (transform/opacity only). */
+  .hx-ping-ring {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: hx-ping 2.8s ease-out infinite;
+    will-change: transform, opacity;
+  }
+
+  /* Light bead travelling along a route line. Pair with --hx-len = path length;
+   * the dash is a short visible segment chasing a long gap. Stable, transform-
+   * free — animates stroke-dashoffset only (no offset-path). */
+  .hx-flowline {
+    stroke-dasharray: 18 400;
+    stroke-dashoffset: 418;
+    animation: hx-flow-run 3.4s linear infinite;
+  }
+
+  /* Glow bar sweeping down a vertical connector in the flow rail. */
+  .hx-rail-glow {
+    animation: hx-rail 3.6s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  /* Gentle float for a floating overlay card. */
+  .hx-float {
+    animation: hx-float 5s ease-in-out infinite;
+    will-change: transform;
   }
 
   /* Decorative CTA sheen — the ::after overlay moves, never the button. */
@@ -206,6 +286,10 @@ body {
   .hx-aurora,
   .hx-pin,
   .hx-route,
+  .hx-ping-ring,
+  .hx-flowline,
+  .hx-rail-glow,
+  .hx-float,
   .hx-shimmer::after {
     animation: none !important;
   }
@@ -215,6 +299,14 @@ body {
   }
   .hx-route {
     stroke-dashoffset: 0 !important;
+  }
+  /* Resolve decorative motion-only elements to an unobtrusive resting state. */
+  .hx-ping-ring,
+  .hx-rail-glow {
+    opacity: 0 !important;
+  }
+  .hx-flowline {
+    stroke-dashoffset: 418 !important;
   }
   .hx-shimmer::after {
     display: none !important;
