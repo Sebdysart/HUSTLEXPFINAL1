@@ -16,6 +16,9 @@ import { useAuth } from "@/providers/auth-provider";
 import { capture } from "@/lib/analytics";
 import { PageView } from "@/components/page-view";
 import { TrackingMapPanel } from "./TrackingMapPanel";
+import { ProofReviewPanel } from "./ProofReviewPanel";
+import { EscrowPanel } from "./EscrowPanel";
+import { RatingPanel } from "./RatingPanel";
 
 // C8: Poster dashboard shell.
 //
@@ -34,8 +37,10 @@ import { TrackingMapPanel } from "./TrackingMapPanel";
 //   - No fake applicants, ETAs, response times, or counts.
 //   - Real data only — no fabrication anywhere.
 //
-// Out of scope for C8: proof review, release/refund/dispute UI, applicants UI,
-// Hustler web flows, SEO, analytics.
+// Phase 1 adds poster-loop actions: proof review + task complete, escrow refund
+// (release is read-only — needs a server-side transfer entry point), and rating.
+// Still out of scope: applicants/assign (backend gate dormant), dispute UI,
+// Hustler web flows.
 
 const LAST_TASK_STORAGE_KEY = "hustlexp.lastTaskId.v1";
 
@@ -315,6 +320,15 @@ function TaskDetail({ taskId }: { taskId: string }) {
       {/* Post-acceptance tracking map — renders only when the backend reports
           the task is trackable (poster-only, post-acceptance). Real data. */}
       <TrackingMapPanel taskId={taskId} />
+
+      {/* Poster-loop actions — each panel self-gates on backend state. */}
+      <ProofReviewPanel taskId={taskId} taskState={task.state} />
+      <EscrowPanel taskId={taskId} taskState={task.state} />
+      <RatingPanel
+        taskId={taskId}
+        taskState={task.state}
+        workerId={"worker_id" in task ? task.worker_id : undefined}
+      />
     </div>
   );
 }

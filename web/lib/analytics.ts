@@ -51,7 +51,12 @@ export type AnalyticsEvent =
   | "payment_funded_backend"
   | "payment_failed"
   | "dashboard_viewed"
-  | "task_detail_viewed";
+  | "task_detail_viewed"
+  // poster dashboard parity (Phase 1)
+  | "proof_reviewed"
+  | "task_completed"
+  | "escrow_refunded"
+  | "rating_submitted";
 
 /**
  * The ONLY property keys allowed on any event. This is the privacy contract —
