@@ -198,6 +198,37 @@ body {
   }
 }
 
+/* Slow breathing for a "live" status dot in the command console. */
+@keyframes hx-livedot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+/* A progress bead easing along the console status timeline. */
+@keyframes hx-progress {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(var(--hx-progress-h, 6rem));
+    opacity: 0;
+  }
+}
+
 @layer utilities {
   /* Staggered entrance reveal — set --hx-i to order siblings. */
   .hx-reveal {
@@ -257,6 +288,26 @@ body {
     will-change: transform;
   }
 
+  /* Breathing "live" console status dot. */
+  .hx-livedot {
+    animation: hx-livedot 2.2s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  /* Progress bead easing down the console status timeline. */
+  .hx-progress {
+    animation: hx-progress 3.4s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  /* Tactile "operating console" grid texture for elevated product panels. */
+  .hx-grid-texture {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 38px 38px;
+  }
+
   /* Decorative CTA sheen — the ::after overlay moves, never the button. */
   .hx-shimmer {
     position: relative;
@@ -290,8 +341,13 @@ body {
   .hx-flowline,
   .hx-rail-glow,
   .hx-float,
+  .hx-livedot,
+  .hx-progress,
   .hx-shimmer::after {
     animation: none !important;
+  }
+  .hx-progress {
+    opacity: 0 !important;
   }
   .hx-reveal {
     opacity: 1 !important;

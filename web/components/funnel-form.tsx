@@ -488,12 +488,12 @@ export function FunnelForm({
     <form
       onSubmit={onSubmit}
       noValidate
-      className="flex w-full flex-col gap-5 text-left"
+      className="flex w-full flex-col gap-6 text-left"
     >
       <div className="flex flex-col gap-2">
         <label
           htmlFor="task"
-          className="text-sm font-semibold text-text-primary"
+          className="text-base font-semibold text-text-primary"
         >
           What do you need done?
         </label>
@@ -511,14 +511,14 @@ export function FunnelForm({
             }
           }}
           placeholder="What do you need done? e.g., move a couch from my apartment to a storage unit"
-          className="w-full resize-none rounded-2xl border border-white/10 bg-elevated px-5 py-4 text-base text-text-primary placeholder:text-text-muted focus:border-brand-purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple sm:rows-2 sm:text-lg"
+          className="w-full resize-none rounded-2xl border border-white/10 bg-elevated px-5 py-5 text-lg text-text-primary placeholder:text-text-muted focus:border-brand-purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple sm:rows-2 sm:text-xl"
         />
       </div>
 
       <div className="flex flex-col gap-2">
         <label
           htmlFor="zip"
-          className="text-sm font-semibold text-text-primary"
+          className="text-base font-semibold text-text-primary"
         >
           Your ZIP code
         </label>
@@ -541,7 +541,7 @@ export function FunnelForm({
               }
             }}
             placeholder="ZIP code"
-            className="w-full rounded-xl border border-white/10 bg-elevated px-4 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple sm:w-40"
+            className="w-full rounded-xl border border-white/10 bg-elevated px-5 py-3.5 text-lg text-text-primary placeholder:text-text-muted focus:border-brand-purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple sm:w-44"
           />
           <p className="text-xs text-text-muted sm:ml-1">
             Eastside only for now.
@@ -568,7 +568,7 @@ export function FunnelForm({
                   if (next) capture("category_selected", { category: next });
                 }}
                 className={
-                  "rounded-full border px-4 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple " +
+                  "rounded-full border px-5 py-2.5 text-[0.95rem] font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple " +
                   (selected
                     ? "border-brand-purple bg-brand-purple text-text-primary"
                     : "border-white/10 bg-elevated text-text-secondary hover:border-white/30")
@@ -585,7 +585,7 @@ export function FunnelForm({
         type="submit"
         disabled={!canSubmit || isLoading}
         aria-busy={isLoading}
-        className="hx-shimmer mt-1 inline-flex w-full items-center justify-center rounded-xl bg-brand-purple px-8 py-4 text-base font-semibold text-text-primary shadow-[0_14px_44px_-16px_rgba(91,45,255,0.85)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-50"
+        className="hx-shimmer mt-1 inline-flex w-full items-center justify-center rounded-2xl bg-brand-purple px-8 py-5 text-lg font-semibold text-text-primary shadow-[0_18px_50px_-16px_rgba(91,45,255,0.9)] transition hover:bg-brand-purple-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-glow disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isLoading ? "Estimating…" : "Get estimate"}
       </button>
