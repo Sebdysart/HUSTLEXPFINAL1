@@ -20,6 +20,10 @@ export const env = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "",
   },
   stripePublishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
+  // Google Maps JS key — browser-exposed by design; restrict by HTTP referrer +
+  // Maps JavaScript API in the Google Cloud console. Used by the authenticated
+  // poster dashboard tracking map only.
+  googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
   posthog: {
     key: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? "",
     host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",

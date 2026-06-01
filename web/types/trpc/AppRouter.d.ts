@@ -3253,6 +3253,35 @@ export declare const appRouter: import("@trpc/server").TRPCBuiltRouter<{
 		};
 		transformer: false;
 	}, import("@trpc/server").TRPCDecorateCreateRouterOptions<{
+		getTracking: import("@trpc/server").TRPCQueryProcedure<{
+			input: {
+				taskId: string;
+			};
+			output: {
+				trackable: false;
+				progressState: TaskProgressState;
+				destination: null;
+				hustler: null;
+				eta: null;
+				lastUpdated: null;
+			} | {
+				trackable: true;
+				progressState: TaskProgressState;
+				destination: {
+					lat: number;
+					lng: number;
+				} | null;
+				hustler: {
+					lat: number;
+					lng: number;
+					accuracy: number;
+					at: Date;
+				} | null;
+				eta: null;
+				lastUpdated: Date | null;
+			};
+			meta: object;
+		}>;
 		getById: import("@trpc/server").TRPCQueryProcedure<{
 			input: {
 				taskId: string;
@@ -4995,6 +5024,53 @@ export declare const appRouter: import("@trpc/server").TRPCBuiltRouter<{
 				reason: string;
 			};
 			output: Escrow;
+			meta: object;
+		}>;
+		listBusinessLeads: import("@trpc/server").TRPCQueryProcedure<{
+			input: {
+				status?: "REJECTED" | "APPROVED" | "REVIEWED" | "NEW" | "CONVERTED" | undefined;
+				limit?: number | undefined;
+				offset?: number | undefined;
+				requiresReview?: boolean | undefined;
+			};
+			output: {
+				leads: Record<string, unknown>[];
+				total: number;
+			};
+			meta: object;
+		}>;
+		reviewBusinessLead: import("@trpc/server").TRPCMutationProcedure<{
+			input: {
+				status: "REJECTED" | "APPROVED" | "REVIEWED";
+				leadId: string;
+				override?: boolean | undefined;
+				adminNotes?: string | undefined;
+				approvedTemplates?: string[] | undefined;
+			};
+			output: {
+				id: string;
+				status: string;
+				reviewed_at: Date;
+				reviewed_by: string;
+				approved_templates: unknown;
+				admin_notes: string | null;
+			};
+			meta: object;
+		}>;
+		convertBusinessLead: import("@trpc/server").TRPCMutationProcedure<{
+			input: {
+				userId: string;
+				leadId: string;
+				adminNotes?: string | undefined;
+				approvedTemplates?: string[] | undefined;
+			};
+			output: {
+				id: string;
+				status: string;
+				converted_user_id: string;
+				approved_templates: unknown;
+				updated_at: Date;
+			};
 			meta: object;
 		}>;
 	}>>;

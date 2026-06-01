@@ -15,6 +15,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/providers/auth-provider";
 import { capture } from "@/lib/analytics";
 import { PageView } from "@/components/page-view";
+import { TrackingMapPanel } from "./TrackingMapPanel";
 
 // C8: Poster dashboard shell.
 //
@@ -310,6 +311,10 @@ function TaskDetail({ taskId }: { taskId: string }) {
           </p>
         </div>
       )}
+
+      {/* Post-acceptance tracking map — renders only when the backend reports
+          the task is trackable (poster-only, post-acceptance). Real data. */}
+      <TrackingMapPanel taskId={taskId} />
     </div>
   );
 }
