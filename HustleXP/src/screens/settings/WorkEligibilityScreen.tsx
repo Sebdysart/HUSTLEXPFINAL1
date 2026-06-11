@@ -5,7 +5,9 @@
  * Allows users to complete license, insurance, and background check verifications.
  * 
  * Constitutional Reference: ARCHITECTURE.md §11-13
- * Backend Integration: /trpc/verification.getEligibility, /trpc/capabilityProfile.get
+ * Backend Integration: /trpc/capability.checkEligibility, /trpc/capability.getProfile
+ * (NOTE 2026-06-11: previous references verification.getEligibility / capabilityProfile.get
+ *  named routers that DO NOT EXIST on the backend — corrected to the real capability router.)
  */
 
 import React, { useEffect, useState } from 'react';
@@ -66,8 +68,8 @@ export default function WorkEligibilityScreen() {
       setError(null);
 
       // PLANNED: Replace with actual tRPC call
-      // const response = await trpc.verification.getEligibility.query();
-      // const profile = await trpc.capabilityProfile.get.query();
+      // const response = await TRPCClient.shared.call('capability', 'checkEligibility', 'query', {});
+      // const profile = await TRPCClient.shared.call('capability', 'getProfile', 'query', {});
       // const taskCount = await trpc.feed.getEligibleTaskCount.query();
 
       // Mock data for now - will be replaced with real API

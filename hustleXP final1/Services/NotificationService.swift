@@ -11,7 +11,11 @@ import Combine
 
 // MARK: - Notification Types
 
-/// Notification from backend
+/// Notification from backend.
+/// CONTRACT (2026-06): notification.getList returns raw `notifications` rows:
+/// { id, user_id, category, title, body, deep_link, task_id, metadata,
+///   sent_at, read_at, clicked_at, created_at, ... } — the row has `category`
+/// (lowercase snake values), and read/clicked are nullable TIMESTAMPS, not bools.
 struct HXNotification: Codable, Identifiable {
     let id: String
     let userId: String
@@ -22,34 +26,97 @@ struct HXNotification: Codable, Identifiable {
     let isRead: Bool
     let isClicked: Bool
     let createdAt: Date
+    let deepLink: String?
+    let taskId: String?
 
     /// Convenience: notification category for grouping
     var category: NotificationCategory {
         NotificationCategory(rawValue: type) ?? .general
     }
+
+    private enum CodingKeys: String, CodingKey {
+        // camelCase (post .convertFromSnakeCase) + legacy fallbacks
+        case id, userId, type, title, body, data, isRead, isClicked, createdAt
+        case category, readAt, clickedAt, metadata, deepLink, taskId
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        userId = try c.decodeIfPresent(String.self, forKey: .userId) ?? ""
+        // Backend column is `category`; tolerate legacy `type`
+        type = try c.decodeIfPresent(String.self, forKey: .category)
+            ?? c.decodeIfPresent(String.self, forKey: .type)
+            ?? "general"
+        title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
+        body = try c.decodeIfPresent(String.self, forKey: .body) ?? ""
+        // Backend column is `metadata` (JSONB); tolerate legacy `data`.
+        // Values may be non-strings — decode best-effort as [String: String].
+        data = (try? c.decodeIfPresent([String: String].self, forKey: .metadata))
+            ?? (try? c.decodeIfPresent([String: String].self, forKey: .data))
+            ?? nil
+        // read/clicked state = nullable timestamps on the backend.
+        // Prefer an explicit legacy Bool when present; otherwise treat a
+        // non-null read_at/clicked_at timestamp as true.
+        let legacyRead: Bool? = (try? c.decodeIfPresent(Bool.self, forKey: .isRead)) ?? nil
+        let readAtDate = (try? c.decodeIfPresent(Date.self, forKey: .readAt)) ?? nil
+        let readAtString = (try? c.decodeIfPresent(String.self, forKey: .readAt)) ?? nil
+        isRead = legacyRead ?? (readAtDate != nil || readAtString != nil)
+
+        let legacyClicked: Bool? = (try? c.decodeIfPresent(Bool.self, forKey: .isClicked)) ?? nil
+        let clickedAtDate = (try? c.decodeIfPresent(Date.self, forKey: .clickedAt)) ?? nil
+        let clickedAtString = (try? c.decodeIfPresent(String.self, forKey: .clickedAt)) ?? nil
+        isClicked = legacyClicked ?? (clickedAtDate != nil || clickedAtString != nil)
+        createdAt = (try? c.decodeIfPresent(Date.self, forKey: .createdAt)) ?? Date()
+        deepLink = try c.decodeIfPresent(String.self, forKey: .deepLink)
+        taskId = try c.decodeIfPresent(String.self, forKey: .taskId)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(userId, forKey: .userId)
+        try c.encode(type, forKey: .type)
+        try c.encode(title, forKey: .title)
+        try c.encode(body, forKey: .body)
+        try c.encodeIfPresent(data, forKey: .data)
+        try c.encode(isRead, forKey: .isRead)
+        try c.encode(isClicked, forKey: .isClicked)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encodeIfPresent(deepLink, forKey: .deepLink)
+        try c.encodeIfPresent(taskId, forKey: .taskId)
+    }
 }
 
 /// Notification categories matching backend types
 enum NotificationCategory: String, Codable, CaseIterable {
-    case taskAccepted = "TASK_ACCEPTED"
-    case taskCompleted = "TASK_COMPLETED"
-    case proofSubmitted = "PROOF_SUBMITTED"
-    case proofApproved = "PROOF_APPROVED"
-    case proofRejected = "PROOF_REJECTED"
-    case paymentReceived = "PAYMENT_RECEIVED"
-    case paymentSent = "PAYMENT_SENT"
-    case messageReceived = "MESSAGE_RECEIVED"
-    case ratingReceived = "RATING_RECEIVED"
-    case tierUp = "TIER_UP"
-    case badgeEarned = "BADGE_EARNED"
-    case insuranceClaim = "INSURANCE_CLAIM"
-    case general = "GENERAL"
+    // CONTRACT: backend categories are lowercase snake_case
+    case taskAccepted = "task_accepted"
+    case taskCompleted = "task_completed"
+    case proofSubmitted = "proof_submitted"
+    case proofApproved = "proof_approved"
+    case proofRejected = "proof_rejected"
+    case paymentReceived = "payment_released"
+    case paymentSent = "payment_due"
+    case messageReceived = "message_received"
+    case ratingReceived = "rating_received"
+    case tierUp = "trust_tier_upgraded"
+    case badgeEarned = "badge_earned"
+    case insuranceClaim = "insurance_claim"
+    case instantTask = "instant_task_available"
+    case newMatchingTask = "new_matching_task"
+    case escrowFunded = "escrow_funded"
+    case disputeOpened = "dispute_opened"
+    case disputeResolved = "dispute_resolved"
+    case general = "general"
 
-    /// Safe decode — unknown values default to .general
+    /// Safe decode — tolerates legacy UPPER_CASE values and unknowns
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
-        self = NotificationCategory(rawValue: raw) ?? .general
+        self = NotificationCategory(rawValue: raw)
+            ?? NotificationCategory(rawValue: raw.lowercased())
+            ?? .general
     }
 
     var iconName: String {

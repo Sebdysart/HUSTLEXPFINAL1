@@ -16,6 +16,9 @@ struct SignupScreen: View {
     @EnvironmentObject private var authService: AuthService
 
     @State private var name: String = ""
+    /// Backend user.register REQUIRES dateOfBirth (YYYY-MM-DD, 18+). Default 18y ago.
+    @State private var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -18, to: Date()) ?? Date()
+    @State private var dobTouched = false
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
@@ -31,12 +34,18 @@ struct SignupScreen: View {
         case name, email, password, confirmPassword
     }
     
+    private var isAdult: Bool {
+        let years = Calendar.current.dateComponents([.year], from: dateOfBirth, to: Date()).year ?? 0
+        return years >= 18
+    }
+
     private var isValid: Bool {
         !name.isEmpty && 
         !email.isEmpty && 
         !password.isEmpty && 
         password == confirmPassword &&
         password.count >= 8 &&
+        isAdult &&
         errors.isEmpty
     }
     
@@ -214,6 +223,37 @@ struct SignupScreen: View {
             .onChange(of: confirmPassword) { _, newValue in
                 validateConfirmPassword(newValue)
             }
+
+            // Date of birth (REQUIRED by backend registration; 18+ only)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                        .font(.caption)
+                        .foregroundStyle(Color.brandPurple)
+                    Text("Date of Birth")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+                DatePicker(
+                    "Date of birth",
+                    selection: $dateOfBirth,
+                    in: ...Date(),
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.compact)
+                .labelsHidden()
+                .colorScheme(.dark)
+                .onChange(of: dateOfBirth) { _, _ in dobTouched = true }
+                if dobTouched && !isAdult {
+                    Text("You must be at least 18 to use HustleXP.")
+                        .font(.caption)
+                        .foregroundStyle(Color.errorRed)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.white.opacity(0.05))
+            .cornerRadius(12)
             
             // Password requirements
             if !password.isEmpty {
@@ -508,7 +548,8 @@ struct SignupScreen: View {
                     email: email,
                     password: password,
                     fullName: name,
-                    defaultMode: .hustler // Default to hustler mode, can make this a selection later
+                    defaultMode: .hustler, // Role selection follows in onboarding -> user.updateProfile
+                    dateOfBirth: dateOfBirth
                 )
 
                 // Success! AuthService will set isAuthenticated = true

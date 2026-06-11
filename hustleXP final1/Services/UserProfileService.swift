@@ -95,7 +95,8 @@ final class UserProfileService: ObservableObject {
         name: String? = nil,
         bio: String? = nil,
         phone: String? = nil,
-        avatarURL: String? = nil
+        avatarURL: String? = nil,
+        defaultMode: String? = nil
     ) async throws -> HXUser {
         isLoading = true
         defer { isLoading = false }
@@ -105,12 +106,13 @@ final class UserProfileService: ObservableObject {
             let bio: String?
             let phone: String?
             let avatarUrl: String?
+            let defaultMode: String?
         }
 
         let user: HXUser = try await trpc.call(
             router: "user",
             procedure: "updateProfile",
-            input: UpdateProfileInput(fullName: name, bio: bio, phone: phone, avatarUrl: avatarURL)
+            input: UpdateProfileInput(fullName: name, bio: bio, phone: phone, avatarUrl: avatarURL, defaultMode: defaultMode)
         )
 
         // Update AuthService's current user
@@ -118,6 +120,14 @@ final class UserProfileService: ObservableObject {
 
         HXLogger.info("UserProfileService: Updated profile", category: "General")
         return user
+    }
+
+    /// Persists the user role server-side. CRITICAL: posterProcedure endpoints
+    /// (task.create, escrow.createPaymentIntent, ...) gate on users.default_mode —
+    /// a UI-only role switch produces FORBIDDEN on every poster call.
+    /// Backend accepts "hustler"/"poster" and normalizes hustler->worker.
+    func updateDefaultMode(_ role: UserRole) async throws -> HXUser {
+        try await updateProfile(defaultMode: role == .poster ? "poster" : "hustler")
     }
 
     /// Gets a public user profile by ID

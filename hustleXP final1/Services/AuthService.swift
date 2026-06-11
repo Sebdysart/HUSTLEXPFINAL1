@@ -26,6 +26,30 @@ final class AuthService: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
 
+    /// Social sign-in (Apple/Google) creates the Firebase user before we can ask
+    /// for a date of birth — which the backend REQUIRES for registration
+    /// (user.register zod schema: dateOfBirth YYYY-MM-DD). When set, the UI must
+    /// present DateOfBirthPromptView and call completePendingRegistration(_:).
+    @Published var needsDateOfBirth = false
+
+    struct PendingSocialRegistration {
+        let firebaseUid: String
+        let email: String
+        let fullName: String
+        let idToken: String
+        let analyticsMethod: String
+    }
+    private(set) var pendingSocialRegistration: PendingSocialRegistration?
+
+    /// Backend contract: dateOfBirth must be YYYY-MM-DD (user.register schema).
+    static let dobFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
     /// Reference to AppState for bridging auth state
     /// Set this from the app entry point after initialization
     var appState: AppState?
@@ -52,17 +76,84 @@ final class AuthService: ObservableObject {
 
     // MARK: - Sign Up
 
+    /// Backend registration input — matches user.register zod schema EXACTLY:
+    /// { idToken (REQUIRED), firebaseUid, email, fullName, defaultMode?, dateOfBirth (REQUIRED), phone? }
+    /// idToken must be in the BODY (register is a publicProcedure; the auth header is ignored).
+    private struct BackendRegisterInput: Codable {
+        let idToken: String
+        let firebaseUid: String
+        let email: String
+        let fullName: String
+        let defaultMode: String
+        let dateOfBirth: String
+    }
+
+    /// Single registration path for all three auth methods (email/Apple/Google).
+    private func registerWithBackend(
+        firebaseUid: String,
+        email: String,
+        fullName: String,
+        defaultMode: UserRole,
+        idToken: String,
+        dateOfBirth: Date
+    ) async throws -> HXUser {
+        let input = BackendRegisterInput(
+            idToken: idToken,
+            firebaseUid: firebaseUid,
+            email: email,
+            fullName: fullName,
+            defaultMode: defaultMode.rawValue,
+            dateOfBirth: Self.dobFormatter.string(from: dateOfBirth)
+        )
+        return try await trpc.call(
+            router: "user",
+            procedure: "register",
+            input: input
+        )
+    }
+
+    /// Completes a social (Apple/Google) registration once the user provides
+    /// their date of birth. The Firebase session and auth token are already live.
+    func completePendingRegistration(dateOfBirth: Date) async throws {
+        guard let pending = pendingSocialRegistration else { return }
+        isLoading = true
+        defer { isLoading = false }
+
+        let user = try await registerWithBackend(
+            firebaseUid: pending.firebaseUid,
+            email: pending.email,
+            fullName: pending.fullName,
+            defaultMode: .hustler,
+            idToken: pending.idToken,
+            dateOfBirth: dateOfBirth
+        )
+
+        KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
+            HXLogger.setDiagnosticsUser(user.id)
+        self.currentUser = user
+        self.isAuthenticated = true
+        self.needsDateOfBirth = false
+        self.pendingSocialRegistration = nil
+        appState?.login(userId: user.id, role: user.role)
+        Task { await PushNotificationManager.shared.flushPendingToken() }
+
+        HXLogger.info("Auth: Social sign-in registration completed - \(user.name)", category: "Auth")
+        AnalyticsService.shared.track(.signUp, properties: ["method": pending.analyticsMethod])
+    }
+
     /// Creates a new user account with Firebase and registers with backend
     /// - Parameters:
     ///   - email: User's email address
     ///   - password: User's password
     ///   - fullName: User's full name
     ///   - defaultMode: User's default role (worker or poster)
+    ///   - dateOfBirth: REQUIRED by the backend (age verification, YYYY-MM-DD)
     func signUp(
         email: String,
         password: String,
         fullName: String,
-        defaultMode: UserRole
+        defaultMode: UserRole,
+        dateOfBirth: Date
     ) async throws {
         isLoading = true
         defer { isLoading = false }
@@ -110,31 +201,21 @@ final class AuthService: ObservableObject {
             // Step 2: Get Firebase ID token
             let idToken = try await authResult.user.getIDToken()
 
-            // Step 3: Register with backend
-            struct RegisterInput: Codable {
-                let firebaseUid: String
-                let email: String
-                let fullName: String
-                let defaultMode: String
-            }
-
-            let input = RegisterInput(
+            // Step 3: Register with backend (idToken + dateOfBirth are REQUIRED by the schema)
+            let user = try await registerWithBackend(
                 firebaseUid: authResult.user.uid,
                 email: email,
                 fullName: fullName,
-                defaultMode: defaultMode.rawValue
-            )
-
-            let user: HXUser = try await trpc.call(
-                router: "user",
-                procedure: "register",
-                input: input
+                defaultMode: defaultMode,
+                idToken: idToken,
+                dateOfBirth: dateOfBirth
             )
 
             // Step 4: Store credentials and update state
             TRPCClient.shared.setAuthToken(idToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
+            HXLogger.setDiagnosticsUser(user.id)
 
             self.currentUser = user
             self.isAuthenticated = true
@@ -274,34 +355,18 @@ final class AuthService: ObservableObject {
                 ? (authResult.user.displayName ?? "HustleXP User")
                 : fullName
 
-            struct RegisterInput: Codable {
-                let firebaseUid: String
-                let email: String
-                let fullName: String
-                let defaultMode: String
-            }
-
-            let input = RegisterInput(
+            // Backend registration REQUIRES a date of birth, which Apple does not
+            // provide. Stash the pending registration and let the UI collect DOB
+            // (DateOfBirthPromptView → completePendingRegistration).
+            self.pendingSocialRegistration = PendingSocialRegistration(
                 firebaseUid: authResult.user.uid,
                 email: authResult.user.email ?? "",
                 fullName: displayName,
-                defaultMode: UserRole.hustler.rawValue
+                idToken: idToken,
+                analyticsMethod: "apple"
             )
-
-            let user: HXUser = try await trpc.call(
-                router: "user",
-                procedure: "register",
-                input: input
-            )
-
-            KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
-            self.currentUser = user
-            self.isAuthenticated = true
-            appState?.login(userId: user.id, role: user.role)
-            Task { await PushNotificationManager.shared.flushPendingToken() }
-
-            HXLogger.info("Auth: Apple Sign-In successful (new user) - \(user.name)", category: "Auth")
-            AnalyticsService.shared.track(.signUp, properties: ["method": "apple"])
+            self.needsDateOfBirth = true
+            HXLogger.info("Auth: Apple Sign-In needs date of birth to finish registration", category: "Auth")
         } catch let error as NSError {
             self.error = error
             HXLogger.error("Auth: Apple Sign-In failed - \(error.localizedDescription)", category: "Auth")
@@ -345,37 +410,16 @@ final class AuthService: ObservableObject {
                 return
             }
 
-            // User doesn't exist on backend yet, register them
-            struct RegisterInput: Codable {
-                let firebaseUid: String
-                let email: String
-                let fullName: String
-                let defaultMode: String
-            }
-
-            let input = RegisterInput(
+            // Backend registration REQUIRES a date of birth — collect via UI first.
+            self.pendingSocialRegistration = PendingSocialRegistration(
                 firebaseUid: authResult.user.uid,
                 email: authResult.user.email ?? "",
                 fullName: authResult.user.displayName ?? "HustleXP User",
-                defaultMode: UserRole.hustler.rawValue
+                idToken: firebaseToken,
+                analyticsMethod: "google"
             )
-
-            HXLogger.info("Auth: Registering new Google user - uid: \(authResult.user.uid), email: \(authResult.user.email ?? "nil")", category: "Auth")
-
-            let user: HXUser = try await trpc.call(
-                router: "user",
-                procedure: "register",
-                input: input
-            )
-
-            KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
-            self.currentUser = user
-            self.isAuthenticated = true
-            appState?.login(userId: user.id, role: user.role)
-            Task { await PushNotificationManager.shared.flushPendingToken() }
-
-            HXLogger.info("Auth: Google Sign-In successful (new user) - \(user.name)", category: "Auth")
-            AnalyticsService.shared.track(.signUp, properties: ["method": "google"])
+            self.needsDateOfBirth = true
+            HXLogger.info("Auth: Google Sign-In needs date of birth to finish registration", category: "Auth")
         } catch let error as NSError {
             self.error = error
             HXLogger.error("Auth: Google Sign-In failed - \(error.localizedDescription)", category: "Auth")
@@ -438,11 +482,13 @@ final class AuthService: ObservableObject {
 
             self.currentUser = user
             self.isAuthenticated = true
+            HXLogger.setDiagnosticsUser(user.id)
             appState?.login(userId: user.id, role: user.role)
             Task { await PushNotificationManager.shared.flushPendingToken() }
 
             // Store user ID
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
+            HXLogger.setDiagnosticsUser(user.id)
 
             HXLogger.info("Auth: Loaded current user - \(user.name)", category: "Auth")
         } catch {

@@ -52,9 +52,19 @@ final class TaskService: ObservableObject {
             let instantMode: Bool
         }
 
+        // CONTRACT: backend requires description with >= 10 characters (zod min(10)).
+        let trimmedDescription = (description ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedDescription.count >= 10 else {
+            throw NSError(
+                domain: "HustleXP",
+                code: 400,
+                userInfo: [NSLocalizedDescriptionKey: "Please describe the task in at least 10 characters so hustlers know what to do."]
+            )
+        }
+
         let input = CreateTaskInput(
             title: title,
-            description: description,
+            description: trimmedDescription,
             price: Int(payment * 100), // Convert to cents
             location: location,
             category: category?.rawValue,
@@ -217,7 +227,11 @@ final class TaskService: ObservableObject {
 
     // MARK: - Task Actions (Poster)
 
-    /// Poster reviews and approves proof submission
+    /// Poster reviews proof. CONTRACT (2026-06): reviewProof returns the PROOF
+    /// row, not the task — and approval alone does NOT finish the loop. On
+    /// approval we must call task.complete, which transitions the task to
+    /// COMPLETED and triggers the backend completion-release orchestration
+    /// (escrow → Stripe transfer → release → XP). One poster action = paid worker.
     func reviewProof(taskId: String, approved: Bool, feedback: String?) async throws -> HXTask {
         isLoading = true
         defer { isLoading = false }
@@ -228,14 +242,45 @@ final class TaskService: ObservableObject {
             let feedback: String?
         }
 
-        let task: HXTask = try await trpc.call(
+        /// Tolerant decode of the proof row returned by reviewProof.
+        struct ReviewedProofDTO: Codable {
+            let id: String?
+            let state: String?
+        }
+
+        let _: ReviewedProofDTO = try await trpc.call(
             router: "task",
             procedure: "reviewProof",
             input: ReviewInput(taskId: taskId, approved: approved, feedback: feedback)
         )
 
+        let task: HXTask
+        if approved {
+            task = try await completeTask(taskId: taskId)
+        } else {
+            task = try await getTask(taskId: taskId)
+        }
+
         HXLogger.info("TaskService: Reviewed proof for task - \(task.title), approved: \(approved)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(approved ? .proofApproved : .proofRejected, taskId: task.id, taskTitle: task.title)
+        return task
+    }
+
+    /// Marks a PROOF_SUBMITTED task as COMPLETED (poster only). This is the
+    /// transition that releases the escrow server-side.
+    func completeTask(taskId: String) async throws -> HXTask {
+        struct CompleteInput: Codable {
+            let taskId: String
+        }
+
+        let task: HXTask = try await trpc.call(
+            router: "task",
+            procedure: "complete",
+            input: CompleteInput(taskId: taskId)
+        )
+
+        HXLogger.info("TaskService: Completed task - \(task.title)", category: "Task")
+        AnalyticsService.shared.trackTaskEvent(.taskCompleted, taskId: task.id, taskTitle: task.title)
         return task
     }
 
@@ -262,33 +307,89 @@ final class TaskService: ObservableObject {
 
     // MARK: - Applicant Management (Poster)
 
-    /// Lists applicants for a posted task
+    /// Lists pending applicants for a posted task (poster only)
     func listApplicants(taskId: String) async throws -> [TaskApplicant] {
-        HXLogger.info("TaskService: Applicant listing is not exposed by the live backend contract for task \(taskId)", category: "Task")
-        return []
+        struct ListInput: Codable {
+            let taskId: String
+            let limit: Int
+        }
+
+        let applicants: [TaskApplicant] = try await trpc.call(
+            router: "task",
+            procedure: "listApplicants",
+            type: .query,
+            input: ListInput(taskId: taskId, limit: 50)
+        )
+
+        HXLogger.info("TaskService: Fetched \(applicants.count) applicants for task \(taskId)", category: "Task")
+        return applicants
     }
 
-    /// Poster assigns a specific applicant as the worker for their task
+    /// Poster assigns a specific applicant as the worker (OPEN → ACCEPTED)
     func assignWorker(taskId: String, workerId: String) async throws -> HXTask {
-        throw unsupportedTaskWorkflow(
-            "Assigning applicants is not available in the live backend contract for task \(taskId)."
+        struct AssignInput: Codable {
+            let taskId: String
+            let workerId: String
+        }
+
+        struct AssignResult: Codable {
+            let id: String
+        }
+
+        // Backend returns a minimal { id, state, worker_id } row — refetch the
+        // full task so callers get a complete HXTask.
+        let _: AssignResult = try await trpc.call(
+            router: "task",
+            procedure: "assignWorker",
+            input: AssignInput(taskId: taskId, workerId: workerId)
         )
+
+        let task = try await getTask(taskId: taskId)
+        HXLogger.info("TaskService: Assigned worker to task - \(task.title)", category: "Task")
+        AnalyticsService.shared.trackTaskEvent(.taskAccepted, taskId: task.id, taskTitle: task.title)
+        return task
     }
 
     /// Poster rejects an applicant for their task
     func rejectApplicant(taskId: String, workerId: String) async throws {
-        throw unsupportedTaskWorkflow(
-            "Rejecting applicants is not available in the live backend contract for task \(taskId)."
+        struct RejectInput: Codable {
+            let taskId: String
+            let workerId: String
+        }
+
+        struct RejectResult: Codable {
+            let success: Bool?
+        }
+
+        let _: RejectResult = try await trpc.call(
+            router: "task",
+            procedure: "rejectApplicant",
+            input: RejectInput(taskId: taskId, workerId: workerId)
         )
+
+        HXLogger.info("TaskService: Rejected applicant for task \(taskId)", category: "Task")
     }
 
     // MARK: - Application (Hustler)
 
-    /// Hustler applies for a task with optional message
+    /// Hustler applies for a standard (OPEN) task. The poster then assigns.
+    /// NOTE: direct task.accept only works for instant-mode (MATCHING) tasks —
+    /// standard tasks MUST go through apply → assignWorker.
     func applyForTask(taskId: String, message: String? = nil) async throws -> ApplicationResponse {
-        throw unsupportedTaskWorkflow(
-            "Task application is not available in the live backend contract for task \(taskId)."
+        struct ApplyInput: Codable {
+            let taskId: String
+            let message: String?
+        }
+
+        let application: ApplicationResponse = try await trpc.call(
+            router: "task",
+            procedure: "applyForTask",
+            input: ApplyInput(taskId: taskId, message: message)
         )
+
+        HXLogger.info("TaskService: Applied for task \(taskId) (status: \(application.status))", category: "Task")
+        AnalyticsService.shared.trackTaskEvent(.taskAccepted, taskId: taskId, taskTitle: "")
+        return application
     }
 
     /// Hustler withdraws their application
@@ -329,16 +430,20 @@ final class TaskService: ObservableObject {
 
     /// Gets tasks created by the current user (poster)
     func listMyPostedTasks(state: TaskState? = nil) async throws -> [HXTask] {
+        // CONTRACT (2026-06): backend returns a cursor envelope { tasks, nextCursor }
+        // and accepts only cursor pagination — the old `state` filter is not part
+        // of the schema (zod strips it), so it is no longer sent. Filter locally.
         struct ListByPosterInput: Codable {
-            let state: String?
+            let limit: Int
         }
 
-        let tasks: [HXTask] = try await trpc.call(
+        let page: TasksPage = try await trpc.call(
             router: "task",
             procedure: "listByPoster",
             type: .query,
-            input: ListByPosterInput(state: state?.rawValue)
+            input: ListByPosterInput(limit: 100)
         )
+        let tasks = state.map { s in page.tasks.filter { $0.state == s } } ?? page.tasks
 
         HXLogger.info("TaskService: Fetched \(tasks.count) posted tasks", category: "Task")
         return tasks
@@ -346,16 +451,19 @@ final class TaskService: ObservableObject {
 
     /// Gets tasks claimed by the current user (worker)
     func listMyClaimedTasks(state: TaskState? = nil) async throws -> [HXTask] {
+        // CONTRACT (2026-06): cursor envelope { tasks, nextCursor }; no server-side
+        // state filter in the schema. Filter locally.
         struct ListByWorkerInput: Codable {
-            let state: String?
+            let limit: Int
         }
 
-        let tasks: [HXTask] = try await trpc.call(
+        let page: TasksPage = try await trpc.call(
             router: "task",
             procedure: "listByWorker",
             type: .query,
-            input: ListByWorkerInput(state: state?.rawValue)
+            input: ListByWorkerInput(limit: 100)
         )
+        let tasks = state.map { s in page.tasks.filter { $0.state == s } } ?? page.tasks
 
         HXLogger.info("TaskService: Fetched \(tasks.count) claimed tasks", category: "Task")
         return tasks
@@ -367,15 +475,16 @@ final class TaskService: ObservableObject {
         let procedure = role == .poster ? "listByPoster" : "listByWorker"
 
         struct HistoryInput: Codable {
-            let state: String?
+            let limit: Int
         }
 
-        let tasks: [HXTask] = try await trpc.call(
+        let page: TasksPage = try await trpc.call(
             router: "task",
             procedure: procedure,
             type: .query,
-            input: HistoryInput(state: nil) // nil state returns all tasks including completed
+            input: HistoryInput(limit: limit)
         )
+        let tasks = page.tasks
 
         HXLogger.info("TaskService: Fetched \(tasks.count) history tasks", category: "Task")
         return tasks
@@ -448,11 +557,21 @@ final class TaskDiscoveryService: ObservableObject {
             filters: filtersInput
         )
 
-        let response: TaskFeedResponse = try await trpc.call(
+        // CONTRACT (2026-06): getFeed returns a BARE ARRAY of feed items with the
+        // task row nested under `.task` plus annotations (canAccept, scores).
+        // Decode the real shape, then adapt to TaskFeedResponse for the UI.
+        let items: [TaskFeedItemDTO] = try await trpc.call(
             router: "taskDiscovery",
             procedure: "getFeed",
             type: .query,
             input: input
+        )
+
+        let response = TaskFeedResponse(
+            tasks: items.map { $0.task },
+            lockedQuests: nil,
+            demandAlerts: nil,
+            matchScore: nil
         )
 
         HXLogger.info("TaskDiscovery: Fetched feed with \(response.tasks.count) tasks", category: "Task")
@@ -631,6 +750,22 @@ final class TaskDiscoveryService: ObservableObject {
         HXLogger.info("TaskDiscovery: Executed saved search, returned \(tasks.count) tasks", category: "Task")
         return tasks
     }
+}
+
+// MARK: - Contract DTOs (2026-06 backend envelope migration)
+
+/// Cursor-paginated envelope returned by task.listByPoster / task.listByWorker.
+struct TasksPage: Codable {
+    let tasks: [HXTask]
+    let nextCursor: String?
+}
+
+/// One element of the bare array returned by taskDiscovery.getFeed:
+/// the task row is nested under `.task` next to matching annotations.
+struct TaskFeedItemDTO: Codable {
+    let task: HXTask
+    let canAccept: Bool?
+    let requiredTrustTier: Int?
 }
 
 // MARK: - Saved Search Model

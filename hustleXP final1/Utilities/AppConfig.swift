@@ -44,6 +44,27 @@ enum AppConfig {
         #endif
     }
 
+    // MARK: - Live Diagnostics (TestFlight log gateway)
+
+    /// Beta diagnostics sink (Supabase edge function `log-ingest`).
+    /// Write-only, token-gated, rate-limited endpoint — the token only allows
+    /// appending log rows, never reading. Used so TestFlight failures are
+    /// visible remotely in near-real-time during beta.
+    // swiftlint:disable:next force_unwrapping
+    static let liveDiagnosticsURL = URL(string: "https://vbnusdfqoyxrrzxshyuh.supabase.co/functions/v1/log-ingest")!
+
+    /// Shared ingest token (append-only permission; see log-ingest function).
+    static let liveDiagnosticsToken = "daafdc0a4891fe6764fe54599bdd142c3f53de4e4c43acdc"
+
+    /// Enabled for DEBUG and TestFlight builds; OFF for App Store builds.
+    static var liveDiagnosticsEnabled: Bool {
+        #if DEBUG
+        return true
+        #else
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
+    }
+
     // MARK: - SSL Pinning
 
     /// Whether to enforce SSL certificate pinning.

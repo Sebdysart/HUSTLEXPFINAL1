@@ -166,6 +166,16 @@ final class AnalyticsService {
         let event = AnalyticsEvent(eventType: eventType.rawValue, properties: properties, category: eventCategory)
         eventBuffer.append(event)
 
+        // Live diagnostics gateway (TestFlight): every analytics event is also
+        // visible remotely, so beta failures can be traced step by step.
+        HXRemoteDiagnostics.shared.record(
+            kind: "analytics",
+            level: nil,
+            category: eventCategory.rawValue,
+            message: eventType.rawValue,
+            metadata: properties
+        )
+
         // Flush if buffer is full
         if eventBuffer.count >= batchSize {
             Task { await flush() }
