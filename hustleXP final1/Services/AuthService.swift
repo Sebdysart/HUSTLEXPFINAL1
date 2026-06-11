@@ -129,6 +129,7 @@ final class AuthService: ObservableObject {
         )
 
         KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
+            HXLogger.setDiagnosticsUser(user.id)
         self.currentUser = user
         self.isAuthenticated = true
         self.needsDateOfBirth = false
@@ -214,6 +215,7 @@ final class AuthService: ObservableObject {
             TRPCClient.shared.setAuthToken(idToken)
             KeychainManager.shared.save(authResult.user.uid, forKey: KeychainManager.Key.firebaseUid)
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
+            HXLogger.setDiagnosticsUser(user.id)
 
             self.currentUser = user
             self.isAuthenticated = true
@@ -480,11 +482,13 @@ final class AuthService: ObservableObject {
 
             self.currentUser = user
             self.isAuthenticated = true
+            HXLogger.setDiagnosticsUser(user.id)
             appState?.login(userId: user.id, role: user.role)
             Task { await PushNotificationManager.shared.flushPendingToken() }
 
             // Store user ID
             KeychainManager.shared.save(user.id, forKey: KeychainManager.Key.userId)
+            HXLogger.setDiagnosticsUser(user.id)
 
             HXLogger.info("Auth: Loaded current user - \(user.name)", category: "Auth")
         } catch {
