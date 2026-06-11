@@ -967,7 +967,11 @@ struct HustlerTaskDetailScreen: View {
         sseSubscription = RealtimeSSEClient.shared.messageReceived
             .receive(on: DispatchQueue.main)
             .sink { message in
+                // CONTRACT (2026-06): backend emits dotted event names
+                // (realtime-dispatcher). Legacy names kept for compatibility.
                 let relevantEvents = [
+                    "task.progress_updated", "escrow.released", "escrow.refunded",
+                    "dispute.created", "dispute.resolved",
                     "task_updated", "task_state_changed", "proof_submitted",
                     "task_completed", "application_accepted", "application_rejected"
                 ]

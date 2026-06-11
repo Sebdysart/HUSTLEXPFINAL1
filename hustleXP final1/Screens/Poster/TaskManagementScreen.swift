@@ -104,7 +104,10 @@ struct TaskManagementScreen: View {
             .receive(on: DispatchQueue.main)
             .sink { message in
                 // Refresh on task-related events (state changes, check-in, proof submitted)
+                // CONTRACT (2026-06): backend emits dotted event names.
                 let relevantEvents = [
+                    "task.progress_updated", "escrow.released", "escrow.refunded",
+                    "dispute.created", "dispute.resolved",
                     "task_updated", "task_state_changed", "worker_checkin",
                     "worker_checkout", "proof_submitted", "task_completed",
                     "worker_location_update"

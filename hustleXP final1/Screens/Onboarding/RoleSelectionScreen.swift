@@ -12,6 +12,8 @@ struct RoleSelectionScreen: View {
     @Environment(Router.self) private var router
     
     @State private var selectedRole: UserRole?
+    @State private var isSavingRole = false
+    @State private var roleError: String?
     
     var body: some View {
         GeometryReader { geometry in
@@ -99,10 +101,15 @@ struct RoleSelectionScreen: View {
             VStack(spacing: 8) {
                 Button(action: handleContinue) {
                     HStack(spacing: 8) {
-                        Text("Continue")
-                            .font(.body.weight(.semibold))
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 14, weight: .semibold))
+                        if isSavingRole {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text("Continue")
+                                .font(.body.weight(.semibold))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
                     }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -112,10 +119,15 @@ struct RoleSelectionScreen: View {
                             .fill(selectedRole != nil ? Color.brandPurple : Color.textMuted.opacity(0.5))
                     )
                 }
-                .disabled(selectedRole == nil)
+                .disabled(selectedRole == nil || isSavingRole)
                 .accessibilityLabel("Continue to next step")
                 
-                if selectedRole == nil {
+                if let roleError {
+                    Text(roleError)
+                        .font(.caption)
+                        .foregroundStyle(Color.errorRed)
+                        .multilineTextAlignment(.center)
+                } else if selectedRole == nil {
                     Text("Select a role to continue")
                         .font(.caption)
                         .foregroundStyle(Color.textMuted)
@@ -129,13 +141,27 @@ struct RoleSelectionScreen: View {
     }
     
     private func handleContinue() {
-        guard let role = selectedRole else { return }
+        guard let role = selectedRole, !isSavingRole else { return }
         
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
         
-        appState.setRole(role)
-        router.navigateToOnboarding(.permissions)
+        // CRITICAL: the backend gates poster endpoints on users.default_mode.
+        // The role MUST be persisted server-side or task.create returns FORBIDDEN.
+        isSavingRole = true
+        roleError = nil
+        Task {
+            do {
+                _ = try await UserProfileService.shared.updateDefaultMode(role)
+                isSavingRole = false
+                appState.setRole(role)
+                router.navigateToOnboarding(.permissions)
+            } catch {
+                isSavingRole = false
+                roleError = "Could not save your role. Check your connection and try again."
+                HXLogger.error("RoleSelection: failed to persist default_mode - \(error.localizedDescription)", category: "Auth")
+            }
+        }
     }
 }
 

@@ -38,12 +38,14 @@ final class RealtimeSSEClient: ObservableObject {
         startHeartbeat()
         guard task == nil else { return }
 
-        guard var components = URLComponents(string: streamURL) else { return }
-        components.queryItems = [URLQueryItem(name: "token", value: authToken)]
-        guard let url = components.url else { return }
+        // CONTRACT (2026-06): the backend SSE handler authenticates via the
+        // Authorization: Bearer header ONLY — a ?token= query param is ignored
+        // and the stream is rejected with 401.
+        guard let url = URL(string: streamURL) else { return }
 
         var request = URLRequest(url: url)
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 0 // No timeout for SSE
 
         // Reuse a single session to avoid URLSession resource leaks.

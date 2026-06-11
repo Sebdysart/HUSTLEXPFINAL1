@@ -291,7 +291,10 @@ struct PosterTaskDetailScreen: View {
         sseSubscription = RealtimeSSEClient.shared.messageReceived
             .receive(on: DispatchQueue.main)
             .sink { message in
+                // CONTRACT (2026-06): backend emits dotted event names.
                 let relevantEvents = [
+                    "task.progress_updated", "escrow.released", "escrow.refunded",
+                    "dispute.created", "dispute.resolved",
                     "task_updated", "task_state_changed", "proof_submitted",
                     "task_completed", "worker_checkin", "worker_checkout"
                 ]

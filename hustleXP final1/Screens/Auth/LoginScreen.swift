@@ -34,6 +34,15 @@ struct LoginScreen: View {
     }
     
     var body: some View {
+        loginBody
+            .sheet(isPresented: $authService.needsDateOfBirth) {
+                DateOfBirthPromptView()
+                    .environmentObject(authService)
+                    .interactiveDismissDisabled(true)
+            }
+    }
+
+    private var loginBody: some View {
         GeometryReader { geometry in
             let safeHeight = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
             let isCompactHeight = safeHeight < 600
@@ -593,4 +602,92 @@ private class AppleSignInDelegate: NSObject, ASAuthorizationControllerDelegate {
     }
     .environment(AppState())
     .environment(Router())
+}
+
+
+// MARK: - Date of Birth Prompt (social sign-in registration completion)
+
+/// Apple/Google sign-in cannot supply a date of birth, but the backend
+/// user.register schema REQUIRES one (age verification). This sheet collects
+/// it and finishes the pending registration.
+struct DateOfBirthPromptView: View {
+    @EnvironmentObject private var authService: AuthService
+    @State private var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -18, to: Date()) ?? Date()
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+
+    private var isAdult: Bool {
+        (Calendar.current.dateComponents([.year], from: dateOfBirth, to: Date()).year ?? 0) >= 18
+    }
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Capsule()
+                .fill(Color.white.opacity(0.2))
+                .frame(width: 40, height: 4)
+                .padding(.top, 12)
+
+            VStack(spacing: 8) {
+                Text("One last thing")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.white)
+                Text("HustleXP is 18+. Enter your date of birth to finish creating your account.")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 24)
+
+            DatePicker(
+                "Date of birth",
+                selection: $dateOfBirth,
+                in: ...Date(),
+                displayedComponents: .date
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .colorScheme(.dark)
+
+            if !isAdult {
+                Text("You must be at least 18 to use HustleXP.")
+                    .font(.caption)
+                    .foregroundStyle(Color.errorRed)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(Color.errorRed)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
+            HXButton("Finish Sign Up", variant: .primary, isLoading: isSubmitting) {
+                submit()
+            }
+            .disabled(!isAdult || isSubmitting)
+            .opacity(isAdult ? 1 : 0.6)
+            .padding(.horizontal, 24)
+
+            Spacer(minLength: 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.brandBlack.ignoresSafeArea())
+        .presentationDetents([.medium])
+    }
+
+    private func submit() {
+        guard isAdult, !isSubmitting else { return }
+        isSubmitting = true
+        errorMessage = nil
+        Task {
+            do {
+                try await authService.completePendingRegistration(dateOfBirth: dateOfBirth)
+                isSubmitting = false
+            } catch {
+                isSubmitting = false
+                errorMessage = "Could not finish sign up: \(error.localizedDescription)"
+            }
+        }
+    }
 }
