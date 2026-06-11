@@ -22,7 +22,7 @@ export default function PosterHomeScreen() {
         </TouchableOpacity>
 
         <Text style={styles.note}>
-          Tip: This RN port wires the core flow (create -> escrow -> feed). Other poster screens are still being ported.
+          Tip: This RN port wires the core flow (create {'->'} escrow {'->'} feed). Other poster screens are still being ported.
         </Text>
       </View>
     </SafeAreaView>
