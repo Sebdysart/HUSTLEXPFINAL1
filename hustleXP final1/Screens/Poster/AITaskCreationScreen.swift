@@ -90,6 +90,9 @@ struct AITaskCreationScreen: View {
                 .offset(x: -100, y: -200)
                 .blur(radius: 80)
                 .rotationEffect(.degrees(orbRotation))
+                // Decorative only: cap reported size so the fixed orb never drives layout width
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
             
             Circle()
                 .fill(
@@ -104,6 +107,9 @@ struct AITaskCreationScreen: View {
                 .offset(x: 150, y: 300)
                 .blur(radius: 60)
                 .rotationEffect(.degrees(-orbRotation * 0.7))
+                // Decorative only: cap reported size so the fixed orb never drives layout width
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
             
             // Grid overlay for nexus feel
             GeometryReader { geo in

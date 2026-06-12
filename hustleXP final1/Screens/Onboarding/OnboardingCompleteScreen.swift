@@ -41,7 +41,10 @@ struct OnboardingCompleteScreen: View {
                         .offset(y: -50)
                     Spacer()
                 }
+                // Decorative only: cap reported size so the fixed orb never drives layout width
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
+                .allowsHitTesting(false)
                 
                 // Secondary purple accent
                 VStack {
@@ -62,7 +65,9 @@ struct OnboardingCompleteScreen: View {
                             .offset(x: 80, y: 100)
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
+                .allowsHitTesting(false)
                 
                 // Confetti particles (enhanced version)
                 if confettiTrigger {
@@ -110,14 +115,19 @@ struct OnboardingCompleteScreen: View {
                         VStack(spacing: isCompact ? 12 : 16) {
                             Text("You're All Set!")
                                 .font(.system(size: isCompact ? 28 : 34, weight: .bold))
+                                .lineLimit(1)
                                 .minimumScaleFactor(0.7)
                                 .foregroundStyle(Color.textPrimary)
-                            
+
                             Text("Welcome to HustleXP, \(appState.userName ?? "Hustler")!")
                                 .font(.system(size: isCompact ? 15 : 17))
                                 .minimumScaleFactor(0.7)
                                 .foregroundStyle(Color.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, isCompact ? 18 : 24)
                         .opacity(showContent ? 1 : 0)
                         .offset(y: showContent ? 0 : 20)
                         .animation(.easeOut(duration: 0.5).delay(0.4), value: showContent)
@@ -209,13 +219,17 @@ private struct StatRow: View {
                 Text(label)
                     .font(.system(size: isCompact ? 14 : 16))
                     .foregroundStyle(Color.textSecondary)
+                    .lineLimit(1)
+                    .layoutPriority(1)
             }
-            
-            Spacer()
-            
+
+            Spacer(minLength: 12)
+
             Text(value)
                 .font(.system(size: isCompact ? 15 : 17, weight: .semibold))
+                .lineLimit(1)
                 .minimumScaleFactor(0.7)
+                .multilineTextAlignment(.trailing)
                 .foregroundStyle(Color.textPrimary)
         }
     }

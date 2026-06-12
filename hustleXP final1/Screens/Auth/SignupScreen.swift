@@ -118,10 +118,13 @@ struct SignupScreen: View {
                     )
                     .frame(width: 400, height: 400)
                     .offset(y: -150)
-                
+
                 Spacer()
             }
+            // Decorative only: cap reported size so the fixed orb never drives layout width
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
+            .allowsHitTesting(false)
         }
     }
     
