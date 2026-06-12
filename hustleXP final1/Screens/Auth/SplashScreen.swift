@@ -38,6 +38,9 @@ struct SplashScreen: View {
                     .easeInOut(duration: 2.0).repeatForever(autoreverses: true),
                     value: isAnimating
                 )
+                // Decorative only: cap reported size so the fixed orb never drives layout width
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
             
             VStack(spacing: 24) {
                 // Logo

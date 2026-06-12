@@ -77,6 +77,31 @@ struct hustleXP_final1App: App {
 
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            // Simulator-only direct screen harness for layout verification.
+            // Launch with env HX_PREVIEW_SCREEN=onboardingComplete (simctl launch --env).
+            // Compiled out of Release builds entirely.
+            if ProcessInfo.processInfo.environment["HX_PREVIEW_SCREEN"] == "onboardingComplete" {
+                OnboardingCompleteScreen()
+                    .environment({ () -> AppState in
+                        let s = AppState()
+                        s.userName = "Sebastian Dysart"
+                        s.userRole = .hustler
+                        return s
+                    }())
+                    .environment(router)
+                    .environment(dataService)
+                    .adaptiveLayout()
+            } else {
+                mainContent
+            }
+            #else
+            mainContent
+            #endif
+        }
+    }
+
+    private var mainContent: some View {
             ZStack {
                 // Main content - always in view hierarchy for faster transition
                 Group {
@@ -150,6 +175,5 @@ struct hustleXP_final1App: App {
                     }
                 }
             }
-        }
     }
 }
