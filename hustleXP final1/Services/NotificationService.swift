@@ -129,6 +129,9 @@ enum NotificationCategory: String, Codable, CaseIterable {
         case .tierUp: return "arrow.up.circle.fill"
         case .badgeEarned: return "rosette"
         case .insuranceClaim: return "shield.fill"
+        case .instantTask, .newMatchingTask: return "bolt.fill"
+        case .escrowFunded: return "lock.fill"
+        case .disputeOpened, .disputeResolved: return "exclamationmark.shield.fill"
         case .general: return "bell.fill"
         }
     }

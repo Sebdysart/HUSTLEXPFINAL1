@@ -258,7 +258,7 @@ final class TaskService: ObservableObject {
         if approved {
             task = try await completeTask(taskId: taskId)
         } else {
-            task = try await getTask(taskId: taskId)
+            task = try await getTask(id: taskId)
         }
 
         HXLogger.info("TaskService: Reviewed proof for task - \(task.title), approved: \(approved)", category: "Task")
@@ -344,7 +344,7 @@ final class TaskService: ObservableObject {
             input: AssignInput(taskId: taskId, workerId: workerId)
         )
 
-        let task = try await getTask(taskId: taskId)
+        let task = try await getTask(id: taskId)
         HXLogger.info("TaskService: Assigned worker to task - \(task.title)", category: "Task")
         AnalyticsService.shared.trackTaskEvent(.taskAccepted, taskId: task.id, taskTitle: task.title)
         return task
