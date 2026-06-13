@@ -1,29 +1,29 @@
 import XCTest
 @testable import hustleXP_final1
 
+/// Tests for the local-only RecurringTaskService.
+/// Backend support for recurring tasks is pending; the service maintains
+/// series/occurrences in memory. These tests pin that local behavior.
 final class RecurringTaskServiceTests: XCTestCase {
     var sut: RecurringTaskService!
-    var mockClient: MockTRPCClient!
 
     @MainActor override func setUp() {
         super.setUp()
-        mockClient = MockTRPCClient()
-        sut = RecurringTaskService(client: mockClient)
+        sut = RecurringTaskService()
     }
 
     override func tearDown() {
         sut = nil
-        mockClient = nil
         super.tearDown()
     }
 
-    // MARK: - Series CRUD Tests
+    // MARK: - Helpers
 
-    @MainActor func testCreateSeries_callsCorrectProcedure() async throws {
-        mockClient.stubJSON("recurringTask.create", json: TestFixtures.recurringSeriesJSON)
-
-        let series = try await sut.createSeries(
-            title: "Weekly Lawn Mow",
+    @MainActor
+    @discardableResult
+    private func makeSeries(title: String = "Weekly Lawn Mow") async throws -> RecurringTaskSeries {
+        try await sut.createSeries(
+            title: title,
             description: "Mow the front lawn",
             payment: 5000,
             location: "123 Main St",
@@ -37,80 +37,133 @@ final class RecurringTaskServiceTests: XCTestCase {
             startDate: Date(),
             endDate: nil
         )
-
-        XCTAssertEqual(series.id, "series-1")
-        XCTAssertTrue(mockClient.wasCalled("recurringTask.create"))
     }
 
-    @MainActor func testListMine_returnsArray() async throws {
-        mockClient.stubJSON("recurringTask.listMine", json: "[\(TestFixtures.recurringSeriesJSON)]")
+    // MARK: - Series CRUD
+
+    @MainActor func testCreateSeries_createsActiveLocalSeries() async throws {
+        let series = try await makeSeries()
+
+        XCTAssertTrue(series.id.hasPrefix("local-series-"))
+        XCTAssertEqual(series.title, "Weekly Lawn Mow")
+        XCTAssertEqual(series.status, .active)
+        XCTAssertEqual(series.occurrenceCount, 1)
+        XCTAssertEqual(series.completedCount, 0)
+        XCTAssertNil(series.preferredWorkerId)
+    }
+
+    @MainActor func testGetMySeries_returnsCreatedSeriesNewestFirst() async throws {
+        try await makeSeries(title: "First")
+        try await makeSeries(title: "Second")
 
         let series = try await sut.getMySeries()
 
-        XCTAssertEqual(series.count, 1)
-        XCTAssertEqual(series.first?.title, "Weekly Lawn Mow")
-        XCTAssertTrue(mockClient.wasCalled("recurringTask.listMine"))
+        XCTAssertEqual(series.count, 2)
+        XCTAssertEqual(series.first?.title, "Second")
     }
 
     @MainActor func testGetById_returnsSeries() async throws {
-        mockClient.stubJSON("recurringTask.getById", json: TestFixtures.recurringSeriesJSON)
+        let created = try await makeSeries()
 
-        let series = try await sut.getSeries(id: "series-1")
+        let fetched = try await sut.getSeries(id: created.id)
 
-        XCTAssertEqual(series.id, "series-1")
-        XCTAssertTrue(mockClient.wasCalled("recurringTask.getById"))
+        XCTAssertEqual(fetched.id, created.id)
+        XCTAssertEqual(fetched.title, created.title)
     }
 
-    @MainActor func testPauseSeries_callsMutation() async throws {
-        mockClient.stubJSON("recurringTask.pause", json: "{\"success\": true}")
-
-        try await sut.pauseSeries(id: "series-1")
-
-        XCTAssertTrue(mockClient.wasCalled("recurringTask.pause"))
+    @MainActor func testGetById_unknownId_throws() async {
+        do {
+            _ = try await sut.getSeries(id: "missing-series")
+            XCTFail("Expected getSeries to throw for unknown id")
+        } catch {
+            XCTAssertEqual((error as NSError).code, 404)
+        }
     }
 
-    @MainActor func testResumeSeries_callsMutation() async throws {
-        mockClient.stubJSON("recurringTask.resume", json: "{\"success\": true}")
+    @MainActor func testPauseSeries_setsPausedStatus() async throws {
+        let created = try await makeSeries()
 
-        try await sut.resumeSeries(id: "series-1")
+        try await sut.pauseSeries(id: created.id)
 
-        XCTAssertTrue(mockClient.wasCalled("recurringTask.resume"))
+        let fetched = try await sut.getSeries(id: created.id)
+        XCTAssertEqual(fetched.status, .paused)
     }
 
-    @MainActor func testCancelSeries_callsMutation() async throws {
-        mockClient.stubJSON("recurringTask.cancel", json: "{\"success\": true}")
+    @MainActor func testResumeSeries_setsActiveStatus() async throws {
+        let created = try await makeSeries()
+        try await sut.pauseSeries(id: created.id)
 
-        try await sut.cancelSeries(id: "series-1")
+        try await sut.resumeSeries(id: created.id)
 
-        XCTAssertTrue(mockClient.wasCalled("recurringTask.cancel"))
+        let fetched = try await sut.getSeries(id: created.id)
+        XCTAssertEqual(fetched.status, .active)
     }
 
-    // MARK: - Occurrence Tests
+    @MainActor func testCancelSeries_setsCancelledStatus() async throws {
+        let created = try await makeSeries()
 
-    @MainActor func testListOccurrences_returnsArray() async throws {
-        mockClient.stubJSON("recurringTask.listOccurrences", json: "[\(TestFixtures.recurringOccurrenceJSON)]")
+        try await sut.cancelSeries(id: created.id)
 
-        let occurrences = try await sut.getOccurrences(seriesId: "series-1")
+        let fetched = try await sut.getSeries(id: created.id)
+        XCTAssertEqual(fetched.status, .cancelled)
+    }
+
+    @MainActor func testPauseSeries_unknownId_throws() async {
+        do {
+            try await sut.pauseSeries(id: "missing-series")
+            XCTFail("Expected pauseSeries to throw for unknown id")
+        } catch {
+            XCTAssertEqual((error as NSError).code, 404)
+        }
+    }
+
+    // MARK: - Occurrences
+
+    @MainActor func testGetOccurrences_returnsInitialOccurrence() async throws {
+        let created = try await makeSeries()
+
+        let occurrences = try await sut.getOccurrences(seriesId: created.id)
 
         XCTAssertEqual(occurrences.count, 1)
-        XCTAssertTrue(mockClient.wasCalled("recurringTask.listOccurrences"))
+        XCTAssertEqual(occurrences.first?.seriesId, created.id)
+        XCTAssertEqual(occurrences.first?.status, .scheduled)
+        XCTAssertEqual(occurrences.first?.occurrenceNumber, 1)
     }
 
-    @MainActor func testSkipOccurrence_callsMutation() async throws {
-        mockClient.stubJSON("recurringTask.skipOccurrence", json: "{\"success\": true}")
+    @MainActor func testGetOccurrences_unknownSeries_returnsEmpty() async throws {
+        let occurrences = try await sut.getOccurrences(seriesId: "missing-series")
+        XCTAssertTrue(occurrences.isEmpty)
+    }
 
-        try await sut.skipOccurrence(occurrenceId: "occ-1")
+    @MainActor func testSkipOccurrence_marksSkipped() async throws {
+        let created = try await makeSeries()
+        let occurrences = try await sut.getOccurrences(seriesId: created.id)
+        let occurrence = try XCTUnwrap(occurrences.first)
 
-        XCTAssertTrue(mockClient.wasCalled("recurringTask.skipOccurrence"))
+        try await sut.skipOccurrence(occurrenceId: occurrence.id)
+
+        let after = try await sut.getOccurrences(seriesId: created.id)
+        XCTAssertEqual(after.first?.status, .skipped)
+    }
+
+    @MainActor func testSkipOccurrence_unknownId_throws() async {
+        do {
+            try await sut.skipOccurrence(occurrenceId: "missing-occurrence")
+            XCTFail("Expected skipOccurrence to throw for unknown id")
+        } catch {
+            XCTAssertEqual((error as NSError).code, 404)
+        }
     }
 
     // MARK: - Preferred Worker
 
-    @MainActor func testSetPreferredWorker_callsMutation() async throws {
-        mockClient.stubJSON("recurringTask.setPreferredWorker", json: "{\"success\": true}")
+    @MainActor func testSetPreferredWorker_updatesSeries() async throws {
+        let created = try await makeSeries()
 
-        try await sut.setPreferredWorker(seriesId: "series-1", workerId: "user-2")
+        try await sut.setPreferredWorker(seriesId: created.id, workerId: "user-2")
 
-        XCTAssertTrue(mockClient.wasCalled("recurringTask.setPreferredWorker"))
+        let fetched = try await sut.getSeries(id: created.id)
+        XCTAssertEqual(fetched.preferredWorkerId, "user-2")
+        XCTAssertNotNil(fetched.preferredWorkerName)
     }
 }

@@ -49,7 +49,7 @@ final class EscrowServiceTests: XCTestCase {
         let releasedJSON = TestFixtures.modify(
             TestFixtures.escrowJSON,
             key: "state",
-            value: "\"released\""
+            value: "\"RELEASED\""
         )
         mockClient.stubJSON("escrow.release", json: releasedJSON)
 
@@ -65,7 +65,7 @@ final class EscrowServiceTests: XCTestCase {
         let refundedJSON = TestFixtures.modify(
             TestFixtures.escrowJSON,
             key: "state",
-            value: "\"refunded\""
+            value: "\"REFUNDED\""
         )
         mockClient.stubJSON("escrow.refund", json: refundedJSON)
 
@@ -85,9 +85,10 @@ final class EscrowServiceTests: XCTestCase {
             baseXP: 50
         )
 
-        XCTAssertEqual(result.xpAwarded, 50)
-        XCTAssertEqual(result.newTotalXP, 200)
-        XCTAssertEqual(result.tierUp, false)
+        XCTAssertEqual(result.effectiveXp, 50)
+        XCTAssertEqual(result.userXpAfter, 200)
+        XCTAssertEqual(result.xpGained, 50)
+        XCTAssertFalse(result.didLevelUp)
     }
 
     // MARK: - Error Handling

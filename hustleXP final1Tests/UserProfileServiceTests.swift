@@ -111,8 +111,9 @@ final class UserProfileServiceTests: XCTestCase {
 
         let status = try await service.getOnboardingStatus()
 
-        XCTAssertTrue(status.hasCompletedOnboarding)
-        XCTAssertEqual(status.completedSteps.count, 2)
+        XCTAssertTrue(status.onboardingComplete)
+        XCTAssertEqual(status.role, "hustler")
+        XCTAssertFalse(status.hasCompletedFirstTask)
         XCTAssertTrue(mockClient.wasCalled("user.getOnboardingStatus"))
     }
 

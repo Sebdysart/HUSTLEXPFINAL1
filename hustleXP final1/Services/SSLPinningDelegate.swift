@@ -31,13 +31,29 @@ final class SSLPinningDelegate: NSObject, URLSessionDelegate {
             return
         }
 
+        // If no real pins are configured (bundled pins are placeholders and no
+        // remote pins are cached), pinning is NOT CONFIGURED. Fall back to the
+        // system trust evaluation that already passed above rather than
+        // rejecting every connection — fail-closed here bricked all
+        // Release/TestFlight networking while shipping placeholder pins.
+        let validPins = CertificatePins.pins
+        guard !validPins.isEmpty else {
+            HXLogger.error(
+                "SSL pinning enabled but no real pins configured — falling back to system TLS validation",
+                category: "Network"
+            )
+            let credential = URLCredential(trust: serverTrust)
+            completionHandler(.useCredential, credential)
+            return
+        }
+
         // Enforce pin matching against certificate chain
         let certificateChain = SecTrustCopyCertificateChain(serverTrust) as? [SecCertificate] ?? []
 
         for certificate in certificateChain {
 
             if let hash = CertificatePins.sha256(of: certificate),
-               CertificatePins.pins.contains(hash) {
+               validPins.contains(hash) {
                 let credential = URLCredential(trust: serverTrust)
                 completionHandler(.useCredential, credential)
                 return

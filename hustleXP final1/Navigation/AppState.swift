@@ -101,32 +101,53 @@ final class AppState {
     
     // Onboarding
     var hasCompletedOnboarding: Bool = false
-    
+
     // Navigation
     var selectedTab: Int = 0
-    
+
+    // MARK: - Onboarding Persistence
+
+    /// Per-user UserDefaults key for onboarding completion.
+    /// FIX (2026-06-12): this flag was in-memory only, so every cold launch
+    /// sent an already-onboarded user back through the onboarding flow.
+    private static func onboardingKey(for userId: String) -> String {
+        "hx_onboarding_complete_\(userId)"
+    }
+
+    static func persistedOnboardingComplete(for userId: String) -> Bool {
+        UserDefaults.standard.bool(forKey: onboardingKey(for: userId))
+    }
+
     // MARK: - Actions
-    
+
     func login(userId: String, role: UserRole) {
         self.userId = userId
         self.userRole = role
         self.isLoggedIn = true
+        // Restore onboarding completion from disk for this user
+        if !hasCompletedOnboarding {
+            hasCompletedOnboarding = Self.persistedOnboardingComplete(for: userId)
+        }
         self.authState = hasCompletedOnboarding ? .authenticated : .onboarding
         HXLogger.info("[AppState] User logged in: \(userId), role: \(role.rawValue)", category: "Navigation")
     }
-    
+
     func logout() {
         self.userId = nil
         self.userRole = nil
         self.isLoggedIn = false
         self.authState = .unauthenticated
         self.selectedTab = 0
+        self.hasCompletedOnboarding = false
         HXLogger.info("[AppState] User logged out", category: "Navigation")
     }
-    
+
     func completeOnboarding() {
         self.hasCompletedOnboarding = true
         self.authState = .authenticated
+        if let userId {
+            UserDefaults.standard.set(true, forKey: Self.onboardingKey(for: userId))
+        }
         HXLogger.info("[AppState] Onboarding completed", category: "Navigation")
     }
     

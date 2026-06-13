@@ -64,6 +64,14 @@ struct CreateTaskScreen: View {
         .safeAreaInset(edge: .bottom) {
             bottomActionBar
         }
+        .alert("Couldn't Post Task", isPresented: Binding(
+            get: { viewModel.submitError != nil },
+            set: { if !$0 { viewModel.submitError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.submitError ?? "Something went wrong. Please try again.")
+        }
         .onAppear {
             viewModel.router = router
             viewModel.dataService = dataService

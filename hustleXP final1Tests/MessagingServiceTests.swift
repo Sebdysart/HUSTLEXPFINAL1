@@ -62,7 +62,7 @@ final class MessagingServiceTests: XCTestCase {
     func testMarkAsRead_callsMutation() async throws {
         mockClient.stubJSON("messaging.markAllAsRead", json: "{}")
         // markAsRead internally calls refreshUnreadCount -> getUnreadCount
-        mockClient.stubJSON("messaging.getUnreadCount", json: "{\"count\": 0}")
+        mockClient.stubJSON("messaging.getUnreadCount", json: "{\"unreadCount\": 0, \"count\": 0}")
 
         try await service.markAsRead(taskId: "task-1")
 
@@ -73,7 +73,7 @@ final class MessagingServiceTests: XCTestCase {
 
     func testGetUnreadCount_returnsCount() async throws {
         mockClient.stubJSON("messaging.getUnreadCount", json: """
-        {"count": 5}
+        {"unreadCount": 5, "count": 5}
         """)
 
         let count = try await service.getUnreadCount()

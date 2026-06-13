@@ -54,13 +54,14 @@ enum TestFixtures {
         "task_id": "task-1",
         "poster_id": "poster-1",
         "worker_id": "worker-1",
-        "amount_cents": 2500,
+        "amount": 2500,
         "platform_fee_cents": 250,
         "tax_withholding_cents": 0,
         "insurance_contribution_cents": 0,
-        "state": "funded",
+        "state": "FUNDED",
         "stripe_payment_intent_id": "pi_test123",
         "created_at": "2026-03-01T10:00:00Z",
+        "updated_at": "2026-03-01T10:01:00Z",
         "funded_at": "2026-03-01T10:01:00Z",
         "released_at": null
     }
@@ -77,10 +78,22 @@ enum TestFixtures {
 
     static let xpAwardJSON = """
     {
-        "xpAwarded": 50,
-        "newTotalXP": 200,
-        "bonusXP": 10,
-        "tierUp": false
+        "id": "xp-1",
+        "userId": "user-1",
+        "taskId": "task-1",
+        "escrowId": "esc-1",
+        "baseXp": 50,
+        "streakMultiplier": 1.0,
+        "trustMultiplier": 1.0,
+        "liveModeMultiplier": 1.0,
+        "effectiveXp": 50,
+        "reason": "task_completion",
+        "userXpBefore": 150,
+        "userXpAfter": 200,
+        "userLevelBefore": 2,
+        "userLevelAfter": 2,
+        "userStreakAtAward": 3,
+        "awardedAt": "2026-01-15T10:00:00Z"
     }
     """
 
@@ -192,14 +205,16 @@ enum TestFixtures {
     static let messageJSON = """
     {
         "id": "msg-1",
-        "conversationId": "task-1",
+        "taskId": "task-1",
         "senderId": "user-2",
-        "senderName": "Jane",
+        "receiverId": "user-1",
         "content": "Hello!",
-        "timestamp": "2026-03-01T10:00:00Z",
-        "isRead": false,
+        "createdAt": "2026-03-01T10:00:00Z",
+        "readAt": null,
         "messageType": "TEXT",
-        "photoUrls": []
+        "photoUrls": [],
+        "autoMessageTemplate": null,
+        "updatedAt": "2026-03-01T10:00:00Z"
     }
     """
 
@@ -267,9 +282,10 @@ enum TestFixtures {
 
     static let onboardingStatusJSON = """
     {
-        "hasCompletedOnboarding": true,
-        "completedSteps": ["role_selection", "profile_setup"],
-        "currentStep": null
+        "onboardingComplete": true,
+        "role": "hustler",
+        "hasCompletedFirstTask": false,
+        "xpFirstCelebrationShownAt": null
     }
     """
 
@@ -319,12 +335,22 @@ enum TestFixtures {
 
     static let notificationPreferencesJSON = """
     {
+        "id": "np-1",
+        "userId": "user-1",
         "pushEnabled": true,
         "emailEnabled": false,
-        "taskUpdates": true,
-        "paymentUpdates": true,
-        "messageNotifications": true,
-        "marketingEmails": false
+        "smsEnabled": false,
+        "quietHoursEnabled": false,
+        "quietHoursStart": null,
+        "quietHoursEnd": null,
+        "categoryPreferences": {
+            "taskUpdates": true,
+            "paymentUpdates": true,
+            "messageNotifications": true,
+            "marketingEmails": false
+        },
+        "createdAt": "2026-03-01T10:00:00Z",
+        "updatedAt": "2026-03-01T10:00:00Z"
     }
     """
 

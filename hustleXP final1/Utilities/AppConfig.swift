@@ -18,15 +18,16 @@ enum AppConfig {
     // MARK: - Backend
 
     /// Railway backend base URL.
-    /// Debug: staging environment. Release: production environment.
+    ///
+    /// NOTE (2026-06-12): Debug previously pointed at
+    /// `hustlexp-ai-backend-staging-production.up.railway.app`, but that
+    /// Railway app no longer exists (edge returns 404 "Application not found"),
+    /// which made every Debug build talk to a dead backend. Until a staging
+    /// environment is recreated, Debug uses production. Re-split when staging
+    /// is back.
     static var backendBaseURL: URL {
-        #if DEBUG
-        // swiftlint:disable:next force_unwrapping
-        URL(string: "https://hustlexp-ai-backend-staging-production.up.railway.app")!
-        #else
         // swiftlint:disable:next force_unwrapping
         URL(string: "https://hustlexp-ai-backend-production.up.railway.app")!
-        #endif
     }
 
     // MARK: - Stripe

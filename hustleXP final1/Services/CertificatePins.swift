@@ -66,6 +66,12 @@ enum CertificatePins {
 
     /// All currently valid pins: union of bundled + cached remote pins.
     /// This is what SSLPinningDelegate checks against.
+    ///
+    /// Placeholder pins (not 64-char hex) are excluded — they can never match
+    /// a real certificate. If this returns an empty array, pinning is treated
+    /// as NOT CONFIGURED and SSLPinningDelegate falls back to system TLS
+    /// validation instead of rejecting every connection (fail-closed with
+    /// placeholder pins bricked all Release/TestFlight networking).
     static var pins: [String] {
         var allPins = Set(bundledPins)
 
@@ -74,7 +80,10 @@ enum CertificatePins {
             allPins.formUnion(cached)
         }
 
-        return Array(allPins)
+        // Drop placeholders / malformed entries (SHA-256 = 64 hex chars)
+        return allPins.filter { pin in
+            pin.count == 64 && pin.allSatisfy { $0.isHexDigit }
+        }
     }
 
     /// Cached remote pins from UserDefaults

@@ -37,6 +37,10 @@ final class CreateTaskViewModel {
     var duration: String = ""
     var requiredTier: TrustTier = .rookie
     var isSubmitting: Bool = false
+    /// User-facing error shown when posting or funding the task fails.
+    /// Replaces the old silent local-mock fallback, which showed a fake
+    /// "posted" task that never existed in the backend.
+    var submitError: String?
     var errors: [String: String] = [:]
     var showContent = false
     var showPaymentSheet: Bool = false
@@ -264,41 +268,23 @@ final class CreateTaskViewModel {
                     HXLogger.error("CreateTask: Payment canceled by user", category: "Task")
                     stripeManager.reset()
                     isSubmitting = false
+                    submitError = "Payment was canceled, so your task is not visible to hustlers yet. Tap Post Task to try again."
 
                 case .failed(error: let error):
                     HXLogger.error("CreateTask: Stripe payment failed - \(error.localizedDescription)", category: "Task")
                     stripeManager.reset()
                     isSubmitting = false
+                    submitError = "Payment didn't go through, so your task is not visible to hustlers yet. Please check your payment method and try again."
                 }
 
             } catch {
-                HXLogger.error("CreateTask: API failed, using mock - \(error.localizedDescription)", category: "Task")
-
-                let mockTask = HXTask(
-                    id: "task-\(UUID().uuidString.prefix(8))",
-                    title: title,
-                    description: description,
-                    payment: paymentAmount,
-                    location: location,
-                    latitude: nil,
-                    longitude: nil,
-                    estimatedDuration: duration.isEmpty ? "1 hr" : duration,
-                    posterId: dataService.currentUser.id,
-                    posterName: dataService.currentUser.name,
-                    posterRating: dataService.currentUser.rating,
-                    hustlerId: nil,
-                    hustlerName: nil,
-                    state: .posted,
-                    requiredTier: requiredTier,
-                    createdAt: Date(),
-                    claimedAt: nil,
-                    completedAt: nil,
-                    aiSuggestedPrice: taskWasAIPriced
-                )
-                dataService.postTask(mockTask)
-
+                // HONESTY FIX (2026-06-12): previously this fell back to a
+                // local mock task marked "posted", silently showing the user
+                // a task that never existed in the backend and disappeared on
+                // restart. Surface the real failure instead.
+                HXLogger.error("CreateTask: API failed - \(error.localizedDescription)", category: "Task")
                 isSubmitting = false
-                router.popPoster()
+                submitError = "We couldn't post your task: \(error.localizedDescription)"
             }
         }
     }

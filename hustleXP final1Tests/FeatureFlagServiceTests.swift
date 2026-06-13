@@ -1,63 +1,90 @@
 import XCTest
 @testable import hustleXP_final1
 
+/// Tests for the local-cache-only FeatureFlagService.
+/// The service no longer calls the backend (flags router removed);
+/// it resolves flags from UserDefaults cache + compiled defaults.
 @MainActor
 final class FeatureFlagServiceTests: XCTestCase {
 
-    var sut: FeatureFlagService!
-    var mockClient: MockTRPCClient!
+    private let cacheKey = "feature_flags_cache"
+
+    /// WORKAROUND (iOS 26.2 simulator runtime): deallocating a @MainActor
+    /// ObservableObject inside a sync XCTest method aborts in
+    /// swift_task_deinitOnExecutorImpl (TaskLocal::StopLookupScope double-free).
+    /// Production only ever uses the never-deallocated singleton, so we retain
+    /// test instances for the process lifetime instead of letting them deinit.
+    private static var retainedInstances: [FeatureFlagService] = []
+
+    private func makeService() -> FeatureFlagService {
+        let service = FeatureFlagService()
+        Self.retainedInstances.append(service)
+        return service
+    }
 
     override func setUp() {
         super.setUp()
-        mockClient = MockTRPCClient()
-        sut = FeatureFlagService(client: mockClient)
+        UserDefaults.standard.removeObject(forKey: cacheKey)
     }
 
     override func tearDown() {
-        sut = nil
-        mockClient = nil
+        UserDefaults.standard.removeObject(forKey: cacheKey)
         super.tearDown()
+    }
+
+    private func seedCache(_ flags: [String: Bool]) {
+        let data = try! JSONEncoder().encode(flags)
+        UserDefaults.standard.set(data, forKey: cacheKey)
     }
 
     // MARK: - isEnabled
 
     func testIsEnabled_defaultsFalse() {
+        let sut = makeService()
         // Unset flags default to false
         XCTAssertFalse(sut.isEnabled("nonexistent_flag"))
     }
 
-    // MARK: - refreshFlags
+    // MARK: - Cache loading
 
-    func testRefreshFlags_callsQueryAndUpdatesFlags() async {
-        let flagsJSON = """
-        [
-            {"name": "dark_mode", "enabled": true},
-            {"name": "beta_feature", "enabled": false}
-        ]
-        """
-        mockClient.stubJSON("flags.getFlags", json: flagsJSON)
+    func testInit_loadsFlagsFromCache() {
+        seedCache(["dark_mode": true, "beta_feature": false])
 
-        await sut.refreshFlags()
+        let sut = makeService()
 
-        XCTAssertTrue(mockClient.wasCalled("flags.getFlags"))
         XCTAssertTrue(sut.isEnabled("dark_mode"))
         XCTAssertFalse(sut.isEnabled("beta_feature"))
     }
 
-    func testRefreshFlags_networkError_keepsOldFlags() async {
-        // First load some flags successfully
-        let flagsJSON = """
-        [{"name": "test_flag", "enabled": true}]
-        """
-        mockClient.stubJSON("flags.getFlags", json: flagsJSON)
-        await sut.refreshFlags()
+    func testInit_corruptCache_fallsBackToEmpty() {
+        UserDefaults.standard.set(Data("not json".utf8), forKey: cacheKey)
+
+        let sut = makeService()
+
+        XCTAssertFalse(sut.isEnabled("anything"))
+    }
+
+    // MARK: - refreshFlags
+
+    func testRefreshFlags_keepsExistingFlags() async {
+        seedCache(["test_flag": true])
+        let sut = makeService()
         XCTAssertTrue(sut.isEnabled("test_flag"))
 
-        // Now simulate error on next refresh
-        mockClient.stubError("flags.getFlags", error: MockNetworkError.serverError)
         await sut.refreshFlags()
 
-        // Old flags should still be there (refreshFlags catches errors internally)
+        // Local refresh must not drop previously loaded flags
         XCTAssertTrue(sut.isEnabled("test_flag"))
+    }
+
+    func testRefreshFlags_persistsFlagsToCache() async {
+        seedCache(["persisted_flag": true])
+        let sut = makeService()
+
+        await sut.refreshFlags()
+
+        // A fresh instance must see the persisted flags
+        let second = makeService()
+        XCTAssertTrue(second.isEnabled("persisted_flag"))
     }
 }

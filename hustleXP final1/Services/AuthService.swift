@@ -483,6 +483,20 @@ final class AuthService: ObservableObject {
             self.currentUser = user
             self.isAuthenticated = true
             HXLogger.setDiagnosticsUser(user.id)
+
+            // Hydrate onboarding completion from the backend BEFORE login()
+            // decides between .onboarding and .authenticated, so an
+            // already-onboarded user isn't sent back through onboarding on a
+            // fresh install / new device. Local UserDefaults flag (checked
+            // inside AppState.login) covers the offline/same-device case.
+            if let appState,
+               !AppState.persistedOnboardingComplete(for: user.id),
+               let status = try? await UserProfileService.shared.getOnboardingStatus(),
+               status.onboardingComplete {
+                appState.hasCompletedOnboarding = true
+                UserDefaults.standard.set(true, forKey: "hx_onboarding_complete_\(user.id)")
+            }
+
             appState?.login(userId: user.id, role: user.role)
             Task { await PushNotificationManager.shared.flushPendingToken() }
 

@@ -26,7 +26,7 @@ final class TaskServiceTests: XCTestCase {
 
         _ = try await service.createTask(
             title: "Test",
-            description: "Desc",
+            description: "A sufficiently long task description",
             payment: 25.00,
             location: "SF",
             latitude: 37.77,
@@ -44,7 +44,7 @@ final class TaskServiceTests: XCTestCase {
 
         let task = try await service.createTask(
             title: "Test Task",
-            description: "A test",
+            description: "A test task that needs doing",
             payment: 25.00,
             location: "SF",
             latitude: nil,
@@ -63,7 +63,7 @@ final class TaskServiceTests: XCTestCase {
         do {
             _ = try await service.createTask(
                 title: "Test",
-                description: "Desc",
+                description: "A sufficiently long task description",
                 payment: 25.00,
                 location: "SF",
                 latitude: nil,
@@ -149,13 +149,16 @@ final class TaskServiceTests: XCTestCase {
         XCTAssertEqual(result.status, "pending")
     }
 
-    func testWithdrawApplication() async throws {
-        let json = """
-        {"success":true}
-        """
-        mockClient.stubJSON("task.withdrawApplication", json: json)
-
-        try await service.withdrawApplication(taskId: "task-001")
-        // No assertion needed - success means it didn't throw
+    func testWithdrawApplication_unsupportedInLiveContract_throws() async {
+        // Application withdrawal is intentionally unsupported in the live
+        // backend contract — the service must surface a clear 501 error
+        // and must NOT call the backend.
+        do {
+            try await service.withdrawApplication(taskId: "task-001")
+            XCTFail("Expected unsupported-workflow error")
+        } catch {
+            XCTAssertEqual((error as NSError).code, 501)
+            XCTAssertFalse(mockClient.wasCalled("task.withdrawApplication"))
+        }
     }
 }

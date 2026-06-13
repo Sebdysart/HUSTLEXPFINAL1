@@ -187,6 +187,13 @@ struct OnboardingCompleteScreen: View {
                         // Start button
                         HXButton("Start Hustling", variant: .primary) {
                             appState.completeOnboarding()
+                            // Record completion in the backend (fire-and-forget;
+                            // local persistence above is the source of truth for
+                            // navigation, this keeps the server in sync so a
+                            // reinstall doesn't re-run onboarding).
+                            Task {
+                                try? await UserProfileService.shared.completeOnboarding()
+                            }
                         }
                         .accessibilityLabel("Start using the app")
                         .padding(.horizontal, isCompact ? 18 : 24)
