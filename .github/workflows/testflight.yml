@@ -1,0 +1,81 @@
+name: TestFlight Upload
+
+# Intentionally NOT triggered on every push to main (this ships real builds to
+# testers). Trigger it deliberately: run "TestFlight Upload" from the Actions
+# tab, or push a beta tag like v1.2.6-beta1.
+on:
+  workflow_dispatch:
+    inputs:
+      build_note:
+        description: 'What to test in this build'
+        required: false
+        default: 'Internal beta build'
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+-beta*'
+
+concurrency:
+  group: testflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-upload:
+    name: Build & Upload to TestFlight
+    runs-on: macos-14
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app \
+            || sudo xcode-select -s /Applications/Xcode_16.1.app \
+            || sudo xcode-select -s /Applications/Xcode_16.app \
+            || sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Install xcpretty
+        run: gem install xcpretty --no-document || true
+
+      - name: Inject Team ID into ExportOptions.plist
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$APPLE_TEAM_ID" ]; then
+            echo "::error::APPLE_TEAM_ID secret is not set."; exit 1
+          fi
+          sed -i '' "s/TEAM_ID_PLACEHOLDER/${APPLE_TEAM_ID}/" ExportOptions.plist
+          echo "Injected Team ID."
+
+      - name: Decode App Store Connect API key
+        env:
+          ASC_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+        run: |
+          if [ -z "$ASC_KEY_CONTENT" ]; then
+            echo "::error::APP_STORE_CONNECT_API_KEY_CONTENT secret is not set."; exit 1
+          fi
+          echo "$ASC_KEY_CONTENT" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          echo "Decoded API key to runner temp."
+
+      - name: Build, sign & upload to TestFlight
+        env:
+          ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          chmod +x scripts/build-testflight.sh
+          ./scripts/build-testflight.sh
+
+      - name: Remove API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Upload archive artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HustleXP-archive
+          path: build/HustleXP.xcarchive
+          retention-days: 14
+          if-no-files-found: ignore

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TestFlight / App Store export options for HustleXP.
+
+  CI injects the real Team ID at build time by replacing TEAM_ID_PLACEHOLDER
+  with the APPLE_TEAM_ID secret (current value in project.pbxproj: V85B8S6KA2).
+
+  destination=upload  -> xcodebuild -exportArchive uploads straight to
+                         App Store Connect / TestFlight (no separate altool step).
+  manageAppVersionAndBuildNumber=true -> Apple assigns a unique build number on
+                         upload, so a stale CURRENT_PROJECT_VERSION never collides.
+-->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>TEAM_ID_PLACEHOLDER</string>
+    <key>destination</key>
+    <string>upload</string>
+    <key>signingStyle</key>
+    <string>automatic</string>
+    <key>manageAppVersionAndBuildNumber</key>
+    <true/>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>uploadBitcode</key>
+    <false/>
+    <key>compileBitcode</key>
+    <false/>
+    <key>stripSwiftSymbols</key>
+    <true/>
+</dict>
+</plist>
