@@ -21,8 +21,7 @@ concurrency:
 jobs:
   build-and-upload:
     name: Build & Upload to TestFlight
-    # macos-26 carries Xcode 26.x + the iOS 26 SDK the project targets.
-    runs-on: macos-26
+    runs-on: macos-26   # Xcode 26.x + iOS 26 SDK
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -38,34 +37,64 @@ jobs:
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if [ -z "$APPLE_TEAM_ID" ]; then
-            echo "::error::APPLE_TEAM_ID secret is not set."; exit 1
-          fi
+          [ -n "$APPLE_TEAM_ID" ] || { echo "::error::APPLE_TEAM_ID not set"; exit 1; }
           sed -i '' "s/TEAM_ID_PLACEHOLDER/${APPLE_TEAM_ID}/" ExportOptions.plist
-          echo "Injected Team ID."
+
+      - name: Import signing certificate & provisioning profile
+        env:
+          CERT_P12: ${{ secrets.BUILD_CERTIFICATE_P12 }}
+          CERT_PWD: ${{ secrets.P12_PASSWORD }}
+          PROFILE_B64: ${{ secrets.BUILD_PROVISION_PROFILE }}
+          KEYCHAIN_PWD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for v in CERT_P12 CERT_PWD PROFILE_B64 KEYCHAIN_PWD; do
+            [ -n "${!v}" ] || { echo "::error::$v secret not set"; exit 1; }
+          done
+          CERT="$RUNNER_TEMP/dist.p12"
+          KC="$RUNNER_TEMP/signing.keychain-db"
+          echo "$CERT_P12"    | base64 --decode > "$CERT"
+          security create-keychain -p "$KEYCHAIN_PWD" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KEYCHAIN_PWD" "$KC"
+          security import "$CERT" -P "$CERT_PWD" -A -t cert -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PWD" "$KC" >/dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | sed s/\"//g)
+          # install the provisioning profile (both legacy + modern locations)
+          PROF="$RUNNER_TEMP/p.mobileprovision"
+          echo "$PROFILE_B64" | base64 --decode > "$PROF"
+          UUID=$(security cms -D -i "$PROF" | plutil -extract UUID raw -)
+          for d in "$HOME/Library/MobileDevice/Provisioning Profiles" \
+                   "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$d"; cp "$PROF" "$d/$UUID.mobileprovision"
+          done
+          echo "Installed profile UUID $UUID"
+          security find-identity -v -p codesigning "$KC"
 
       - name: Decode App Store Connect API key
         env:
           ASC_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
         run: |
-          if [ -z "$ASC_KEY_CONTENT" ]; then
-            echo "::error::APP_STORE_CONNECT_API_KEY_CONTENT secret is not set."; exit 1
-          fi
+          [ -n "$ASC_KEY_CONTENT" ] || { echo "::error::APP_STORE_CONNECT_API_KEY_CONTENT not set"; exit 1; }
           echo "$ASC_KEY_CONTENT" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
-          echo "Decoded API key to runner temp."
 
       - name: Build, sign & upload to TestFlight
         env:
           ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          SIGN_IDENTITY: "Apple Distribution"
+          PROFILE_NAME: "HustleXP App Store CI"
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           chmod +x scripts/build-testflight.sh
           ./scripts/build-testflight.sh
 
-      - name: Remove API key
+      - name: Clean up secrets from runner
         if: always()
-        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+        run: |
+          rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP/p.mobileprovision"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
 
       - name: Upload build logs + archive
         if: always()
