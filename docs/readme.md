@@ -82,7 +82,7 @@ Download → Sign up → Choose Poster → Set up profile
 ## Requirements
 
 - iOS 17.0+
-- Xcode 16.0+
+- Xcode 26.3 (iOS 26 SDK) — matches the CI runner
 - Swift 5.9+
 - Active backend deployment (see `hustlexp-ai-backend`)
 
@@ -312,6 +312,16 @@ HustleXP becomes a credentialing layer. Master Hustlers hold verifiable work his
 **AdaptiveLayout** — Responsive padding based on screen height (`UIScreen.main.bounds.height`). All spacing uses 4pt grid multiples.
 
 **Trust tier colors** — Each tier has a distinct color defined in `ColorTokens.swift`. Never hardcode tier colors — always reference the token.
+
+---
+
+## Releasing to TestFlight
+
+The native iOS app ships to **TestFlight from GitHub Actions** (`testflight.yml`) —
+no local build required. Trigger via **Actions → "TestFlight Upload"** or by pushing
+a `v*-beta` tag (`macos-26` / Xcode 26.3, hybrid automatic-archive + manual
+Apple Distribution signing). Full pipeline, secrets, and cert-renewal notes:
+**[../TESTFLIGHT_SETUP.md](../TESTFLIGHT_SETUP.md)**. Latest shipped build: **v1.2.6**.
 
 ---
 

@@ -4,6 +4,7 @@
 > Dual-architecture: React Native (Expo) + native Swift/SwiftUI.
 
 [![Build](https://img.shields.io/badge/Build-CI_Passing-green)]()
+[![TestFlight](https://img.shields.io/badge/TestFlight-CI_Shipping-brightgreen)](TESTFLIGHT_SETUP.md)
 [![E2E Tests](https://img.shields.io/badge/E2E_Tests-ZERO-red)]()
 [![Security](https://img.shields.io/badge/Security-5_Open_Findings-red)]()
 [![Architecture](https://img.shields.io/badge/Architecture-Dual_RN%2BSwift-yellow)]()
@@ -15,6 +16,7 @@
 | Domain | Status | Detail |
 |--------|--------|--------|
 | Build | CI PASSING | ios-ci.yml + contract-validation.yml green |
+| Release | ✅ TESTFLIGHT CI LIVE | testflight.yml ships to TestFlight from CI — latest **v1.2.6** ([setup](TESTFLIGHT_SETUP.md)) |
 | E2E Tests | ZERO | No end-to-end test coverage |
 | Security | 5 OPEN FINDINGS | 2 Critical, 3 High — see below |
 | Architecture | DUAL (RN + Swift) | Decision pending: single path or both? |
@@ -62,9 +64,17 @@ The dual approach doubles maintenance cost. A decision is needed: React Native o
 
 ## CI/CD
 
-Two GitHub Actions workflows (non-blocking):
-- `ios-ci.yml` — Build and test on macOS with iPhone 16 simulator
-- `contract-validation.yml` — tRPC coverage validation against backend contract
+Three GitHub Actions workflows:
+- `ios-ci.yml` — build + test on macOS with the iPhone 16 simulator (non-blocking)
+- `contract-validation.yml` — tRPC coverage validation against the backend contract
+- **`testflight.yml`** — release pipeline: archives, signs, and uploads the native
+  app to **TestFlight** straight from CI. Runs on `macos-26` / Xcode 26.3 using
+  hybrid signing (automatic archive + manual Apple Distribution export). Trigger via
+  **Actions → "TestFlight Upload"** or by pushing a `v*-beta` tag. Full pipeline,
+  secrets, and cert-renewal notes are in **[TESTFLIGHT_SETUP.md](TESTFLIGHT_SETUP.md)**.
+  Latest shipped build: **v1.2.6 (202606180001)**.
+
+> This closes TODO-005 ("Add frontend CI/CD pipeline") for the native iOS release path.
 
 ---
 
@@ -125,4 +135,4 @@ See the full 64-item roadmap in [HUSTLEXP-ERRORS-AND-TODOS](https://github.com/S
 
 ---
 
-**Last README update**: 2026-04-02 — grounded to full source-level audit + adversarial stress test
+**Last README update**: 2026-06-18 — added the GitHub Actions → TestFlight release pipeline (see [TESTFLIGHT_SETUP.md](TESTFLIGHT_SETUP.md)). Prior full source-level audit + adversarial stress test: 2026-04-02.

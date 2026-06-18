@@ -1,5 +1,10 @@
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
+> **Releasing the native iOS app to TestFlight?** That ships from GitHub Actions
+> (`testflight.yml`), not from this RN workspace — see
+> [../TESTFLIGHT_SETUP.md](../TESTFLIGHT_SETUP.md). The steps below are for local
+> React Native development only.
+
 # Getting Started
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
